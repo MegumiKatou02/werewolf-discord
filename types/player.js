@@ -3,6 +3,7 @@ class Player {
         this.userId = userId;
         this.alive = true;
         this.voted = false;
+        this.role = null;
     }
 
     resetRound() {
