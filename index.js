@@ -1,7 +1,10 @@
-const { Client, GatewayIntentBits, Collection } = require('discord.js')
+const { Client, GatewayIntentBits, Collection, EmbedBuilder, AttachmentBuilder } = require('discord.js')
 const fs = require('node:fs');
 const path = require('node:path');
+const EmbedBuilderWerewolf = require('./utils/embed')
 require('dotenv').config();
+
+const roles = require('./data/data.json');
 
 const client = new Client({
     intents: [
@@ -23,6 +26,26 @@ for (const file of commandFiles) {
 
 client.once('ready', () => {
     console.log('Bot online với tên', client.user.tag);
+})
+
+client.on('messageCreate', async message => {
+  if (message.author.bot) return;
+  if (message.content === '!soi') {
+    const { embed, file } = EmbedBuilderWerewolf('werewolf.png', {
+      title: roles["0"].title,
+      description: roles["0"].description
+    })
+    
+    await message.reply({ embeds: [embed], files: [file] });
+  }
+  if (message.content === '!danlang') {
+    const { embed, file } = EmbedBuilderWerewolf('villager.png', {
+      title: roles["1"].title,
+      description: roles["1"].description
+    })
+    
+    await message.reply({ embeds: [embed], files: [file] });
+  }
 })
 
 client.on('interactionCreate', async interaction => {

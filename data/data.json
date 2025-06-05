@@ -1,0 +1,18 @@
+{
+    "0": {
+        "title": "Ma Sói",
+        "description": "Mỗi đêm bạn có thể bỏ phiếu cùng đàn sói để chọn giết một người chơi."
+    },
+    "1": {
+        "title": "Dân Làng",
+        "description": "Bạn là một dân làng bình thường và không có khả năng gì đặc biệt."
+    },
+    "2": {
+        "title": "Bảo Vệ",
+        "description": "Bạn có thể chọn một người chơi để bảo vệ mỗi đêm. Người được bảo vệ không thể bị giết vào đêm đó, thay vào đó bạn sẽ bị tấn công thay họ. Vì bạn rất khỏe nên sẽ không thể bị chết trong lần tấn công đầu tiên nhưng sẽ chết trong lần tấn công thứ hai. Mỗi đêm bạn sẽ tự bảo vệ chính mình."
+    },
+    "3": {
+        "title": "Bán Sói",
+        "description": "Bạn là dân làng bình thường cho tới khi bị ma sói cắn, lúc đó bạn sẽ trở thành Ma sói."
+    }
+}
