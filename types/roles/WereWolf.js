@@ -7,7 +7,7 @@ class Werewolf extends Role {
     }
 
     getDescription() {
-        return "Ma Sói là phe phản diện, chiến thắng khi số sói ≥ số dân.";
+        return "Mỗi đêm bạn có thể bỏ phiếu cùng đàn sói để chọn giết một người chơi.";
     }
 }
 

@@ -7,7 +7,7 @@ class Villager extends Role {
     }
 
     getDescription() {
-        return "Bạn thuộc phe dân làng, hãy cố gắng sống sót qua từng ngày";
+        return "Bạn là một dân làng bình thường và không có khả năng gì đặc biệt.";
     }
 }
 

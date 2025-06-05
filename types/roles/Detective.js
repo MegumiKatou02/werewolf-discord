@@ -3,7 +3,7 @@ const Role = require('./role')
 class Detective extends Role {
     constructor() {
         super("Thám Tử", 1);
-        this.id = 6;
+        this.id = 5;
     }
 
     getDescription() {
