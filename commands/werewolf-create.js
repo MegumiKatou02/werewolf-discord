@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js')
-const { gameRooms } = require('../core/room')
+const { gameRooms, GameRoom } = require('../core/room')
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -17,11 +17,10 @@ module.exports = {
             })
         }
 
-        gameRooms.set(guildId, {
-            host: userId,
-            players: [userId],
-            status: 'waiting',
-        })
+        const room = new GameRoom(guildId, userId);
+        room.addPlayer(userId)
+
+        gameRooms.set(guildId, room);
 
         return interaction.reply({
             content: `✅ Phòng Ma Sói đã được tạo bởi <@${userId}>.\nDùng lệnh \`/masoi-join\` để tham gia.`,

@@ -26,14 +26,14 @@ module.exports = {
             })
         }
 
-        if (room.players.includes(userId)) {
+        if (room.hasPlayer(userId)) {
             return interaction.reply({
                 content: 'Bạn đã tham gia trò chơi rồi',
                 ephemeral: true,
             })
         }
 
-        room.players.push(userId);
+        room.addPlayer(userId);
         gameRooms.set(guildId, room);
 
         return interaction.reply({

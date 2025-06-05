@@ -19,7 +19,7 @@ module.exports = {
 
         const room = gameRooms.get(guildId)
 
-        if (!room.players.includes(userId)) {
+        if (!room.hasPlayer(userId)) {
             return interaction.reply({
                 content: 'Bạn chưa tham gia phòng chơi nào trong server này.',
                 ephemeral: true,
@@ -33,14 +33,18 @@ module.exports = {
             });
         }
 
-        room.players = room.players.filter(id => id !== userId);
+        // remove player
+        room.removePlayer(userId);
 
         if (room.players.length === 0) {
             gameRooms.delete(guildId);
-            return interaction.reply({
-                content: 'Bạn đã rời khỏi phòng. Không còn ai trong phòng nên phòng đã bị hủy.',
+            
+            await interaction.reply({
+                content: 'Bạn đã rời khỏi phòng chơi ma sói',
                 ephemeral: true,
-            });
+            })
+
+            return interaction.channel.send('Không còn ai trong phòng nên phòng đã bị hủy');
         }
 
         gameRooms.set(guildId, room);
