@@ -1,34 +1,50 @@
 {
     "0": {
         "title": "Ma Sói",
+        "eName": "Werewolf",
+        "faction": 0,
         "description": "Mỗi đêm bạn có thể bỏ phiếu cùng đàn sói để chọn giết một người chơi."
     },
     "1": {
         "title": "Dân Làng",
+        "eName": "Villager",
+        "faction": 1,
         "description": "Bạn là một dân làng bình thường và không có khả năng gì đặc biệt."
     },
     "2": {
         "title": "Bảo Vệ",
+        "eName": "Bodyguard",
+        "faction": 1,
         "description": "Bạn có thể chọn một người chơi để bảo vệ mỗi đêm. Người được bảo vệ không thể bị giết vào đêm đó, thay vào đó bạn sẽ bị tấn công thay họ. Vì bạn rất khỏe nên sẽ không thể bị chết trong lần tấn công đầu tiên nhưng sẽ chết trong lần tấn công thứ hai. Mỗi đêm bạn sẽ tự bảo vệ chính mình."
     },
     "3": {
         "title": "Bán Sói",
+        "eName": "Cursed",
+        "faction": 3,
         "description": "Bạn là dân làng bình thường cho tới khi bị ma sói cắn, lúc đó bạn sẽ trở thành Ma sói."
     },
     "4": {
         "title": "Tiên Tri",
+        "eName": "Seer",
+        "faction": 1,
         "description": "Mỗi đêm bạn có thể xem vai trò của người chơi khác."
     },
     "5": {
         "title": "Thám Tử",
+        "eName": "Detected",
+        "faction": 1,
         "description": "Mỗi đêm, bạn có thể chọn hai người chơi để điều tra và biết được họ ở cùng một phe hay là khác phe."
     },
     "6": {
         "title": "Phù Thuỷ",
+        "eName": "Witch",
+        "faction": 1,
         "description": "Bạn có hai bình thuốc: Một bình dùng để giết và bình kia để bảo vệ người chơi. Bình bảo vệ chỉ được tiêu thụ nếu người chơi đó bị tấn công. Bạn không thể giết trong đêm đầu tiên."
     },
     "7": {
-        "title": "Thằng Ngố",
+        "title": "Hùng Năng",
+        "eName": "Fool",
+        "faction": 2,
         "description": "Bạn phải lừa dân làng treo cổ bạn. Nếu họ treo cổ bạn, bạn thắng."
     }
 }

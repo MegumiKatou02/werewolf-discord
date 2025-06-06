@@ -2,7 +2,7 @@ const Role = require('./role')
 
 class Fool extends Role {
     constructor() {
-        super("Thằng Ngố", 3);
+        super("Hùng Năng", 3);
         this.id = 7;
     }
 
