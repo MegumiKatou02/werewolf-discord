@@ -14,5 +14,21 @@
     "3": {
         "title": "Bán Sói",
         "description": "Bạn là dân làng bình thường cho tới khi bị ma sói cắn, lúc đó bạn sẽ trở thành Ma sói."
+    },
+    "4": {
+        "title": "Tiên Tri",
+        "description": "Mỗi đêm bạn có thể xem vai trò của người chơi khác."
+    },
+    "5": {
+        "title": "Thám Tử",
+        "description": "Mỗi đêm, bạn có thể chọn hai người chơi để điều tra và biết được họ ở cùng một phe hay là khác phe."
+    },
+    "6": {
+        "title": "Phù Thuỷ",
+        "description": "Bạn có hai bình thuốc: Một bình dùng để giết và bình kia để bảo vệ người chơi. Bình bảo vệ chỉ được tiêu thụ nếu người chơi đó bị tấn công. Bạn không thể giết trong đêm đầu tiên."
+    },
+    "7": {
+        "title": "Thằng Ngố",
+        "description": "Bạn phải lừa dân làng treo cổ bạn. Nếu họ treo cổ bạn, bạn thắng."
     }
 }

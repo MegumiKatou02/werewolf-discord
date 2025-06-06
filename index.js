@@ -1,7 +1,7 @@
-const { Client, GatewayIntentBits, Collection, EmbedBuilder, AttachmentBuilder } = require('discord.js')
+const { Client, GatewayIntentBits, Collection } = require('discord.js')
 const fs = require('node:fs');
 const path = require('node:path');
-const EmbedBuilderWerewolf = require('./utils/embed')
+const { RoleResponse } = require('./utils/response')
 require('dotenv').config();
 
 const roles = require('./data/data.json');
@@ -30,22 +30,15 @@ client.once('ready', () => {
 
 client.on('messageCreate', async message => {
   if (message.author.bot) return;
-  if (message.content === '!soi') {
-    const { embed, file } = EmbedBuilderWerewolf('werewolf.png', {
-      title: roles["0"].title,
-      description: roles["0"].description
-    })
-    
-    await message.reply({ embeds: [embed], files: [file] });
-  }
-  if (message.content === '!danlang') {
-    const { embed, file } = EmbedBuilderWerewolf('villager.png', {
-      title: roles["1"].title,
-      description: roles["1"].description
-    })
-    
-    await message.reply({ embeds: [embed], files: [file] });
-  }
+
+  await RoleResponse(message, '!soi', 'werewolf.png', 0)
+  await RoleResponse(message, '!danlang', 'villager.png', 1)
+  await RoleResponse(message, '!baove', 'bodyguard.png', 2)
+  await RoleResponse(message, '!bansoi', 'cursed.png', 3)
+  await RoleResponse(message, '!tientri', 'seer.png', 4)
+  await RoleResponse(message, '!thamtu', 'detective.png', 5)
+  await RoleResponse(message, '!phuthuy', 'witch.png', 6)
+  await RoleResponse(message, '!thangngo', 'fool.png', 7)
 })
 
 client.on('interactionCreate', async interaction => {
