@@ -2,7 +2,7 @@ const Role = require('./role')
 
 class Cursed extends Role {
     constructor() {
-        super("Bán Sói", 3);
+        super("Thái Phổi Bạn", 3);
         this.id = 3;
     }
 

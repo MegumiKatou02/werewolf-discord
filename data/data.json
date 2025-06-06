@@ -18,7 +18,7 @@
         "description": "Bạn có thể chọn một người chơi để bảo vệ mỗi đêm. Người được bảo vệ không thể bị giết vào đêm đó, thay vào đó bạn sẽ bị tấn công thay họ. Vì bạn rất khỏe nên sẽ không thể bị chết trong lần tấn công đầu tiên nhưng sẽ chết trong lần tấn công thứ hai. Mỗi đêm bạn sẽ tự bảo vệ chính mình."
     },
     "3": {
-        "title": "Bán Sói",
+        "title": "Thái Phổi Bạn",
         "eName": "Cursed",
         "faction": 3,
         "description": "Bạn là dân làng bình thường cho tới khi bị ma sói cắn, lúc đó bạn sẽ trở thành Ma sói."
