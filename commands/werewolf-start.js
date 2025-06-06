@@ -38,9 +38,10 @@ module.exports = {
 
     try {
       await room.startGame(interaction);
-      return interaction.editReply(
-        'Trò chơi đã bắt đầu! Vai trò đã được chia.'
-      );
+      return interaction.followUp({
+        content: `${interaction.user.globalName || interaction.user.username} đã bắt đầu trò chơi! Vai trò đã được chia.`,
+        ephemeral: false,
+    });
     } catch (err) {
       return interaction.editReply(`Lỗi: ${err.message}`);
     }
