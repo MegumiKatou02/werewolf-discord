@@ -2,6 +2,7 @@ const { Client, GatewayIntentBits, Collection } = require('discord.js')
 const fs = require('node:fs');
 const path = require('node:path');
 const { RoleResponse } = require('./utils/response')
+const { FactionRole } = require('./types/faction')
 require('dotenv').config();
 
 const roles = require('./data/data.json');
@@ -31,14 +32,14 @@ client.once('ready', () => {
 client.on('messageCreate', async message => {
   if (message.author.bot) return;
 
-  await RoleResponse(message, '!soi', 'werewolf.png', 0)
-  await RoleResponse(message, '!danlang', 'villager.png', 1)
-  await RoleResponse(message, '!baove', 'bodyguard.png', 2)
-  await RoleResponse(message, '!bansoi', 'cursed.png', 3)
-  await RoleResponse(message, '!tientri', 'seer.png', 4)
-  await RoleResponse(message, '!thamtu', 'detective.png', 5)
-  await RoleResponse(message, '!phuthuy', 'witch.png', 6)
-  await RoleResponse(message, '!thangngo', 'fool.png', 7)
+  await RoleResponse(message, '!soi', 'werewolf.png', 0, FactionRole.Werewolf)
+  await RoleResponse(message, '!danlang', 'villager.png', 1, FactionRole.Village)
+  await RoleResponse(message, '!baove', 'bodyguard.png', 2, FactionRole.Village)
+  await RoleResponse(message, '!bansoi', 'cursed.png', 3, FactionRole['Vi-Wolf'])
+  await RoleResponse(message, '!tientri', 'seer.png', 4, FactionRole.Village)
+  await RoleResponse(message, '!thamtu', 'detective.png', 5, FactionRole.Village)
+  await RoleResponse(message, '!phuthuy', 'witch.png', 6, FactionRole.Village)
+  await RoleResponse(message, '!thangngo', 'fool.png', 7, FactionRole.Solo)
 })
 
 client.on('interactionCreate', async interaction => {
