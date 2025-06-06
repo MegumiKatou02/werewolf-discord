@@ -9,7 +9,9 @@ const guildId = process.env.GUILD_ID;
 
 const commands = [];
 const commandsPath = path.join(__dirname, 'commands');
-const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+const commandFiles = fs
+  .readdirSync(commandsPath)
+  .filter((file) => file.endsWith('.js'));
 
 for (const file of commandFiles) {
   const filePath = path.join(commandsPath, file);
@@ -22,10 +24,9 @@ const rest = new REST({ version: '10' }).setToken(token);
 (async () => {
   try {
     console.log('🛠️ Đang đăng ký slash command...');
-    await rest.put(
-      Routes.applicationGuildCommands(clientId, guildId),
-      { body: commands },
-    );
+    await rest.put(Routes.applicationGuildCommands(clientId, guildId), {
+      body: commands,
+    });
     console.log('✅ Slash command đã được đăng ký!');
   } catch (error) {
     console.error('❌ Lỗi khi đăng ký:', error);

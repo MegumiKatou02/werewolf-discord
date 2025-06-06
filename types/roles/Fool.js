@@ -1,14 +1,14 @@
-const Role = require('./role')
+const Role = require('./role');
 
 class Fool extends Role {
-    constructor() {
-        super("Hùng Năng", 3);
-        this.id = 7;
-    }
+  constructor() {
+    super('Hùng Năng', 3);
+    this.id = 7;
+  }
 
-    getDescription() {
-        return `Bạn phải lừa dân làng treo cổ bạn. Nếu họ treo cổ bạn, bạn thắng.`;
-    }
+  getDescription() {
+    return `Bạn phải lừa dân làng treo cổ bạn. Nếu họ treo cổ bạn, bạn thắng.`;
+  }
 }
 
 module.exports = Fool;

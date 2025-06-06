@@ -8,7 +8,7 @@ const EmbedBuilderWerewolf = (fileName, { title, description }) => {
   const embed = new EmbedBuilder()
     .setTitle(title)
     .setDescription(description)
-    .setColor(0x00AE86)
+    .setColor(0x00ae86)
     .setImage(`attachment://${fileName}`);
 
   return { embed, file };
