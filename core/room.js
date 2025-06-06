@@ -1,5 +1,5 @@
 const Player = require('../types/player');
-const { roleTable } = require("../utils/role")
+const { roleTable, assignRolesGame } = require("../utils/role")
 
 class GameRoom {
     constructor(guildId, hostId) {
@@ -65,9 +65,28 @@ class GameRoom {
         return roles;
     }
 
-    startGame(interaction) {
+    async startGame(interaction) {
         if (this.status !== 'waiting') throw new Error('Game đã bắt đầu hoặc kết thúc.');
-        this.assignRoles(this.players.length);
+        const roles = this.assignRoles(this.players.length);
+
+        for (let i = 0; i < this.players.length; i++) {
+            const role = assignRolesGame(roles[i]);
+            this.players[i].role = role;
+
+            try {
+
+                const user = await interaction.client.users.fetch(this.players[i].userId);
+                const roleName = role.name;
+
+                await user.send(`🎮 Bạn được phân vai: **${roleName}**. Hãy giữ bí mật! 🤫`);
+            } catch (err) {
+                console.error(`Không thể gửi tin nhắn cho ${this.players[i].userId}`, err);
+            }
+        }
+
+        console.log('-----');
+        console.log(this.players);
+
         this.status = 'starting';
     }
 

@@ -20,7 +20,7 @@ module.exports = {
         }
 
         try {
-            room.startGame(interaction);
+            await room.startGame(interaction);
             return interaction.reply('Trò chơi đã bắt đầu! Vai trò đã được chia.');
         } catch (err) {
             return interaction.reply(`Lỗi: ${err.message}`);
