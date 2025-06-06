@@ -15,5 +15,8 @@
   "dependencies": {
     "discord.js": "^14.19.3",
     "dotenv": "^16.5.0"
+  },
+  "devDependencies": {
+    "prettier": "^3.5.3"
   }
 }
