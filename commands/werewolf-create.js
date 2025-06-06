@@ -17,7 +17,7 @@ module.exports = {
       });
     }
 
-    const room = new GameRoom(guildId, userId);
+    const room = new GameRoom(interaction.client, guildId, userId);
     room.addPlayer(userId);
 
     gameRooms.set(guildId, room);
