@@ -12,4 +12,13 @@ const RoleResponse = async (message, commandName, fileName, indexRole, factionRo
     }
 }
 
-module.exports = { RoleResponse };
+const RoleResponseDMs = async (user, fileName, indexRole, factionRole) => {
+        const { embed, file } = EmbedBuilderWerewolf(fileName, {
+          title: `${roles[indexRole].title} (${roles[indexRole].eName})`,
+          description: `${roles[indexRole].description}\n\nPhe: ${factionRole}`
+        })
+        
+        await user.send({ embeds: [embed], files: [file] });
+}
+
+module.exports = { RoleResponse, RoleResponseDMs };

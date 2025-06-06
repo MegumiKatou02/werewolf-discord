@@ -9,6 +9,8 @@ const Seer = require('../types/roles/Seer')
 const Witch = require('../types/roles/Witch')
 const Role = require('../types/roles/role')
 
+const { FactionRole } = require('../types/faction')
+
 const roleTable = {
   4:  { 0: 1, 1: 2, 2: 1 },                                     // Ma sói, Dân, Bảo vệ
   5:  { 0: 1, 1: 2, 2: 1, 6: 1 },                               // + Phù thủy
@@ -36,4 +38,14 @@ const assignRolesGame = (roleId) => {
   }
 }
 
-module.exports = { roleTable, assignRolesGame }
+const convertFactionRoles = (roleId) => {
+  switch (roleId) {
+    case 0: return FactionRole.Werewolf
+    case 1: return FactionRole.Village
+    case 2: return FactionRole.Solo
+    case 3: return FactionRole['Vi-Wolf']
+    default: return FactionRole.Village
+  }
+}
+
+module.exports = { roleTable, assignRolesGame, convertFactionRoles }

@@ -1,5 +1,8 @@
 const Player = require('../types/player');
-const { roleTable, assignRolesGame } = require("../utils/role")
+const { RoleResponseDMs } = require('../utils/response');
+const { roleTable, assignRolesGame, convertFactionRoles } = require("../utils/role");
+
+const rolesData = require('../data/data.json');
 
 class GameRoom {
     constructor(guildId, hostId) {
@@ -69,25 +72,28 @@ class GameRoom {
         if (this.status !== 'waiting') throw new Error('Game đã bắt đầu hoặc kết thúc.');
         const roles = this.assignRoles(this.players.length);
 
-        for (let i = 0; i < this.players.length; i++) {
+        const dmPromises = this.players.map(async (player, i) => {
             const role = assignRolesGame(roles[i]);
-            this.players[i].role = role;
+            player.role = role;
 
             try {
-
-                const user = await interaction.client.users.fetch(this.players[i].userId);
-                const roleName = role.name;
-
-                await user.send(`🎮 Bạn được phân vai: **${roleName}**. Hãy giữ bí mật! 🤫`);
+                const user = await interaction.client.users.fetch(player.userId);
+                await user.send(`🎮 Bạn được phân vai: **${role.name}**. Hãy giữ bí mật! 🤫`);
+                await RoleResponseDMs(user, `${rolesData[role.id].eName.toLowerCase()}.png`, role.id, convertFactionRoles(rolesData[role.id].faction));
             } catch (err) {
-                console.error(`Không thể gửi tin nhắn cho ${this.players[i].userId}`, err);
+                console.error(`Không thể gửi tin nhắn cho ${player.userId}`, err);
+                await interaction.reply({
+                    content: 'Không thể gửi tin nhắn cho bạn, hãy kiểm tra cài đặt quyền', 
+                    ephemeral: true
+                })
             }
-        }
-
+        });
+        await Promise.all(dmPromises);
+        
+        this.status = 'starting';
+        
         console.log('-----');
         console.log(this.players);
-
-        this.status = 'starting';
     }
 
     endGame() {
