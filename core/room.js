@@ -1,6 +1,12 @@
 const Player = require('../types/player');
 const { RoleResponseDMs } = require('../utils/response');
-const { EmbedBuilder, AttachmentBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
+const {
+  EmbedBuilder,
+  AttachmentBuilder,
+  ButtonBuilder,
+  ActionRowBuilder,
+  ButtonStyle,
+} = require('discord.js');
 const {
   roleTable,
   assignRolesGame,
@@ -135,7 +141,7 @@ class GameRoom extends EventEmitter {
   }
 
   async nightPhase() {
-    this.gameState.phase = 'night'; 
+    this.gameState.phase = 'night';
     this.gameState.nightCount += 1;
 
     this.emit('night', this.guildId, this.players, this.gameState);
@@ -149,11 +155,12 @@ class GameRoom extends EventEmitter {
 
       const embed = new EmbedBuilder()
         .setTitle('📋 Danh sách người chơi')
-        .setColor(0x00AE86)
+        .setColor(0x00ae86)
         .setImage('attachment://avatars.png')
         .setTimestamp();
 
-      if (player.role.id === 0) { // Sói
+      if (player.role.id === 0) {
+        // Sói
         const voteButton = new ButtonBuilder()
           .setCustomId(`vote_target_${player.userId}`)
           .setLabel('🗳️ Vote người cần giết')
@@ -161,13 +168,18 @@ class GameRoom extends EventEmitter {
 
         const row = new ActionRowBuilder().addComponents(voteButton);
 
-        await user.send("🌙 Bạn là **Sói**. Hãy vote người cần giết. Bạn có thể trò chuyện với các Sói khác ngay tại đây.");
-        await user.send({ embeds: [embed], files: [attachment], components: [row] });
+        await user.send(
+          '🌙 Bạn là **Sói**. Hãy vote người cần giết. Bạn có thể trò chuyện với các Sói khác ngay tại đây.'
+        );
+        await user.send({
+          embeds: [embed],
+          files: [attachment],
+          components: [row],
+        });
       } else {
-        await user.send("🌙 Một đêm yên tĩnh trôi qua. Bạn hãy chờ đến sáng.");
+        await user.send('🌙 Một đêm yên tĩnh trôi qua. Bạn hãy chờ đến sáng.');
         await user.send({ embeds: [embed], files: [attachment] });
       }
-     
     }
 
     // Chờ 60 giây
@@ -180,13 +192,15 @@ class GameRoom extends EventEmitter {
     for (const player of this.players) {
       const user = await this.fetchUser(player.userId);
       if (!user) continue;
-        await user.send("☀️ Ban ngày đã đến. Hãy thảo luận và bỏ phiếu để loại trừ người khả nghi nhất. Bạn có 30 giây để quyết định.");
+      await user.send(
+        '☀️ Ban ngày đã đến. Hãy thảo luận và bỏ phiếu để loại trừ người khả nghi nhất. Bạn có 30 giây để quyết định.'
+      );
     }
 
     function getWerewolfVotes(gameRoom) {
       return gameRoom.players
-        .filter(p => p.role?.id === 0)
-        .map(p => `${p.userId} -> ${p.role.voteBite}`);
+        .filter((p) => p.role?.id === 0)
+        .map((p) => `${p.userId} -> ${p.role.voteBite}`);
     }
     getWerewolfVotes(this);
 
@@ -211,19 +225,16 @@ class GameRoom extends EventEmitter {
   }
 
   async gameLoop() {
-    while(this.status === 'starting') {
+    while (this.status === 'starting') {
       await this.nightPhase();
       await this.dayPhase();
       await this.votePhase();
-    }    
+    }
   }
 
-  processVote() {
-
-  }
+  processVote() {}
 
   checkVictory() {}
-
 }
 
 // gameRoom có key là guilId và value là class GameRoom
