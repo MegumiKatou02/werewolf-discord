@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require('discord.js')
+const { SlashCommandBuilder, PermissionsBitField } = require('discord.js')
 const { gameRooms } = require('../core/room')
 
 module.exports = {
@@ -7,23 +7,36 @@ module.exports = {
         .setDescription('Bắt đầu chơi game'),
 
     async execute(interaction) {
+        await interaction.deferReply({ ephemeral: true });
+
         const guildId = interaction.guildId;
 
         if (!gameRooms.has(guildId)) {
-            return interaction.reply('Chưa có phòng chơi, hãy để người chơi tham gia trước.');
+            return interaction.editReply('Chưa có phòng chơi, hãy để người chơi tham gia trước.');
         }
 
         const room = gameRooms.get(guildId);
 
         if (room.status !== 'waiting') {
-            return interaction.reply('Trò chơi đã bắt đầu hoặc kết thúc.');
+            return interaction.editReply('Trò chơi đã bắt đầu hoặc kết thúc.');
+        }
+
+        const member = interaction.member;
+        const isAdmin = member.permissions.has(PermissionsBitField.Flags.Administrator);
+        const isHost = interaction.user.id === room.hostId;
+
+        if (!isAdmin && !isHost) {
+            return interaction.editReply({
+                content: '❌ Chỉ host hoặc admin mới được phép bắt đầu trò chơi.',
+                ephemeral: true,
+            });
         }
 
         try {
             await room.startGame(interaction);
-            return interaction.reply('Trò chơi đã bắt đầu! Vai trò đã được chia.');
+            return interaction.editReply('Trò chơi đã bắt đầu! Vai trò đã được chia.');
         } catch (err) {
-            return interaction.reply(`Lỗi: ${err.message}`);
+            return interaction.editReply(`Lỗi: ${err.message}`);
         }
     }
 }
