@@ -40,6 +40,7 @@ client.on('messageCreate', async message => {
   await RoleResponse(message, '!thamtu', 'detective.png', 5, FactionRole.Village)
   await RoleResponse(message, '!phuthuy', 'witch.png', 6, FactionRole.Village)
   await RoleResponse(message, '!thangngo', 'fool.png', 7, FactionRole.Solo)
+  await RoleResponse(message, '!thaydong', 'medium.png', 8, FactionRole.Village)
 })
 
 client.on('interactionCreate', async interaction => {

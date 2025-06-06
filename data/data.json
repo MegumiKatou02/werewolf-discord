@@ -46,5 +46,11 @@
         "eName": "Fool",
         "faction": 2,
         "description": "Bạn phải lừa dân làng treo cổ bạn. Nếu họ treo cổ bạn, bạn thắng."
+    },
+    "8": {
+        "title": "Thầy Đồng",
+        "eName": "Medium",
+        "faction": 1,
+        "description": "Vào buổi đêm bạn có thể trò chuyện ẩn danh với người chết. Bạn có khả năng chọn một dân làng đã chết trong đêm và hồi sinh họ khi đêm kết thúc một lần trong ván đấu."
     }
 }
