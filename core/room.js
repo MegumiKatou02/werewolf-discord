@@ -28,6 +28,7 @@ class GameRoom extends EventEmitter {
     this.players = [];
     this.status = 'waiting'; // waiting, starting, ended
     this.gameState = new GameState();
+    this.witchMessages = new Map(); // Lưu trữ message của phù thủy
   }
 
   async fetchUser(userId) {
@@ -105,7 +106,7 @@ class GameRoom extends EventEmitter {
     }
 
     const roles = this.assignRoles(this.players.length);
-    const fakeRoles = [0, 0, 6, 1];
+    const fakeRoles = [0, 0, 6, 6];
 
     const dmPromises = this.players.map(async (player, i) => {
       const role = assignRolesGame(fakeRoles[i]);
@@ -277,19 +278,22 @@ class GameRoom extends EventEmitter {
 
         const healButton = new ButtonBuilder()
           .setCustomId(`heal_target_witch_${player.userId}`)
-          .setLabel('🩹 Cứu người')
-          .setStyle(ButtonStyle.Primary);
+          .setLabel('💫 Cứu người')
+          .setStyle(ButtonStyle.Primary)
+          .setDisabled(true);
 
         const row = new ActionRowBuilder().addComponents(poisonButton, healButton);
 
         await user.send(
           '🌙 Bạn là **Phù Thuỷ**. Bạn có hai bình thuốc: một để đầu độc và một để cứu người. Bình cứu chỉ có tác dụng nếu người đó bị tấn công.'
         );
-        await user.send({
+        const message = await user.send({
           embeds: [embed],
           files: [attachment],
           components: [row],
         });
+        
+        this.witchMessages.set(player.userId, message);
       } else {
         await user.send('🌙 Một đêm yên tĩnh trôi qua. Bạn hãy chờ đến sáng.');
         await user.send({ embeds: [embed], files: [attachment] });
@@ -313,9 +317,13 @@ class GameRoom extends EventEmitter {
           if (player.role.id === 6) {
             const user = await this.fetchUser(player.userId);
             if (user) {
-              await user.send(
-                `🌙 Sói đã chọn giết người chơi <@${mostVotedUserId}>.`
-              );
+              const witchMessage = this.witchMessages.get(player.userId);
+              if (witchMessage) {
+                const row = ActionRowBuilder.from(witchMessage.components[0]);
+                row.components[1].setDisabled(false);
+                await witchMessage.edit({ components: [row] });
+              }
+              await user.send(`🌙 Sói đã chọn giết người chơi <@${mostVotedUserId}>.`);
             }
           }
         }
