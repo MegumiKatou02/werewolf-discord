@@ -208,6 +208,40 @@ client.on('interactionCreate', async (interaction) => {
 
       await interaction.showModal(modal);
     }
+    if (interaction.customId.startsWith('investigate_target_detective_')) {
+      const playerId = interaction.customId.split('_')[3];
+
+      if (interaction.user.id !== playerId) {
+        return interaction.reply({
+          content: 'Bạn không được nhấn nút này.',
+          ephemeral: true,
+        });
+      }
+
+      const modal = new ModalBuilder()
+        .setCustomId(`submit_investigate_detective_${playerId}`)
+        .setTitle('Điều tra người chơi');
+
+      const input1 = new TextInputBuilder()
+        .setCustomId('investigate_index_1')
+        .setLabel('Nhập số thứ tự người chơi 1 (bắt đầu từ 1)')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('VD: 3')
+        .setRequired(true);
+
+      const input2 = new TextInputBuilder()
+        .setCustomId('investigate_index_2')
+        .setLabel('Nhập số thứ tự người chơi 2 (bắt đầu từ 1)')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('VD: 4')
+        .setRequired(true);
+
+      const row1 = new ActionRowBuilder().addComponents(input1);
+      const row2 = new ActionRowBuilder().addComponents(input2);
+      modal.addComponents(row1, row2);
+
+      await interaction.showModal(modal);
+    }
   }
 
   if (interaction.isModalSubmit()) {
@@ -249,12 +283,21 @@ client.on('interactionCreate', async (interaction) => {
       const targetPlayer = gameRoom.players[voteIndex - 1];
 
       if (sender.role.id === 0) {
+        if (sender.role.biteCount <= 0) {
+          return interaction.reply({
+            content: 'Bạn đã hết lượt dùng chức năng',
+            ephemeral: true,
+          });
+        }
+
         if (targetPlayer.role.faction === 0) { // FactionRole.Werewolf
           return interaction.reply({
             content: 'Bạn không thể vote giết đồng minh của mình.',
             ephemeral: true,
           });
         }
+
+        sender.role.biteCount -= 1;
         sender.role.voteBite = targetPlayer.userId;
       }
 
@@ -299,6 +342,13 @@ client.on('interactionCreate', async (interaction) => {
 
       const targetPlayer = gameRoom.players[protectIndex - 1];
       if (sender.role.id === 2) {
+        if (sender.role.protectedCount <= 0) {
+          return interaction.reply({
+            content: 'Bạn đã hết lượt dùng chức năng',
+            ephemeral: true,
+          });
+        }
+        sender.role.protectedCount -= 1;
         sender.role.protectedPerson = targetPlayer.userId;
       }
 
@@ -342,7 +392,14 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       const targetPlayer = gameRoom.players[viewIndex - 1];
-      if (sender.role.id === 4 && sender.role.viewCount > 0) {
+      if (sender.role.id === 4) {
+        if (sender.role.viewCount <= 0) {
+          return interaction.reply({
+            content: 'Bạn đã hết lượt dùng chức năng',
+            ephemeral: true,
+          });
+        }
+
         if (sender.role.id === targetPlayer.role.id) {
           return interaction.reply({
             content: 'Bạn không thể xem vai trò của đồng minh.',
@@ -360,6 +417,68 @@ client.on('interactionCreate', async (interaction) => {
       try {
         const user = await client.users.fetch(playerId);
         await user.send(`✅ Bạn đã xem vai trò của: **${targetPlayer.userId}**.`);
+      } catch (err) {
+        console.error(`Không thể gửi DM cho ${playerId}:`, err);
+      }
+    }
+    if (interaction.customId.startsWith('submit_investigate_detective_')) {
+      if (!gameRoom || gameRoom.gameState.phase !== 'night') return;
+
+      const playerId = interaction.customId.split('_')[3];
+
+      if (interaction.user.id !== playerId) {
+        return interaction.reply({
+          content: 'Bạn không được gửi form này.',
+          ephemeral: true,
+        });
+      }
+
+      const index1Str = interaction.fields.getTextInputValue('investigate_index_1');
+      const index2Str = interaction.fields.getTextInputValue('investigate_index_2');
+      const index1 = parseInt(index1Str, 10);
+      const index2 = parseInt(index2Str, 10);
+
+      if (
+        isNaN(index1) || isNaN(index2) ||
+        index1 < 1 || index2 < 1 ||
+        index1 > gameRoom.players.length || index2 > gameRoom.players.length ||
+        index1 === index2
+      ) {
+        return interaction.reply({
+          content: 'Số thứ tự không hợp lệ hoặc trùng nhau.',
+          ephemeral: true,
+        });
+      }
+
+      const targetPlayer1 = gameRoom.players[index1 - 1];
+      const targetPlayer2 = gameRoom.players[index2 - 1];
+
+      if (sender.role.id === 5) {
+        if (sender.role.investigatedCount <= 0) {
+          return interaction.reply({
+            content: 'Bạn đã hết lượt dùng chức năng',
+            ephemeral: true,
+          });
+        }
+
+        if (targetPlayer1.userId === sender.userId || targetPlayer2.userId === sender.userId) {
+          return interaction.reply({
+            content: 'Bạn không thể chọn chính bản thân bạn.',
+            ephemeral: true,
+          });
+        }
+
+        sender.role.investigatedPairs.push([targetPlayer1.userId, targetPlayer2.userId]);
+        sender.role.investigatedCount -= 1;
+        await interaction.reply({
+          content: `Bạn đã điều tra: **${targetPlayer1.userId}** và **${targetPlayer2.userId}**. Họ ${targetPlayer1.role.faction === targetPlayer2.role.faction ? 'cùng phe' : 'khác phe'}.`,
+          ephemeral: false,
+        });
+      }
+
+      try {
+        const user = await client.users.fetch(playerId);
+        await user.send(`✅ Bạn đã điều tra: **${targetPlayer1.userId}** và **${targetPlayer2.userId}**.`);
       } catch (err) {
         console.error(`Không thể gửi DM cho ${playerId}:`, err);
       }
