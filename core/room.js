@@ -105,7 +105,7 @@ class GameRoom extends EventEmitter {
     }
 
     const roles = this.assignRoles(this.players.length);
-    const fakeRoles = [0, 0, 1, 1];
+    const fakeRoles = [0, 4, 5, 2];
 
     const dmPromises = this.players.map(async (player, i) => {
       const role = assignRolesGame(fakeRoles[i]);
@@ -183,6 +183,79 @@ class GameRoom extends EventEmitter {
           files: [attachment],
           components: [row],
         });
+      } else if (player.role.id === 2) {
+        // Bảo Vệ
+        const protectButton = new ButtonBuilder()
+          .setCustomId(`protect_target_bodyguard_${player.userId}`)
+          .setLabel('🛡️ Bảo vệ người')
+          .setStyle(ButtonStyle.Primary);
+
+        const row = new ActionRowBuilder().addComponents(protectButton);
+
+        await user.send(
+          '🌙 Bạn là **Bảo Vệ**. Hãy chọn người bạn muốn bảo vệ trong đêm nay. Bạn có thể tự bảo vệ mình.'
+        );
+        await user.send({
+          embeds: [embed],
+          files: [attachment],
+          components: [row],
+        });
+      } else if( player.role.id === 4) {
+        // Tiên Tri
+        const viewButton = new ButtonBuilder()
+          .setCustomId(`view_target_seer_${player.userId}`)
+          .setLabel('🔍 Xem vai trò người')
+          .setStyle(ButtonStyle.Primary);
+
+        const row = new ActionRowBuilder().addComponents(viewButton);
+
+        await user.send(
+          '🌙 Bạn là **Tiên Tri**. Bạn có thể xem vai trò của một người chơi khác trong đêm nay.'
+        );
+        await user.send({
+          embeds: [embed],
+          files: [attachment],
+          components: [row],
+        });
+      } else if (player.role.id === 5) {
+        // Thám Tử
+        const investigateButton = new ButtonBuilder()
+          .setCustomId(`investigate_target_detective_${player.userId}`)
+          .setLabel('🔎 Điều tra người')
+          .setStyle(ButtonStyle.Primary);
+
+        const row = new ActionRowBuilder().addComponents(investigateButton);
+
+        await user.send(
+          '🌙 Bạn là **Thám Tử**. Bạn có thể điều tra hai người chơi để biết họ ở cùng phe hay khác phe.'
+        );
+        await user.send({
+          embeds: [embed],
+          files: [attachment],
+          components: [row],
+        });
+      } else if (player.role.id === 6) {
+        // Phù Thuỷ
+        const poisonButton = new ButtonBuilder()
+          .setCustomId(`poison_target_witch_${player.userId}`)
+          .setLabel('💊 Đầu độc người')
+          .setStyle(ButtonStyle.Primary);
+
+        const healButton = new ButtonBuilder()
+          .setCustomId(`heal_target_witch_${player.userId}`)
+          .setLabel('🩹 Cứu người')
+          .setStyle(ButtonStyle.Primary);
+
+        const row = new ActionRowBuilder().addComponents(poisonButton, healButton);
+
+        await user.send(
+          '🌙 Bạn là **Phù Thuỷ**. Bạn có hai bình thuốc: một để đầu độc và một để cứu người. Bình cứu chỉ có tác dụng nếu người đó bị tấn công.'
+        );
+        await user.send({
+          embeds: [embed],
+          files: [attachment],
+          components: [row],
+        });
       } else {
         await user.send('🌙 Một đêm yên tĩnh trôi qua. Bạn hãy chờ đến sáng.');
         await user.send({ embeds: [embed], files: [attachment] });
@@ -204,12 +277,14 @@ class GameRoom extends EventEmitter {
       );
     }
 
-    function getWerewolfVotes(gameRoom) {
-      return gameRoom.players
-        .filter((p) => p.role?.id === 0)
-        .map((p) => `${p.userId} -> ${p.role.voteBite}`);
+    for (const p of this.players) {
+      if (p.role.id === 0) {
+        console.log(`${p.userId} -> ${p.role.voteBite}`);
+      }
+      if (p.role.id === 2) {
+        console.log(`${p.userId} -> ${p.role.protectedPerson}`);
+      }
     }
-    console.log(getWerewolfVotes(this));
 
     // Chờ 30 giây
     await new Promise((resolve) => setTimeout(resolve, 30_000));

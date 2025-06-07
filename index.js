@@ -242,6 +242,58 @@ client.on('interactionCreate', async (interaction) => {
 
       await interaction.showModal(modal);
     }
+    if (interaction.customId.startsWith('poison_target_witch_')) {
+      const playerId = interaction.customId.split('_')[3];
+
+      if (interaction.user.id !== playerId) {
+        return interaction.reply({
+          content: 'Bạn không được nhấn nút này.',
+          ephemeral: true,
+        });
+      }
+
+      const modal = new ModalBuilder()
+        .setCustomId(`submit_poison_witch_${playerId}`)
+        .setTitle('Chọn người chơi để dùng thuốc');
+
+      const input = new TextInputBuilder()
+        .setCustomId('poison_index_witch')
+        .setLabel('Nhập số thứ tự người chơi (bắt đầu từ 1)')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('VD: 3')
+        .setRequired(true);
+
+      const row = new ActionRowBuilder().addComponents(input);
+      modal.addComponents(row);
+
+      await interaction.showModal(modal);
+    }
+    if (interaction.customId.startsWith('heal_target_witch_')) {
+      const playerId = interaction.customId.split('_')[3];
+
+      if (interaction.user.id !== playerId) {
+        return interaction.reply({
+          content: 'Bạn không được nhấn nút này.',
+          ephemeral: true,
+        });
+      }
+
+      const modal = new ModalBuilder()
+        .setCustomId(`submit_heal_witch_${playerId}`)
+        .setTitle('Chọn người chơi để cứu');
+
+      const input = new TextInputBuilder()
+        .setCustomId('heal_index_witch')
+        .setLabel('Nhập số thứ tự người chơi (bắt đầu từ 1)')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('VD: 3')
+        .setRequired(true);
+
+      const row = new ActionRowBuilder().addComponents(input);
+      modal.addComponents(row);
+
+      await interaction.showModal(modal);
+    }
   }
 
   if (interaction.isModalSubmit()) {
@@ -482,6 +534,108 @@ client.on('interactionCreate', async (interaction) => {
       } catch (err) {
         console.error(`Không thể gửi DM cho ${playerId}:`, err);
       }
+    }
+    if (interaction.customId.startsWith('submit_poison_witch_')) {
+      if (!gameRoom || gameRoom.gameState.phase !== 'night') return;
+
+      const playerId = interaction.customId.split('_')[3];
+
+      if (interaction.user.id !== playerId) {
+        return interaction.reply({
+          content: 'Bạn không được gửi form này.',
+          ephemeral: true,
+        });
+      }
+
+      const pointIndexStr = interaction.fields.getTextInputValue('poison_index_witch');
+      const pointIndex = parseInt(pointIndexStr, 10);
+
+      if (
+        isNaN(pointIndex) ||
+        pointIndex < 1 ||
+        pointIndex > gameRoom.players.length
+      ) {
+        return interaction.reply({
+          content: 'Số thứ tự không hợp lệ.',
+          ephemeral: true,
+        });
+      }
+
+      const targetPlayer = gameRoom.players[pointIndex - 1];
+      if (sender.role.id === 6) {
+        if (sender.role.pointCount <= 0) {
+          return interaction.reply({
+            content: 'Bạn đã hết lượt dùng chức năng',
+            ephemeral: true,
+          });
+        }
+
+        sender.role.pointCount -= 1;
+        sender.role.pointedPerson = targetPlayer.userId;
+      }
+
+      try {
+        const user = await client.users.fetch(playerId);
+        await user.send(`✅ Bạn đã chọn người chơi để dùng thuốc: **${targetPlayer.userId}**.`);
+      } catch (err) {
+        console.error(`Không thể gửi DM cho ${playerId}:`, err);
+      }
+
+      await interaction.reply({
+        content: '✅ Chọn người chơi thành công.',
+        ephemeral: true,
+      });
+    }
+    if (interaction.customId.startsWith('submit_heal_witch_')) {
+      if (!gameRoom || gameRoom.gameState.phase !== 'night') return;
+
+      const playerId = interaction.customId.split('_')[3];
+
+      if (interaction.user.id !== playerId) {
+        return interaction.reply({
+          content: 'Bạn không được gửi form này.',
+          ephemeral: true,
+        });
+      }
+
+      const healIndexStr = interaction.fields.getTextInputValue('heal_index_witch');
+      const healIndex = parseInt(healIndexStr, 10);
+
+      if (
+        isNaN(healIndex) ||
+        healIndex < 1 ||
+        healIndex > gameRoom.players.length
+      ) {
+        return interaction.reply({
+          content: 'Số thứ tự không hợp lệ.',
+          ephemeral: true,
+        });
+      }
+
+      const targetPlayer = gameRoom.players[healIndex - 1];
+      if (sender.role.id === 6) {
+        if (sender.role.healCount <= 0) {
+          return interaction.reply({
+            content: 'Bạn đã hết lượt dùng chức năng',
+            ephemeral: true,
+          });
+        }
+
+        // sender.role.healCount -= 1; // Giữ nguyên healCount để có thể cứu nhiều người
+        sender.role.healedPerson = targetPlayer.userId;
+      }
+
+      try {
+        const user = await client.users.fetch(playerId);
+        await user.send(`✅ Bạn đã chọn người chơi để cứu: **${targetPlayer.userId}**.`);
+      } catch (err) {
+        console.error(`Không thể gửi DM cho ${playerId}:`, err);
+      }
+
+      await interaction.reply({
+        content: '✅ Chọn người chơi thành công.',
+        ephemeral: true,
+      });
     }
   }
 
