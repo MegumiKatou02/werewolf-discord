@@ -107,9 +107,6 @@ client.on('messageCreate', async (message) => {
     const sender = gameRoom.players.find((p) => p.userId === message.author.id);
     if (!sender) return;
 
-    const senderUser = await client.users.fetch(sender.userId);
-    const senderName = senderUser.globalName || senderUser.username;
-
     // Gửi tin nhắn cho các sói khác
     if (sender.role.id === 0) {
       const wolves = gameRoom.players.filter(
@@ -118,8 +115,7 @@ client.on('messageCreate', async (message) => {
       for (const wolf of wolves) {
         try {
           const user = await client.users.fetch(wolf.userId);
-
-          await user.send(`🐺 [${senderName}]: ${message.content}`);
+          await user.send(`🐺 <@${sender.userId}>: ${message.content}`);
         } catch (err) {
           console.error('Không gửi được tin nhắn cho Sói khác', err);
         }
@@ -617,6 +613,19 @@ client.on('interactionCreate', async (interaction) => {
         if (sender.role.healCount <= 0) {
           return interaction.reply({
             content: 'Bạn đã hết lượt dùng chức năng',
+            ephemeral: true,
+          });
+        }
+        if (targetPlayer.userId === sender.userId) {
+          return interaction.reply({
+            content: 'Bạn không thể cứu chính bản thân bạn.',
+            ephemeral: true,
+          });
+        }
+
+        if (targetPlayer.userId !== sender.role.needHelpPerson) {
+          return interaction.reply({
+            content: 'Bạn chỉ có thể cứu người chơi đã được yêu cầu giúp đỡ.',
             ephemeral: true,
           });
         }
