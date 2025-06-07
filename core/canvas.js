@@ -34,6 +34,17 @@ async function createAvatarCollage(players, client) {
 
     ctx.drawImage(img, x, y, avatarSize, avatarSize);
 
+    if (!player.alive) {
+      ctx.strokeStyle = 'red';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + avatarSize, y + avatarSize);
+      ctx.moveTo(x + avatarSize, y);
+      ctx.lineTo(x, y + avatarSize);
+      ctx.stroke();
+    }
+
     let displayName = `(${i + 1}) ${user.globalName || user.username}`;
     const maxTextWidth = avatarSize;
 
