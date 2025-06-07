@@ -122,6 +122,23 @@ client.on('messageCreate', async (message) => {
           }
         }
       }
+      const playersDead = gameRoom.players.filter((p) => {
+        return (
+          p.userId !== sender.userId && (p.alive === false || p.role.id === 8)
+        );
+      });
+      for (const player of playersDead) {
+        try {
+          const user = await client.users.fetch(player.userId);
+          if (sender.role.id === 8 && sender.alive) {
+            await user.send(`_🔮 <@${sender.userId}>: ${message.content}_`);
+          } else {
+            await user.send(`_💀 <@${sender.userId}>: ${message.content}_`);
+          }
+        } catch (err) {
+          console.error('Không gửi được tin nhắn cho người chơi', err);
+        }
+      }
     }
     if (
       gameRoom.gameState.phase === 'day' ||
@@ -134,7 +151,13 @@ client.on('messageCreate', async (message) => {
       for (const player of playersInGame) {
         try {
           const user = await client.users.fetch(player.userId);
-          await user.send(`🗣️ <@${sender.userId}>: ${message.content}`);
+          if (!sender.alive) {
+            if (!player.alive) {
+              await user.send(`_💀 <@${sender.userId}>: ${message.content}_`);
+            }
+          } else {
+            await user.send(`🗣️ <@${sender.userId}>: ${message.content}`);
+          }
         } catch (err) {
           console.error('Không gửi được tin nhắn cho người chơi', err);
         }

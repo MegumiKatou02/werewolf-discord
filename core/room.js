@@ -106,10 +106,10 @@ class GameRoom extends EventEmitter {
     }
 
     const roles = this.assignRoles(this.players.length);
-    const fakeRoles = [0, 2, 4, 6];
+    const fakeRoles = [0, 2, 8, 6];
 
     const dmPromises = this.players.map(async (player, i) => {
-      const role = assignRolesGame(roles[i]);
+      const role = assignRolesGame(fakeRoles[i]);
       player.role = role;
 
       try {
@@ -563,6 +563,10 @@ class GameRoom extends EventEmitter {
       player.role.voteHanged = null;
     }
 
+    await this.checkEndGame();
+  }
+
+  async checkEndGame() {
     const victoryResult = this.checkVictory();
     if (victoryResult) {
       this.status = 'ended';
@@ -585,13 +589,20 @@ class GameRoom extends EventEmitter {
         if (!user) continue;
         await user.send(winMessage);
       }
+
+      return true;
     }
+
+    return false;
   }
 
   async gameLoop() {
     while (this.status === 'starting') {
       await this.nightPhase();
       await this.solvePhase();
+      if (await this.checkEndGame()) {
+        break;
+      }
       await this.dayPhase();
       await this.votePhase();
     }
