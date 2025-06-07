@@ -24,6 +24,10 @@ const rest = new REST({ version: '10' }).setToken(token);
 (async () => {
   try {
     console.log('🛠️ Đang đăng ký slash command...');
+    console.log(
+      'Lệnh sẽ được đăng ký:',
+      commands.map((c) => c.name)
+    );
     await rest.put(Routes.applicationGuildCommands(clientId, guildId), {
       body: commands,
     });
