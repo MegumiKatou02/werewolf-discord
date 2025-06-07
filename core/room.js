@@ -105,7 +105,7 @@ class GameRoom extends EventEmitter {
     }
 
     const roles = this.assignRoles(this.players.length);
-    const fakeRoles = [0, 4, 5, 2];
+    const fakeRoles = [0, 0, 6, 1];
 
     const dmPromises = this.players.map(async (player, i) => {
       const role = assignRolesGame(fakeRoles[i]);
@@ -147,11 +147,44 @@ class GameRoom extends EventEmitter {
     this.players = [];
   }
 
+  totalVotedWolvesSolve() {
+    const totalVotes = this.players.reduce((acc, player) => {
+      if (player.role.id === 0 && player.role.voteBite) {
+        acc[player.role.voteBite] = (acc[player.role.voteBite] || 0) + 1;
+      }
+      return acc;
+    }, {});
+
+    const voteEntries = Object.entries(totalVotes);
+
+    if (voteEntries.length === 0) return null;
+
+    let maxVotes = 0;
+    let candidates = [];
+
+    for (const [userId, count] of voteEntries) {
+      if (count > maxVotes) {
+        maxVotes = count;
+        candidates = [userId];
+      } else if (count === maxVotes) {
+        candidates.push(userId);
+      }
+    }
+
+    if (candidates.length === 1) {
+      return candidates[0];
+    }
+
+    return null;
+  }
+
   async nightPhase() {
     this.gameState.phase = 'night';
     this.gameState.nightCount += 1;
 
     this.emit('night', this.guildId, this.players, this.gameState);
+
+    const wolfMessages = [];
 
     for (const player of this.players) {
       const user = await this.fetchUser(player.userId);
@@ -176,13 +209,14 @@ class GameRoom extends EventEmitter {
         const row = new ActionRowBuilder().addComponents(voteButton);
 
         await user.send(
-          '🌙 Bạn là **Sói**. Hãy vote người cần giết. Bạn có thể trò chuyện với các Sói khác ngay tại đây.'
+          '🌙 Bạn là **Sói**. Hãy vote người cần giết trong 40 giây. Bạn có thể trò chuyện với các Sói khác ngay tại đây.'
         );
-        await user.send({
+        const message = await user.send({
           embeds: [embed],
           files: [attachment],
           components: [row],
         });
+        wolfMessages.push(message);
       } else if (player.role.id === 2) {
         // Bảo Vệ
         const protectButton = new ButtonBuilder()
@@ -262,8 +296,34 @@ class GameRoom extends EventEmitter {
       }
     }
 
-    // Chờ 60 giây
-    await new Promise((resolve) => setTimeout(resolve, 60_000));
+    setTimeout(async () => {
+      for (const message of wolfMessages) {
+        try {
+          const row = ActionRowBuilder.from(message.components[0]);
+          row.components[0].setDisabled(true).setLabel('🗳️ Hết thời gian vote');
+          await message.edit({ components: [row] });
+          await message.reply('⏰ Đã hết thời gian vote!');
+        } catch (err) {
+          console.error('Không thể cập nhật nút vote của Sói:', err);
+        }
+      }
+      const mostVotedUserId = this.totalVotedWolvesSolve();
+      if (mostVotedUserId) {
+        for (const player of this.players) {
+          if (player.role.id === 6) {
+            const user = await this.fetchUser(player.userId);
+            if (user) {
+              await user.send(
+                `🌙 Sói đã chọn giết người chơi <@${mostVotedUserId}>.`
+              );
+            }
+          }
+        }
+      }
+    }, 40_000);
+
+    // Chờ tổng cộng 70 giây cho đêm
+    await new Promise((resolve) => setTimeout(resolve, 70_000));
   }
 
   async dayPhase() {
