@@ -1,5 +1,5 @@
 {
-  "name": "test",
+  "name": "werewwolf-discord",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -8,7 +8,9 @@
     "dev:run": "node index.js",
     "format": "npx prettier --write ."
   },
-  "keywords": [],
+  "keywords": [
+    "werewwolf"
+  ],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
