@@ -109,7 +109,7 @@ class GameRoom extends EventEmitter {
     const fakeRoles = [0, 2, 4, 6];
 
     const dmPromises = this.players.map(async (player, i) => {
-      const role = assignRolesGame(fakeRoles[i]);
+      const role = assignRolesGame(roles[i]);
       player.role = role;
 
       try {
@@ -190,6 +190,10 @@ class GameRoom extends EventEmitter {
     for (const player of this.players) {
       const user = await this.fetchUser(player.userId);
       if (!user) continue;
+
+      await user.send(
+        `# Đêm ${this.gameState.nightCount === 1 ? 'đầu tiên' : `thứ ${this.gameState.nightCount}`}`
+      );
 
       const buffer = await createAvatarCollage(this.players, this.client);
       const attachment = new AttachmentBuilder(buffer, { name: 'avatars.png' });
@@ -309,7 +313,7 @@ class GameRoom extends EventEmitter {
           const row = ActionRowBuilder.from(message.components[0]);
           row.components[0].setDisabled(true).setLabel('🗳️ Hết thời gian vote');
           await message.edit({ components: [row] });
-          await message.reply('⏰ Đã hết thời gian vote!');
+          await message.reply('⏰ Đã hết thời gian vote!\n');
         } catch (err) {
           console.error('Không thể cập nhật nút vote của Sói:', err);
         }
@@ -329,7 +333,7 @@ class GameRoom extends EventEmitter {
                 await witchMessage.edit({ components: [row] });
               }
               await user.send(
-                `🌙 Sói đã chọn giết người chơi <@${mostVotedUserId}>. ${player.role.needHelpPerson}`
+                `🌙 Sói đã chọn giết người chơi <@${mostVotedUserId}>.`
               );
             }
           }
@@ -337,7 +341,7 @@ class GameRoom extends EventEmitter {
       }
     }, 40_000);
 
-    // Chờ tổng cộng 70 giây cho đêm
+    // Đêm 70 giây
     await new Promise((resolve) => setTimeout(resolve, 70_000));
   }
 
@@ -441,20 +445,18 @@ class GameRoom extends EventEmitter {
       }
     }
 
-    // Thông báo kết quả
     for (const player of this.players) {
       const user = await this.fetchUser(player.userId);
       if (!user) continue;
 
       if (killedPlayers.size === 0) {
-        await user.send('🌙 Đêm nay không ai thiệt mạng.');
+        await user.send('🌙 Đêm nay không ai thiệt mạng.\n');
       } else {
         const killedPlayersList = Array.from(killedPlayers)
           .map((id) => `<@${id}>`)
           .join(', ');
-        await user.send(`🌙 Đêm nay, ${killedPlayersList} đã thiệt mạng.`);
+        await user.send(`🌙 Đêm nay, ${killedPlayersList} đã thiệt mạng.\n`);
 
-        // Nếu người chơi bị giết, thông báo riêng
         if (killedPlayers.has(player.userId)) {
           await user.send('💀 Bạn đã bị giết trong đêm nay.');
           player.alive = false;
@@ -462,7 +464,6 @@ class GameRoom extends EventEmitter {
       }
     }
 
-    // Reset các hành động của đêm
     for (const player of this.players) {
       player.role.resetDay();
     }
@@ -476,23 +477,40 @@ class GameRoom extends EventEmitter {
       const user = await this.fetchUser(player.userId);
       if (!user) continue;
       await user.send(
-        '☀️ Ban ngày đã đến. Hãy thảo luận và bỏ phiếu để loại trừ người khả nghi nhất. Bạn có 30 giây để quyết định.'
+        '☀️ Ban ngày đã đến. Hãy thảo luận và bỏ phiếu để loại trừ người khả nghi nhất. Bạn có 1 phút 30 giây để quyết định.'
       );
+
+      const buffer = await createAvatarCollage(this.players, this.client);
+      const attachment = new AttachmentBuilder(buffer, { name: 'avatars.png' });
+
+      const embed = new EmbedBuilder()
+        .setTitle('📋 Danh sách người chơi')
+        .setColor(0x00ae86)
+        .setImage('attachment://avatars.png')
+        .setTimestamp();
+
+      await user.send({
+        embeds: [embed],
+        files: [attachment],
+      });
     }
 
-    // Chờ 30 giây
-    await new Promise((resolve) => setTimeout(resolve, 30_000));
+    // Thảo luận 1p 30 giây
+    await new Promise((resolve) => setTimeout(resolve, 30_000 + 60_000));
   }
 
   async votePhase() {
     this.gameState.phase = 'voting';
     this.emit('vote', this.guildId, this.players, this.gameState);
 
+    const alivePlayers = this.players.filter((p) => p.alive);
+    const requiredVotes = Math.floor(alivePlayers.length / 2) + 1;
+
     for (const player of this.players) {
       const user = await this.fetchUser(player.userId);
       if (!user) continue;
       await user.send(
-        '🗳️ Thời gian bỏ phiếu đã đến. Hãy chọn người bạn muốn loại trừ trong 30 giây tới.'
+        `🗳️ Thời gian bỏ phiếu đã đến. Cần ít nhất ${requiredVotes} phiếu để treo cổ một người. Hãy chọn người bạn muốn loại trừ trong 30 giây tới.`
       );
 
       const buffer = await createAvatarCollage(this.players, this.client);
@@ -517,17 +535,57 @@ class GameRoom extends EventEmitter {
       });
     }
 
-    // Chờ 30 giây
+    // Vote 30 giây
     await new Promise((resolve) => setTimeout(resolve, 30_000));
 
-    this.processVote();
+    const hangedPlayer = this.processVote();
 
-    if (this.checkVictory()) {
-      this.endGame();
-      return;
+    for (const player of this.players) {
+      const user = await this.fetchUser(player.userId);
+      if (!user) continue;
+
+      if (!hangedPlayer) {
+        await user.send(
+          '🎭 Không đủ số phiếu để treo cổ ai trong ngày hôm nay.'
+        );
+      } else {
+        await user.send(
+          `🎭 <@${hangedPlayer.userId}> đã bị dân làng treo cổ với đủ số phiếu cần thiết.`
+        );
+        if (hangedPlayer.userId === player.userId) {
+          await user.send('💀 Bạn đã bị dân làng treo cổ.');
+        }
+      }
     }
 
-    this.gameState.round += 1;
+    // Reset vote
+    for (const player of this.players) {
+      player.role.voteHanged = null;
+    }
+
+    const victoryResult = this.checkVictory();
+    if (victoryResult) {
+      this.status = 'ended';
+      let winMessage = '';
+      switch (victoryResult.winner) {
+        case 'werewolf':
+          winMessage = `🐺 **Ma Sói thắng!** Họ đã tiêu diệt tất cả dân làng.`;
+          break;
+        case 'village':
+          winMessage = '👥 **Dân Làng thắng!** Họ đã tiêu diệt tất cả Ma Sói.';
+          break;
+        case 'solo':
+          winMessage =
+            '🎭 **Phe Solo thắng!** Họ đã hoàn thành mục tiêu của mình.';
+          break;
+      }
+
+      for (const player of this.players) {
+        const user = await this.fetchUser(player.userId);
+        if (!user) continue;
+        await user.send(winMessage);
+      }
+    }
   }
 
   async gameLoop() {
@@ -539,9 +597,70 @@ class GameRoom extends EventEmitter {
     }
   }
 
-  processVote() {}
+  /**
+   *
+   * @returns {Player|null}
+   */
+  processVote() {
+    const alivePlayers = this.players.filter((p) => p.alive);
+    const requiredVotes = Math.floor(alivePlayers.length / 2) + 1;
 
-  checkVictory() {}
+    const totalVotes = this.players.reduce((acc, player) => {
+      if (player.alive && player.role.voteHanged) {
+        acc[player.role.voteHanged] = (acc[player.role.voteHanged] || 0) + 1;
+      }
+      return acc;
+    }, {});
+
+    const voteEntries = Object.entries(totalVotes);
+
+    if (voteEntries.length === 0) return null;
+
+    let maxVotes = 0;
+    let candidates = [];
+
+    for (const [userId, count] of voteEntries) {
+      if (count > maxVotes) {
+        maxVotes = count;
+        candidates = [userId];
+      } else if (count === maxVotes) {
+        candidates.push(userId);
+      }
+    }
+
+    if (candidates.length === 1 && maxVotes >= requiredVotes) {
+      const hangedPlayer = this.players.find((p) => p.userId === candidates[0]);
+      if (hangedPlayer && hangedPlayer.alive) {
+        hangedPlayer.alive = false;
+        return hangedPlayer;
+      }
+    }
+
+    return null;
+  }
+
+  checkVictory() {
+    const alivePlayers = this.players.filter((p) => p.alive);
+    const aliveWolves = alivePlayers.filter((p) => p.role.faction === 0);
+    const aliveVillagers = alivePlayers.filter((p) => p.role.faction === 1);
+    const aliveSolos = alivePlayers.filter((p) => p.role.faction === 2);
+
+    if (aliveWolves.length === 0) {
+      if (aliveSolos.length > 0) {
+        return { winner: 'solo', faction: 2 };
+      }
+      return { winner: 'village', faction: 1 };
+    }
+
+    if (aliveWolves.length >= aliveVillagers.length) {
+      if (aliveSolos.length > 0) {
+        return { winner: 'solo', faction: 2 };
+      }
+      return { winner: 'werewolf', faction: 0 };
+    }
+
+    return null;
+  }
 }
 
 // gameRoom có key là guilId và value là class GameRoom

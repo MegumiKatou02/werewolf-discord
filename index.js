@@ -102,22 +102,41 @@ client.on('messageCreate', async (message) => {
         room.players.some((p) => p.userId === message.author.id)
     );
 
-    if (!gameRoom || gameRoom.gameState.phase !== 'night') return;
+    if (!gameRoom) return;
 
     const sender = gameRoom.players.find((p) => p.userId === message.author.id);
     if (!sender) return;
 
-    // Gửi tin nhắn cho các sói khác
-    if (sender.role.id === 0) {
-      const wolves = gameRoom.players.filter(
-        (p) => p.role.id === 0 && p.userId !== sender.userId
+    if (gameRoom.gameState.phase === 'night') {
+      // Gửi tin nhắn cho các sói khác
+      if (sender.role.id === 0) {
+        const wolves = gameRoom.players.filter(
+          (p) => p.role.id === 0 && p.userId !== sender.userId
+        );
+        for (const wolf of wolves) {
+          try {
+            const user = await client.users.fetch(wolf.userId);
+            await user.send(`🐺 <@${sender.userId}>: ${message.content}`);
+          } catch (err) {
+            console.error('Không gửi được tin nhắn cho Sói khác', err);
+          }
+        }
+      }
+    }
+    if (
+      gameRoom.gameState.phase === 'day' ||
+      gameRoom.gameState.phase === 'voting'
+    ) {
+      // Gửi tin nhắn cho tất cả người chơi
+      const playersInGame = gameRoom.players.filter(
+        (p) => p.userId !== sender.userId
       );
-      for (const wolf of wolves) {
+      for (const player of playersInGame) {
         try {
-          const user = await client.users.fetch(wolf.userId);
-          await user.send(`🐺 <@${sender.userId}>: ${message.content}`);
+          const user = await client.users.fetch(player.userId);
+          await user.send(`🗣️ <@${sender.userId}>: ${message.content}`);
         } catch (err) {
-          console.error('Không gửi được tin nhắn cho Sói khác', err);
+          console.error('Không gửi được tin nhắn cho người chơi', err);
         }
       }
     }
@@ -290,6 +309,32 @@ client.on('interactionCreate', async (interaction) => {
 
       await interaction.showModal(modal);
     }
+    if (interaction.customId.startsWith('vote_hanged_')) {
+      const playerId = interaction.customId.split('_')[2];
+
+      if (interaction.user.id !== playerId) {
+        return interaction.reply({
+          content: 'Bạn không được nhấn nút này.',
+          ephemeral: true,
+        });
+      }
+
+      const modal = new ModalBuilder()
+        .setCustomId(`submit_vote_hanged_${playerId}`)
+        .setTitle('Vote người chơi để treo cổ');
+
+      const input = new TextInputBuilder()
+        .setCustomId('vote_index_hanged')
+        .setLabel('Nhập số thứ tự người chơi (bắt đầu từ 1)')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('VD: 3')
+        .setRequired(true);
+
+      const row = new ActionRowBuilder().addComponents(input);
+      modal.addComponents(row);
+
+      await interaction.showModal(modal);
+    }
   }
 
   if (interaction.isModalSubmit()) {
@@ -338,20 +383,32 @@ client.on('interactionCreate', async (interaction) => {
           });
         }
 
-        if (targetPlayer.role.faction === 0) { // FactionRole.Werewolf
+        if (targetPlayer.role.faction === 0) {
+          // FactionRole.Werewolf
           return interaction.reply({
             content: 'Bạn không thể vote giết đồng minh của mình.',
             ephemeral: true,
           });
         }
 
-        sender.role.biteCount -= 1;
+        // sender.role.biteCount -= 1; lỡ chọn lại
         sender.role.voteBite = targetPlayer.userId;
       }
 
       try {
         const user = await client.users.fetch(playerId);
-        await user.send(`✅ Bạn đã vote giết: **${targetPlayer.userId}**.`);
+        for (const player of gameRoom.players) {
+          if (player.role.id === 0) {
+            if (player.userId !== playerId) {
+              const targetUser = await client.users.fetch(player.userId);
+              await targetUser.send(
+                `<@${sender.userId}> đã vote giết <@${targetPlayer.userId}>.`
+              );
+            } else {
+              await user.send(`Bạn đã vote giết: <@${targetPlayer.userId}>.`);
+            }
+          }
+        }
       } catch (err) {
         console.error(`Không thể gửi DM cho ${playerId}:`, err);
       }
@@ -373,8 +430,9 @@ client.on('interactionCreate', async (interaction) => {
         });
       }
 
-      const protectIndexStr =
-        interaction.fields.getTextInputValue('protect_index_bodyguard');
+      const protectIndexStr = interaction.fields.getTextInputValue(
+        'protect_index_bodyguard'
+      );
       const protectIndex = parseInt(protectIndexStr, 10);
 
       if (
@@ -396,13 +454,13 @@ client.on('interactionCreate', async (interaction) => {
             ephemeral: true,
           });
         }
-        sender.role.protectedCount -= 1;
+        // sender.role.protectedCount -= 1; lỡ chọn lại
         sender.role.protectedPerson = targetPlayer.userId;
       }
 
       try {
         const user = await client.users.fetch(playerId);
-        await user.send(`✅ Bạn đã bảo vệ: **${targetPlayer.userId}**.`);
+        await user.send(`✅ Bạn đã bảo vệ: <@${targetPlayer.userId}>.`);
       } catch (err) {
         console.error(`Không thể gửi DM cho ${playerId}:`, err);
       }
@@ -455,16 +513,18 @@ client.on('interactionCreate', async (interaction) => {
           });
         }
 
-        sender.role.viewCount -= 1;
+        sender.role.viewCount -= 1; // soi rồi không chọn lại được nữa
         await interaction.reply({
-          content: `Vai trò của **${targetPlayer.userId}** là: **${targetPlayer.role.name}**.`,
+          content: `Vai trò của <@${targetPlayer.userId}> là: **${targetPlayer.role.name}**.`,
           ephemeral: false,
         });
       }
 
       try {
         const user = await client.users.fetch(playerId);
-        await user.send(`✅ Bạn đã xem vai trò của: **${targetPlayer.userId}**.`);
+        await user.send(
+          `✅ Bạn đã xem vai trò của: <@${targetPlayer.userId}>.`
+        );
       } catch (err) {
         console.error(`Không thể gửi DM cho ${playerId}:`, err);
       }
@@ -481,15 +541,22 @@ client.on('interactionCreate', async (interaction) => {
         });
       }
 
-      const index1Str = interaction.fields.getTextInputValue('investigate_index_1');
-      const index2Str = interaction.fields.getTextInputValue('investigate_index_2');
+      const index1Str = interaction.fields.getTextInputValue(
+        'investigate_index_1'
+      );
+      const index2Str = interaction.fields.getTextInputValue(
+        'investigate_index_2'
+      );
       const index1 = parseInt(index1Str, 10);
       const index2 = parseInt(index2Str, 10);
 
       if (
-        isNaN(index1) || isNaN(index2) ||
-        index1 < 1 || index2 < 1 ||
-        index1 > gameRoom.players.length || index2 > gameRoom.players.length ||
+        isNaN(index1) ||
+        isNaN(index2) ||
+        index1 < 1 ||
+        index2 < 1 ||
+        index1 > gameRoom.players.length ||
+        index2 > gameRoom.players.length ||
         index1 === index2
       ) {
         return interaction.reply({
@@ -509,24 +576,32 @@ client.on('interactionCreate', async (interaction) => {
           });
         }
 
-        if (targetPlayer1.userId === sender.userId || targetPlayer2.userId === sender.userId) {
+        if (
+          targetPlayer1.userId === sender.userId ||
+          targetPlayer2.userId === sender.userId
+        ) {
           return interaction.reply({
             content: 'Bạn không thể chọn chính bản thân bạn.',
             ephemeral: true,
           });
         }
 
-        sender.role.investigatedPairs.push([targetPlayer1.userId, targetPlayer2.userId]);
-        sender.role.investigatedCount -= 1;
+        sender.role.investigatedPairs.push([
+          targetPlayer1.userId,
+          targetPlayer2.userId,
+        ]);
+        sender.role.investigatedCount -= 1; // soi rồi không chọn lại được nữa
         await interaction.reply({
-          content: `Bạn đã điều tra: **${targetPlayer1.userId}** và **${targetPlayer2.userId}**. Họ ${targetPlayer1.role.faction === targetPlayer2.role.faction ? 'cùng phe' : 'khác phe'}.`,
+          content: `Bạn đã điều tra: <@${targetPlayer1.userId}> và <@${targetPlayer2.userId}>. Họ ${targetPlayer1.role.faction === targetPlayer2.role.faction ? 'cùng phe' : 'khác phe'}.`,
           ephemeral: false,
         });
       }
 
       try {
         const user = await client.users.fetch(playerId);
-        await user.send(`✅ Bạn đã điều tra: **${targetPlayer1.userId}** và **${targetPlayer2.userId}**.`);
+        await user.send(
+          `✅ Bạn đã điều tra: **${targetPlayer1.userId}** và **${targetPlayer2.userId}**.`
+        );
       } catch (err) {
         console.error(`Không thể gửi DM cho ${playerId}:`, err);
       }
@@ -543,7 +618,8 @@ client.on('interactionCreate', async (interaction) => {
         });
       }
 
-      const pointIndexStr = interaction.fields.getTextInputValue('poison_index_witch');
+      const pointIndexStr =
+        interaction.fields.getTextInputValue('poison_index_witch');
       const pointIndex = parseInt(pointIndexStr, 10);
 
       if (
@@ -559,20 +635,29 @@ client.on('interactionCreate', async (interaction) => {
 
       const targetPlayer = gameRoom.players[pointIndex - 1];
       if (sender.role.id === 6) {
-        if (sender.role.pointCount <= 0) {
+        if (sender.role.poisonCount <= 0) {
           return interaction.reply({
             content: 'Bạn đã hết lượt dùng chức năng',
             ephemeral: true,
           });
         }
 
-        sender.role.pointCount -= 1;
-        sender.role.pointedPerson = targetPlayer.userId;
+        if (targetPlayer.userId === sender.userId) {
+          return interaction.reply({
+            content: 'Bạn không thể chọn chính bản thân bạn.',
+            ephemeral: true,
+          });
+        }
+
+        // sender.role.poisonCount -= 1; // lỡ chọn lại
+        sender.role.poisonedPerson = targetPlayer.userId;
       }
 
       try {
         const user = await client.users.fetch(playerId);
-        await user.send(`✅ Bạn đã chọn người chơi để dùng thuốc: **${targetPlayer.userId}**.`);
+        await user.send(
+          `✅ Bạn đã chọn người chơi để dùng thuốc: <@${targetPlayer.userId}>.`
+        );
       } catch (err) {
         console.error(`Không thể gửi DM cho ${playerId}:`, err);
       }
@@ -594,7 +679,8 @@ client.on('interactionCreate', async (interaction) => {
         });
       }
 
-      const healIndexStr = interaction.fields.getTextInputValue('heal_index_witch');
+      const healIndexStr =
+        interaction.fields.getTextInputValue('heal_index_witch');
       const healIndex = parseInt(healIndexStr, 10);
 
       if (
@@ -630,13 +716,15 @@ client.on('interactionCreate', async (interaction) => {
           });
         }
 
-        // sender.role.healCount -= 1; // Giữ nguyên healCount để có thể cứu nhiều người
+        sender.role.healCount -= 1; // cứu rồi không cứu lại được nữa
         sender.role.healedPerson = targetPlayer.userId;
       }
 
       try {
         const user = await client.users.fetch(playerId);
-        await user.send(`✅ Bạn đã chọn người chơi để cứu: **${targetPlayer.userId}**.`);
+        await user.send(
+          `✅ Bạn đã chọn người chơi để cứu: <@${targetPlayer.userId}>.`
+        );
       } catch (err) {
         console.error(`Không thể gửi DM cho ${playerId}:`, err);
       }
@@ -645,6 +733,84 @@ client.on('interactionCreate', async (interaction) => {
         content: '✅ Chọn người chơi thành công.',
         ephemeral: true,
       });
+    }
+    if (interaction.customId.startsWith('submit_vote_hanged_')) {
+      if (!gameRoom) return;
+
+      if (
+        gameRoom.gameState.phase !== 'voting' &&
+        gameRoom.gameState.phase === 'day'
+      ) {
+        return interaction.reply({
+          content: 'Bạn chưa thể vote ngay lúc này',
+          ephemeral: true,
+        });
+      }
+
+      const playerId = interaction.customId.split('_')[3];
+
+      if (interaction.user.id !== playerId) {
+        return interaction.reply({
+          content: 'Bạn không được gửi form này.',
+          ephemeral: true,
+        });
+      }
+
+      const voteIndexStr =
+        interaction.fields.getTextInputValue('vote_index_hanged');
+      const voteIndex = parseInt(voteIndexStr, 10);
+
+      if (
+        isNaN(voteIndex) ||
+        voteIndex < 1 ||
+        voteIndex > gameRoom.players.length
+      ) {
+        return interaction.reply({
+          content: 'Số thứ tự không hợp lệ.',
+          ephemeral: true,
+        });
+      }
+
+      const targetPlayer = gameRoom.players[voteIndex - 1];
+
+      if (targetPlayer.userId === sender.userId) {
+        return interaction.reply({
+          content: 'Bạn không thể vote chính mình.',
+          ephemeral: true,
+        });
+      }
+
+      if (!sender.alive) {
+        return interaction.reply({
+          content: 'Người chết không thể vote.',
+          ephemeral: true,
+        });
+      }
+
+      if (!targetPlayer.alive) {
+        return interaction.reply({
+          content: 'Không thể vote người đã chết.',
+          ephemeral: true,
+        });
+      }
+
+      sender.role.voteHanged = targetPlayer.userId;
+
+      try {
+        const user = await client.users.fetch(playerId);
+        for (const player of gameRoom.players) {
+          if (player.userId !== playerId) {
+            const targetUser = await client.users.fetch(player.userId);
+            await targetUser.send(`✅ <@${sender.userId}> đã vote.`);
+          } else {
+            await user.send(
+              `✅ Bạn đã vote treo cổ: <@${targetPlayer.userId}>.`
+            );
+          }
+        }
+      } catch (err) {
+        console.error(`Không thể gửi DM cho ${playerId}:`, err);
+      }
     }
   }
 
