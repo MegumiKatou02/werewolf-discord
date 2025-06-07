@@ -106,7 +106,7 @@ class GameRoom extends EventEmitter {
     }
 
     const roles = this.assignRoles(this.players.length);
-    const fakeRoles = [0, 0, 6, 6];
+    const fakeRoles = [0, 2, 4, 6];
 
     const dmPromises = this.players.map(async (player, i) => {
       const role = assignRolesGame(fakeRoles[i]);
@@ -115,7 +115,7 @@ class GameRoom extends EventEmitter {
       try {
         const user = await interaction.client.users.fetch(player.userId);
         await user.send(
-          `🎮 Bạn được phân vai: **${role.name}**. Hãy giữ bí mật! 🤫`
+          `🎮 Bạn được phân vai: **${role.name}**. Hãy giữ bí mật!!!`
         );
         await RoleResponseDMs(
           user,
@@ -235,7 +235,7 @@ class GameRoom extends EventEmitter {
           files: [attachment],
           components: [row],
         });
-      } else if( player.role.id === 4) {
+      } else if (player.role.id === 4) {
         // Tiên Tri
         const viewButton = new ButtonBuilder()
           .setCustomId(`view_target_seer_${player.userId}`)
@@ -282,7 +282,10 @@ class GameRoom extends EventEmitter {
           .setStyle(ButtonStyle.Primary)
           .setDisabled(true);
 
-        const row = new ActionRowBuilder().addComponents(poisonButton, healButton);
+        const row = new ActionRowBuilder().addComponents(
+          poisonButton,
+          healButton
+        );
 
         await user.send(
           '🌙 Bạn là **Phù Thuỷ**. Bạn có hai bình thuốc: một để đầu độc và một để cứu người. Bình cứu chỉ có tác dụng nếu người đó bị tấn công.'
@@ -292,7 +295,7 @@ class GameRoom extends EventEmitter {
           files: [attachment],
           components: [row],
         });
-        
+
         this.witchMessages.set(player.userId, message);
       } else {
         await user.send('🌙 Một đêm yên tĩnh trôi qua. Bạn hãy chờ đến sáng.');
@@ -317,13 +320,17 @@ class GameRoom extends EventEmitter {
           if (player.role.id === 6) {
             const user = await this.fetchUser(player.userId);
             if (user) {
+              player.role.needHelpPerson = mostVotedUserId;
+
               const witchMessage = this.witchMessages.get(player.userId);
               if (witchMessage) {
                 const row = ActionRowBuilder.from(witchMessage.components[0]);
                 row.components[1].setDisabled(false);
                 await witchMessage.edit({ components: [row] });
               }
-              await user.send(`🌙 Sói đã chọn giết người chơi <@${mostVotedUserId}>.`);
+              await user.send(
+                `🌙 Sói đã chọn giết người chơi <@${mostVotedUserId}>. ${player.role.needHelpPerson}`
+              );
             }
           }
         }
@@ -334,7 +341,135 @@ class GameRoom extends EventEmitter {
     await new Promise((resolve) => setTimeout(resolve, 70_000));
   }
 
+  /**
+   *
+   * @returns {Promise<void>}
+   * Đoạn này xin được phép comment nhiều vì sợ đọc lại không hiểu <(")
+   */
+  async solvePhase() {
+    const mostVotedUserId = this.totalVotedWolvesSolve();
+    let killedPlayers = new Set();
+    let savedPlayers = new Set();
+
+    // Nếu không ai bị vote
+    if (!mostVotedUserId) {
+      for (const player of this.players) {
+        const user = await this.fetchUser(player.userId);
+        if (user) {
+          await user.send('🌙 Đêm nay không ai bị tấn công.');
+        }
+      }
+      return;
+    }
+
+    // Kiểm tra người bị vote có được bảo vệ không
+    for (const player of this.players) {
+      // Nếu là người bị vote
+      if (mostVotedUserId === player.userId) {
+        if (player.role.id === 7) {
+          // thằng ngố -> end game
+        }
+
+        // Kiểm tra nếu là đêm đầu tiên và người bị tấn công là phù thủy
+        if (this.gameState.nightCount === 1 && player.role.id === 6) {
+          savedPlayers.add(mostVotedUserId);
+          continue;
+        }
+
+        if (player.role.id === 2) {
+          player.role.hp -= 1;
+          if (player.role.hp <= 0) {
+            const user = await this.fetchUser(player.userId);
+            if (user) {
+              await user.send(
+                '💀 Bạn đã chết vì bảo vệ người chơi bị tấn công quá nhiều lần.'
+              );
+            }
+            player.alive = false;
+            killedPlayers.add(player.userId);
+          }
+          continue;
+        }
+
+        // Kiểm tra có được bảo vệ không
+        const isProtected = this.players.some(
+          (p) => p.role.id === 2 && p.role.protectedPerson === mostVotedUserId
+        );
+
+        // Kiểm tra phù thủy có cứu không
+        const isHealedByWitch = this.players.some(
+          (p) => p.role.id === 6 && p.role.healedPerson === mostVotedUserId
+        );
+
+        if (isProtected || isHealedByWitch) {
+          if (isHealedByWitch) {
+            if (isProtected) {
+              const witch = this.players.find((p) => p.role.id === 6);
+              witch.role.healCount = 1;
+            }
+            if (!isProtected) {
+              const witch = this.players.find((p) => p.role.id === 6);
+              witch.role.healCount -= 1;
+            }
+          }
+          if (isProtected) {
+            const bodyguard = this.players.find((p) => p.role.id === 2);
+            bodyguard.role.hp -= 1;
+
+            if (bodyguard.role.hp <= 0) {
+              const user = await this.fetchUser(bodyguard.userId);
+              if (user) {
+                await user.send(
+                  '💀 Bạn đã chết vì bảo vệ người chơi bị tấn công quá nhiều lần.'
+                );
+              }
+              bodyguard.alive = false;
+              killedPlayers.add(bodyguard.userId);
+            }
+          }
+
+          savedPlayers.add(mostVotedUserId);
+        } else {
+          killedPlayers.add(mostVotedUserId);
+        }
+      }
+
+      // Kiểm tra phù thủy có đầu độc ai không
+      if (player.role.id === 6 && player.role.poisonedPerson) {
+        player.role.poisonCount -= 1;
+        killedPlayers.add(player.role.poisonedPerson);
+      }
+    }
+
+    // Thông báo kết quả
+    for (const player of this.players) {
+      const user = await this.fetchUser(player.userId);
+      if (!user) continue;
+
+      if (killedPlayers.size === 0) {
+        await user.send('🌙 Đêm nay không ai thiệt mạng.');
+      } else {
+        const killedPlayersList = Array.from(killedPlayers)
+          .map((id) => `<@${id}>`)
+          .join(', ');
+        await user.send(`🌙 Đêm nay, ${killedPlayersList} đã thiệt mạng.`);
+
+        // Nếu người chơi bị giết, thông báo riêng
+        if (killedPlayers.has(player.userId)) {
+          await user.send('💀 Bạn đã bị giết trong đêm nay.');
+          player.alive = false;
+        }
+      }
+    }
+
+    // Reset các hành động của đêm
+    for (const player of this.players) {
+      player.role.resetDay();
+    }
+  }
+
   async dayPhase() {
+    this.gameState.phase = 'day';
     this.emit('day', this.guildId, this.players, this.gameState);
 
     for (const player of this.players) {
@@ -345,21 +480,42 @@ class GameRoom extends EventEmitter {
       );
     }
 
-    for (const p of this.players) {
-      if (p.role.id === 0) {
-        console.log(`${p.userId} -> ${p.role.voteBite}`);
-      }
-      if (p.role.id === 2) {
-        console.log(`${p.userId} -> ${p.role.protectedPerson}`);
-      }
-    }
-
     // Chờ 30 giây
     await new Promise((resolve) => setTimeout(resolve, 30_000));
   }
 
   async votePhase() {
+    this.gameState.phase = 'voting';
     this.emit('vote', this.guildId, this.players, this.gameState);
+
+    for (const player of this.players) {
+      const user = await this.fetchUser(player.userId);
+      if (!user) continue;
+      await user.send(
+        '🗳️ Thời gian bỏ phiếu đã đến. Hãy chọn người bạn muốn loại trừ trong 30 giây tới.'
+      );
+
+      const buffer = await createAvatarCollage(this.players, this.client);
+      const attachment = new AttachmentBuilder(buffer, { name: 'avatars.png' });
+
+      const embed = new EmbedBuilder()
+        .setTitle('📋 Danh sách người chơi')
+        .setColor(0x00ae86)
+        .setImage('attachment://avatars.png')
+        .setTimestamp();
+
+      const voteButton = new ButtonBuilder()
+        .setCustomId(`vote_hanged_${player.userId}`)
+        .setLabel('🗳️ Vote người bị treo')
+        .setStyle(ButtonStyle.Primary);
+
+      const row = new ActionRowBuilder().addComponents(voteButton);
+      await user.send({
+        embeds: [embed],
+        files: [attachment],
+        components: [row],
+      });
+    }
 
     // Chờ 30 giây
     await new Promise((resolve) => setTimeout(resolve, 30_000));
@@ -377,6 +533,7 @@ class GameRoom extends EventEmitter {
   async gameLoop() {
     while (this.status === 'starting') {
       await this.nightPhase();
+      await this.solvePhase();
       await this.dayPhase();
       await this.votePhase();
     }
