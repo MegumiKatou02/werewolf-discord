@@ -16,6 +16,7 @@ const EventEmitter = require('events');
 const GameState = require('./gamestate');
 const rolesData = require('../data/data.json');
 const { createAvatarCollage } = require('./canvas');
+const { store } = require('./store');
 
 class GameRoom extends EventEmitter {
   constructor(client, guildId, hostId) {
@@ -97,6 +98,12 @@ class GameRoom extends EventEmitter {
   async startGame(interaction) {
     if (this.status !== 'waiting')
       throw new Error('Game đã bắt đầu hoặc kết thúc.');
+
+    // lưu vào store
+    for (const player of this.players) {
+      store.set(player.userId, this.guildId);
+    }
+
     const roles = this.assignRoles(this.players.length);
     const fakeRoles = [0, 0, 1, 1];
 
@@ -162,7 +169,7 @@ class GameRoom extends EventEmitter {
       if (player.role.id === 0) {
         // Sói
         const voteButton = new ButtonBuilder()
-          .setCustomId(`vote_target_${player.userId}`)
+          .setCustomId(`vote_target_wolf_${player.userId}`)
           .setLabel('🗳️ Vote người cần giết')
           .setStyle(ButtonStyle.Primary);
 
@@ -202,7 +209,7 @@ class GameRoom extends EventEmitter {
         .filter((p) => p.role?.id === 0)
         .map((p) => `${p.userId} -> ${p.role.voteBite}`);
     }
-    getWerewolfVotes(this);
+    console.log(getWerewolfVotes(this));
 
     // Chờ 30 giây
     await new Promise((resolve) => setTimeout(resolve, 30_000));
