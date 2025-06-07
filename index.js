@@ -220,6 +220,14 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       const targetPlayer = gameRoom.players[voteIndex - 1];
+      
+      if (targetPlayer.role.faction === 0) { // FactionRole.Werewolf
+          return interaction.reply({
+            content: 'Bạn không thể vote giết đồng minh của mình.',
+            ephemeral: true,
+          });
+      }
+
       if (sender.role.id === 0) {
         sender.role.voteBite = targetPlayer.userId;
       }
