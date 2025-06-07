@@ -155,13 +155,37 @@ client.on('interactionCreate', async (interaction) => {
 
       await interaction.showModal(modal);
     }
+    if (interaction.customId.startsWith('protect_target_bodyguard_')) {
+      const playerId = interaction.customId.split('_')[3];
+
+      if (interaction.user.id !== playerId) {
+        return interaction.reply({
+          content: 'Bạn không được nhấn nút này.',
+          ephemeral: true,
+        });
+      }
+
+      const modal = new ModalBuilder()
+        .setCustomId(`submit_protect_bodyguard_${playerId}`)
+        .setTitle('Chọn người cần bảo vệ');
+
+      const input = new TextInputBuilder()
+        .setCustomId('protect_index_bodyguard')
+        .setLabel('Nhập số thứ tự người chơi (bắt đầu từ 1)')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('VD: 3')
+        .setRequired(true);
+
+      const row = new ActionRowBuilder().addComponents(input);
+      modal.addComponents(row);
+
+      await interaction.showModal(modal);
+    }
   }
 
   if (interaction.isModalSubmit()) {
     const guildId = store.get(interaction.user.id);
     const gameRoom = gameRooms.get(guildId);
-
-    if (!gameRoom || gameRoom.gameState.phase !== 'night') return;
 
     const sender = gameRoom.players.find(
       (p) => p.userId === interaction.user.id
@@ -169,6 +193,8 @@ client.on('interactionCreate', async (interaction) => {
     if (!sender) return;
 
     if (interaction.customId.startsWith('submit_vote_wolf_')) {
+      if (!gameRoom || gameRoom.gameState.phase !== 'night') return;
+
       const playerId = interaction.customId.split('_')[3];
 
       if (interaction.user.id !== playerId) {
@@ -207,6 +233,50 @@ client.on('interactionCreate', async (interaction) => {
 
       await interaction.reply({
         content: '✅ Vote của bạn đã được ghi nhận.',
+        ephemeral: true,
+      });
+    }
+    if (interaction.customId.startsWith('submit_protect_bodyguard_')) {
+      if (!gameRoom || gameRoom.gameState.phase !== 'night') return;
+
+      const playerId = interaction.customId.split('_')[3];
+
+      if (interaction.user.id !== playerId) {
+        return interaction.reply({
+          content: 'Bạn không được gửi form này.',
+          ephemeral: true,
+        });
+      }
+
+      const protectIndexStr =
+        interaction.fields.getTextInputValue('protect_index_bodyguard');
+      const protectIndex = parseInt(protectIndexStr, 10);
+
+      if (
+        isNaN(protectIndex) ||
+        protectIndex < 1 ||
+        protectIndex > gameRoom.players.length
+      ) {
+        return interaction.reply({
+          content: 'Số thứ tự không hợp lệ.',
+          ephemeral: true,
+        });
+      }
+
+      const targetPlayer = gameRoom.players[protectIndex - 1];
+      if (sender.role.id === 2) {
+        sender.role.protectedPerson = targetPlayer.userId;
+      }
+
+      try {
+        const user = await client.users.fetch(playerId);
+        await user.send(`✅ Bạn đã bảo vệ: **${targetPlayer.userId}**.`);
+      } catch (err) {
+        console.error(`Không thể gửi DM cho ${playerId}:`, err);
+      }
+
+      await interaction.reply({
+        content: '✅ Bảo vệ thành công.',
         ephemeral: true,
       });
     }
