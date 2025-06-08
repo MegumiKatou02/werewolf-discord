@@ -109,7 +109,7 @@ class GameRoom extends EventEmitter {
     }
 
     const roles = this.assignRoles(this.players.length);
-    const fakeRoles = [0, 2, 8, 6];
+    const fakeRoles = [0, 2, 3, 5];
 
     const dmPromises = this.players.map(async (player, i) => {
       const role = assignRolesGame(fakeRoles[i]);
@@ -487,13 +487,22 @@ class GameRoom extends EventEmitter {
 
     for (const killedId of killedPlayers) {
       const killed = this.players.find((p) => p.userId === killedId);
-      if (killed.role.id === 3) {
+      if (
+        killed.role.id === WEREROLE.CURSED &&
+        mostVotedUserId &&
+        killed.userId === mostVotedUserId
+      ) {
         this.gameState.log.push(
           `Bán sói <@${killed.userId}> đã biến thành sói`
         );
+        const user = await this.fetchUser(killed.userId);
+        if (user) {
+          await user.send(`### Bạn đã bị sói cắn và biến thành sói`);
+        }
 
         killed.role = new Werewolf();
         killed.alive = true;
+        killedPlayers.delete(killedId);
       } else {
         killed.role = new Dead(killed.role.faction, killed.role.id);
         killed.alive = false;
@@ -799,6 +808,19 @@ class GameRoom extends EventEmitter {
           '🎭 Không đủ số phiếu hoặc có nhiều người cùng số phiếu cao nhất, không ai bị treo cổ trong ngày hôm nay.'
         );
       } else {
+        // check ngố
+        if (hangedPlayer.role.id === WEREROLE.FOOL) {
+          this.status = 'ended';
+          for (const player of this.players) {
+            const user = await this.fetchUser(player.userId);
+            if (!user) continue;
+            await user.send(
+              '🎭 <@${hangedPlayer.userId}> là **Ngố** và đã bị treo cổ. \n🎉 **Ngố** thắng !!.'
+            );
+          }
+          return; //
+        }
+
         hangedPlayer.alive = false;
         hangedPlayer.role = new Dead(
           hangedPlayer.role.faction,

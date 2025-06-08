@@ -485,7 +485,7 @@ client.on('interactionCreate', async (interaction) => {
 
       const targetPlayer = gameRoom.players[voteIndex - 1];
 
-      if (sender.role.id === 0) {
+      if (sender.role.id === WEREROLE.WEREWOLF) {
         if (!targetPlayer.alive) {
           return interaction.reply({
             content: 'Không có tác dụng lên người chết',
@@ -564,7 +564,7 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       const targetPlayer = gameRoom.players[protectIndex - 1];
-      if (sender.role.id === 2) {
+      if (sender.role.id === WEREROLE.BODYGUARD) {
         if (!targetPlayer.alive) {
           return interaction.reply({
             content: 'Không có tác dụng lên người chết',
@@ -578,13 +578,21 @@ client.on('interactionCreate', async (interaction) => {
             ephemeral: true,
           });
         }
+
+        if (targetPlayer.userId === sender.userId) {
+          return interaction.reply({
+            content: 'Bạn đã tự bảo vệ bản thân rồi, không cần bảo vệ tiếp nữa',
+            ephemeral: true,
+          });
+        }
+
         // sender.role.protectedCount -= 1; lỡ chọn lại
         sender.role.protectedPerson = targetPlayer.userId;
       }
 
       try {
         const user = await client.users.fetch(playerId);
-        await user.send(`✅ Bạn đã bảo vệ: <@${targetPlayer.userId}>.`);
+        await user.send(`🥋 Bạn đã bảo vệ: <@${targetPlayer.userId}>.`);
       } catch (err) {
         console.error(`Không thể gửi DM cho ${playerId}:`, err);
       }
@@ -622,7 +630,7 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       const targetPlayer = gameRoom.players[viewIndex - 1];
-      if (sender.role.id === 4) {
+      if (sender.role.id === WEREROLE.SEER) {
         if (!targetPlayer.alive) {
           return interaction.reply({
             content: 'Không có tác dụng lên người chết',
@@ -645,20 +653,21 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         sender.role.viewCount -= 1; // soi rồi không chọn lại được nữa
-        await interaction.reply({
-          content: `Vai trò của <@${targetPlayer.userId}> là: **${targetPlayer.role.name}**.`,
-          ephemeral: false,
-        });
+
+        try {
+          const user = await client.users.fetch(playerId);
+          await user.send(
+            `👁️ Vai trò của <@${targetPlayer.userId}> là: **${targetPlayer.role.name}**.`
+          );
+        } catch (err) {
+          console.error(`Không thể gửi DM cho ${playerId}:`, err);
+        }
       }
 
-      try {
-        const user = await client.users.fetch(playerId);
-        await user.send(
-          `✅ Bạn đã xem vai trò của: <@${targetPlayer.userId}>.`
-        );
-      } catch (err) {
-        console.error(`Không thể gửi DM cho ${playerId}:`, err);
-      }
+      await interaction.reply({
+        content: '✅ Soi thành công.',
+        ephemeral: true,
+      });
     }
     if (interaction.customId.startsWith('submit_investigate_detective_')) {
       if (!gameRoom || gameRoom.gameState.phase !== 'night') return;
@@ -714,35 +723,43 @@ client.on('interactionCreate', async (interaction) => {
           });
         }
 
-        if (
-          targetPlayer1.userId === sender.userId ||
-          targetPlayer2.userId === sender.userId
-        ) {
-          return interaction.reply({
-            content: 'Bạn không thể chọn chính bản thân bạn.',
-            ephemeral: true,
-          });
-        }
-
         sender.role.investigatedPairs.push([
           targetPlayer1.userId,
           targetPlayer2.userId,
         ]);
         sender.role.investigatedCount -= 1; // soi rồi không chọn lại được nữa
-        await interaction.reply({
-          content: `Bạn đã điều tra: <@${targetPlayer1.userId}> và <@${targetPlayer2.userId}>. Họ ${targetPlayer1.role.faction === targetPlayer2.role.faction ? 'cùng phe' : 'khác phe'}.`,
-          ephemeral: false,
-        });
+
+        const checkFaction = () => {
+          if (targetPlayer1.role.faction === targetPlayer2.role.faction)
+            return true;
+          if (
+            targetPlayer1.role.faction === 3 &&
+            targetPlayer2.role.faction === 1
+          )
+            return true;
+          if (
+            targetPlayer1.role.faction === 1 &&
+            targetPlayer2.role.faction === 3
+          )
+            return true;
+
+          return false;
+        };
+
+        try {
+          const user = await client.users.fetch(playerId);
+          await user.send(
+            `🔎 Bạn đã điều tra: <@${targetPlayer1.userId}> và <@${targetPlayer2.userId}>. Họ ${checkFaction() ? 'cùng phe' : 'khác phe'}.`
+          );
+        } catch (err) {
+          console.error(`Không thể gửi DM cho ${playerId}:`, err);
+        }
       }
 
-      try {
-        const user = await client.users.fetch(playerId);
-        await user.send(
-          `✅ Bạn đã điều tra: **${targetPlayer1.userId}** và **${targetPlayer2.userId}**.`
-        );
-      } catch (err) {
-        console.error(`Không thể gửi DM cho ${playerId}:`, err);
-      }
+      await interaction.reply({
+        content: '✅ Điều tra thành công.',
+        ephemeral: true,
+      });
     }
     if (interaction.customId.startsWith('submit_poison_witch_')) {
       if (!gameRoom || gameRoom.gameState.phase !== 'night') return;
@@ -772,7 +789,7 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       const targetPlayer = gameRoom.players[pointIndex - 1];
-      if (sender.role.id === 6) {
+      if (sender.role.id === WEREROLE.WITCH) {
         if (!targetPlayer.alive) {
           return interaction.reply({
             content: 'Không có tác dụng lên người chết',
@@ -801,7 +818,7 @@ client.on('interactionCreate', async (interaction) => {
       try {
         const user = await client.users.fetch(playerId);
         await user.send(
-          `✅ Bạn đã chọn người chơi để dùng thuốc: <@${targetPlayer.userId}>.`
+          `💉 Bạn đã chọn người chơi để dùng thuốc: <@${targetPlayer.userId}>.`
         );
       } catch (err) {
         console.error(`Không thể gửi DM cho ${playerId}:`, err);
@@ -840,7 +857,7 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       const targetPlayer = gameRoom.players[healIndex - 1];
-      if (sender.role.id === 6) {
+      if (sender.role.id === WEREROLE.WITCH) {
         if (!targetPlayer.alive) {
           return interaction.reply({
             content: 'Không có tác dụng lên người chết',
@@ -875,7 +892,7 @@ client.on('interactionCreate', async (interaction) => {
       try {
         const user = await client.users.fetch(playerId);
         await user.send(
-          `✅ Bạn đã chọn người chơi để cứu: <@${targetPlayer.userId}>.`
+          `💫 Bạn đã chọn người chơi để cứu: <@${targetPlayer.userId}>.`
         );
       } catch (err) {
         console.error(`Không thể gửi DM cho ${playerId}:`, err);
@@ -1025,7 +1042,7 @@ client.on('interactionCreate', async (interaction) => {
       try {
         const user = await client.users.fetch(playerId);
         await user.send(
-          `✅ Bạn đã chọn người chơi để hồi sinh: <@${targetPlayer.userId}>.`
+          `💫 Bạn đã chọn người chơi để hồi sinh: <@${targetPlayer.userId}>.`
         );
       } catch (err) {
         console.error(`Không thể gửi DM cho ${playerId}:`, err);
