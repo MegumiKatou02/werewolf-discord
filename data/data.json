@@ -18,7 +18,7 @@
     "description": "Bạn có thể chọn một người chơi để bảo vệ mỗi đêm. Người được bảo vệ không thể bị giết vào đêm đó, thay vào đó bạn sẽ bị tấn công thay họ. Vì bạn rất khỏe nên sẽ không thể bị chết trong lần tấn công đầu tiên nhưng sẽ chết trong lần tấn công thứ hai. Mỗi đêm bạn sẽ tự bảo vệ chính mình."
   },
   "3": {
-    "title": "Thái Phổi Bạn",
+    "title": "Bán Sói",
     "eName": "Cursed",
     "faction": 3,
     "description": "Bạn là dân làng bình thường cho tới khi bị ma sói cắn, lúc đó bạn sẽ trở thành Ma sói."
@@ -52,5 +52,11 @@
     "eName": "Medium",
     "faction": 1,
     "description": "Vào buổi đêm bạn có thể trò chuyện ẩn danh với người chết. Bạn có khả năng chọn một dân làng đã chết trong đêm và hồi sinh họ khi đêm kết thúc một lần trong ván đấu."
+  },
+  "9": {
+    "title": "Người Chết",
+    "eName": "Dead",
+    "faction": -1,
+    "description": "Bạn đã chết rồi, đừng hỏi gì cả..."
   }
 }

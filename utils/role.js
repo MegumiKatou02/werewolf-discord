@@ -44,7 +44,7 @@ const assignRolesGame = (roleId) => {
     case 8:
       return new Medium();
     default:
-      return new Role();
+      throw new Error(`Role id không hợp lệ`);
   }
 };
 
