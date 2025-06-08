@@ -63,4 +63,21 @@ const convertFactionRoles = (roleId) => {
   }
 };
 
-module.exports = { roleTable, assignRolesGame, convertFactionRoles };
+const WEREROLE = Object.freeze({
+  WEREWOLF: 0,
+  VILLAGER: 1,
+  BODYGUARD: 2,
+  CURSED: 3,
+  SEER: 4,
+  DETECTIVE: 5,
+  WITCH: 6,
+  FOOL: 7,
+  MEDIUM: 8,
+  DEAD: 9
+})
+
+const getRoleName = (roleId) => {
+  return Object.keys(WEREROLE).find(key => WEREROLE[key] === roleId) || 'UNKNOWN';
+};
+
+module.exports = { roleTable, assignRolesGame, convertFactionRoles, WEREROLE, getRoleName };
