@@ -10,9 +10,7 @@ module.exports = {
     const guildId = interaction.guildId;
     const existingRoom = gameRooms.get(guildId);
 
-    // Kiểm tra nếu có phòng tồn tại
     if (existingRoom) {
-      // Nếu phòng đã kết thúc, xóa phòng cũ và tạo phòng mới
       if (existingRoom.status === 'ended') {
         gameRooms.delete(guildId);
       } else if (existingRoom.status === 'waiting') {
@@ -30,7 +28,6 @@ module.exports = {
       }
     }
 
-    // Tạo phòng mới
     const newRoom = new GameRoom(interaction.client, guildId, interaction.user.id);
     gameRooms.set(guildId, newRoom);
     newRoom.addPlayer(interaction.user.id);
