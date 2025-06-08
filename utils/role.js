@@ -73,11 +73,19 @@ const WEREROLE = Object.freeze({
   WITCH: 6,
   FOOL: 7,
   MEDIUM: 8,
-  DEAD: 9
-})
+  DEAD: 9,
+});
 
 const getRoleName = (roleId) => {
-  return Object.keys(WEREROLE).find(key => WEREROLE[key] === roleId) || 'UNKNOWN';
+  return (
+    Object.keys(WEREROLE).find((key) => WEREROLE[key] === roleId) || 'UNKNOWN'
+  );
 };
 
-module.exports = { roleTable, assignRolesGame, convertFactionRoles, WEREROLE, getRoleName };
+module.exports = {
+  roleTable,
+  assignRolesGame,
+  convertFactionRoles,
+  WEREROLE,
+  getRoleName,
+};

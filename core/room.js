@@ -11,6 +11,7 @@ const {
   roleTable,
   assignRolesGame,
   convertFactionRoles,
+  WEREROLE,
 } = require('../utils/role');
 const EventEmitter = require('events');
 const GameState = require('./gamestate');
@@ -396,7 +397,7 @@ class GameRoom extends EventEmitter {
     // let savedPlayers = new Set();
     let revivedPlayers = new Set();
 
-    const witch = this.players.find((p) => p.role.id === 6);
+    const witch = this.players.find((p) => p.role.id === WEREROLE.WITCH);
     if (mostVotedUserId) {
       this.gameState.log.push(`Sói đã chọn cắn <@${mostVotedUserId}>`);
       const nguoiBiChoCan = this.players.find(
@@ -428,7 +429,7 @@ class GameRoom extends EventEmitter {
       witch.role.poisonCount -= 1;
     }
 
-    const guard = this.players.find((p) => p.role.id === 2);
+    const guard = this.players.find((p) => p.role.id === WEREROLE.BODYGUARD);
     for (const killedId of killedPlayers) {
       // người bị chó cắn
       if (!guard || !guard.alive) break;
@@ -454,7 +455,11 @@ class GameRoom extends EventEmitter {
       );
       // chưa được ai bảo vệ trước đó
       this.gameState.log.push(`Phù thuỷ đã chọn cứu <@${saved.userId}>`);
-      if (saved && killedPlayers.has(saved.userId)) {
+      if (
+        saved &&
+        killedPlayers.has(saved.userId) &&
+        killedPlayers.has(witch.role.healedPerson)
+      ) {
         this.gameState.log.push(`Phù thuỷ cứu được <@${saved.userId}>`);
 
         witch.role.healCount -= 1;
@@ -462,7 +467,7 @@ class GameRoom extends EventEmitter {
       }
     }
 
-    const medium = this.players.find((p) => p.role.id === 8);
+    const medium = this.players.find((p) => p.role.id === WEREROLE.MEDIUM);
     if (medium && medium.role.revivedPerson) {
       const saved = this.players.find(
         (p) => p.userId === medium.role.revivedPerson && !p.alive
@@ -750,13 +755,12 @@ class GameRoom extends EventEmitter {
     this.emit('vote', this.guildId, this.players, this.gameState);
 
     const alivePlayers = this.players.filter((p) => p.alive);
-    const requiredVotes = Math.floor(alivePlayers.length / 2) + 1;
 
     for (const player of this.players) {
       const user = await this.fetchUser(player.userId);
       if (!user) continue;
       await user.send(
-        `🗳️ Thời gian bỏ phiếu đã đến. Cần ít nhất ${requiredVotes} phiếu để treo cổ một người. Hãy chọn người bạn muốn loại trừ trong 30 giây tới.`
+        `🗳️ Thời gian bỏ phiếu đã đến. Người có số phiếu cao nhất và có ít nhất 2 phiếu sẽ bị treo cổ. Hãy chọn người bạn muốn loại trừ trong 30 giây tới.`
       );
 
       const buffer = await createAvatarCollage(this.players, this.client);
@@ -792,7 +796,7 @@ class GameRoom extends EventEmitter {
 
       if (!hangedPlayer) {
         await user.send(
-          '🎭 Không đủ số phiếu để treo cổ ai trong ngày hôm nay.'
+          '🎭 Không đủ số phiếu hoặc có nhiều người cùng số phiếu cao nhất, không ai bị treo cổ trong ngày hôm nay.'
         );
       } else {
         hangedPlayer.alive = false;
@@ -804,7 +808,7 @@ class GameRoom extends EventEmitter {
         console.log(hangedPlayer);
 
         await user.send(
-          `🎭 <@${hangedPlayer.userId}> đã bị dân làng treo cổ với đủ số phiếu cần thiết.`
+          `🎭 <@${hangedPlayer.userId}> đã bị dân làng treo cổ vì có số phiếu cao nhất.`
         );
         if (hangedPlayer.userId === player.userId) {
           await user.send('💀 Bạn đã bị dân làng treo cổ.');
@@ -868,9 +872,6 @@ class GameRoom extends EventEmitter {
    * @returns {Player|null}
    */
   processVote() {
-    const alivePlayers = this.players.filter((p) => p.alive);
-    const requiredVotes = Math.floor(alivePlayers.length / 2) + 1;
-
     const totalVotes = this.players.reduce((acc, player) => {
       if (player.alive && player.role.voteHanged) {
         acc[player.role.voteHanged] = (acc[player.role.voteHanged] || 0) + 1;
@@ -894,7 +895,7 @@ class GameRoom extends EventEmitter {
       }
     }
 
-    if (candidates.length === 1 && maxVotes >= requiredVotes) {
+    if (candidates.length === 1 && maxVotes >= 2) {
       const hangedPlayer = this.players.find((p) => p.userId === candidates[0]);
       if (hangedPlayer && hangedPlayer.alive) {
         hangedPlayer.alive = false;
@@ -904,24 +905,28 @@ class GameRoom extends EventEmitter {
 
     return null;
   }
-
+  /**
+   *
+   * @returns {Object|null}
+   * @property {string} winner -  ('werewolf', 'village', 'solo').
+   * @property {number} faction -  (0: sói, 1: dân, 2: solo)
+   */
   checkVictory() {
     const alivePlayers = this.players.filter((p) => p.alive);
     const aliveWolves = alivePlayers.filter((p) => p.role.faction === 0);
     const aliveVillagers = alivePlayers.filter((p) => p.role.faction === 1);
     const aliveSolos = alivePlayers.filter((p) => p.role.faction === 2);
 
+    if (alivePlayers.length === aliveSolos.length && aliveSolos.length > 0) {
+      return { winner: 'solo', faction: 2 };
+    }
+
     if (aliveWolves.length === 0) {
-      if (aliveSolos.length > 0) {
-        return { winner: 'solo', faction: 2 };
-      }
       return { winner: 'village', faction: 1 };
     }
 
-    if (aliveWolves.length >= aliveVillagers.length) {
-      if (aliveSolos.length > 0) {
-        return { winner: 'solo', faction: 2 };
-      }
+    const nonWolves = alivePlayers.length - aliveWolves.length;
+    if (aliveWolves.length >= nonWolves) {
       return { winner: 'werewolf', faction: 0 };
     }
 
@@ -929,7 +934,6 @@ class GameRoom extends EventEmitter {
   }
 }
 
-// gameRoom có key là guilId và value là class GameRoom
 module.exports = {
   gameRooms: new Map(),
   GameRoom,
