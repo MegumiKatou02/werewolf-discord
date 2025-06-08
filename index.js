@@ -127,6 +127,8 @@ client.on('messageCreate', async (message) => {
           p.userId !== sender.userId && (p.alive === false || p.role.id === 8)
         );
       });
+      console.log('Hội người âm', playersDead);
+
       for (const player of playersDead) {
         try {
           const user = await client.users.fetch(player.userId);
@@ -192,7 +194,18 @@ client.on('interactionCreate', async (interaction) => {
       const row = new ActionRowBuilder().addComponents(input);
       modal.addComponents(row);
 
-      await interaction.showModal(modal);
+      try {
+        await interaction.showModal(modal);
+      } catch (err) {
+        console.error('❌ Lỗi khi showModal:', err);
+
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({
+            content: 'Tương tác đã hết hạn hoặc xảy ra lỗi. Vui lòng thử lại.',
+            ephemeral: true,
+          });
+        }
+      }
     }
     if (interaction.customId.startsWith('protect_target_bodyguard_')) {
       const playerId = interaction.customId.split('_')[3];
@@ -304,7 +317,18 @@ client.on('interactionCreate', async (interaction) => {
       const row = new ActionRowBuilder().addComponents(input);
       modal.addComponents(row);
 
-      await interaction.showModal(modal);
+      try {
+        await interaction.showModal(modal);
+      } catch (err) {
+        console.error('❌ Lỗi khi showModal:', err);
+
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({
+            content: 'Tương tác đã hết hạn hoặc xảy ra lỗi. Vui lòng thử lại.',
+            ephemeral: true,
+          });
+        }
+      }
     }
     if (interaction.customId.startsWith('heal_target_witch_')) {
       const playerId = interaction.customId.split('_')[3];
@@ -330,7 +354,18 @@ client.on('interactionCreate', async (interaction) => {
       const row = new ActionRowBuilder().addComponents(input);
       modal.addComponents(row);
 
-      await interaction.showModal(modal);
+      try {
+        await interaction.showModal(modal);
+      } catch (err) {
+        console.error('❌ Lỗi khi showModal:', err);
+
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({
+            content: 'Tương tác đã hết hạn hoặc xảy ra lỗi. Vui lòng thử lại.',
+            ephemeral: true,
+          });
+        }
+      }
     }
     if (interaction.customId.startsWith('vote_hanged_')) {
       const playerId = interaction.customId.split('_')[2];
@@ -356,7 +391,18 @@ client.on('interactionCreate', async (interaction) => {
       const row = new ActionRowBuilder().addComponents(input);
       modal.addComponents(row);
 
-      await interaction.showModal(modal);
+      try {
+        await interaction.showModal(modal);
+      } catch (err) {
+        console.error('❌ Lỗi khi showModal:', err);
+
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({
+            content: 'Tương tác đã hết hạn hoặc xảy ra lỗi. Vui lòng thử lại.',
+            ephemeral: true,
+          });
+        }
+      }
     }
     if (interaction.customId.startsWith('revive_target_medium_')) {
       const playerId = interaction.customId.split('_')[3];
@@ -382,7 +428,18 @@ client.on('interactionCreate', async (interaction) => {
       const row = new ActionRowBuilder().addComponents(input);
       modal.addComponents(row);
 
-      await interaction.showModal(modal);
+      try {
+        await interaction.showModal(modal);
+      } catch (err) {
+        console.error('❌ Lỗi khi showModal:', err);
+
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({
+            content: 'Tương tác đã hết hạn hoặc xảy ra lỗi. Vui lòng thử lại.',
+            ephemeral: true,
+          });
+        }
+      }
     }
   }
 
@@ -892,7 +949,9 @@ client.on('interactionCreate', async (interaction) => {
           if (player.userId !== playerId) {
             return targetUser.send(`✅ <@${sender.userId}> đã vote.`);
           } else {
-            return targetUser.send(`✅ Bạn đã vote treo cổ: <@${targetPlayer.userId}>.`);
+            return targetUser.send(
+              `✅ Bạn đã vote treo cổ: <@${targetPlayer.userId}>.`
+            );
           }
         });
 

@@ -18,6 +18,7 @@ const rolesData = require('../data/data.json');
 const { createAvatarCollage } = require('./canvas');
 const { store } = require('./store');
 const Dead = require('../types/roles/Dead');
+const Werewolf = require('../types/roles/WereWolf');
 
 class GameRoom extends EventEmitter {
   constructor(client, guildId, hostId) {
@@ -158,6 +159,8 @@ class GameRoom extends EventEmitter {
     }, {});
 
     const voteEntries = Object.entries(totalVotes);
+
+    console.log(totalVotes);
 
     if (voteEntries.length === 0) return null;
 
@@ -384,6 +387,166 @@ class GameRoom extends EventEmitter {
    * @returns {Promise<void>}
    * Đoạn này xin được phép comment nhiều vì sợ đọc lại không hiểu <(")
    */
+  async solvePhase2() {
+    this.gameState.log.push(`Đêm thứ ${this.gameState.nightCount}`);
+
+    const mostVotedUserId = this.totalVotedWolvesSolve();
+    let killedPlayers = new Set(); // vẫn có thể cứu được
+    let sureDieInTheNight = new Set(); // 100% chết ngay trong đêm đó (không thể cứu hay bảo vệ)
+    // let savedPlayers = new Set();
+    let revivedPlayers = new Set();
+
+    const witch = this.players.find((p) => p.role.id === 6);
+    if (mostVotedUserId) {
+      this.gameState.log.push(`Sói đã chọn cắn <@${mostVotedUserId}>`);
+      const nguoiBiChoCan = this.players.find(
+        (p) => p.userId === mostVotedUserId
+      );
+      if (
+        witch &&
+        nguoiBiChoCan.userId === witch.userId &&
+        this.gameState.nightCount === 1
+      ) {
+        // Đêm đầu tiên phù thuỷ không bị sao cả
+        this.gameState.log.push(
+          `Vì là đêm đầu tiên nên phù thuỷ không bị sao cả`
+        );
+      } else {
+        killedPlayers.add(nguoiBiChoCan.userId);
+      }
+    }
+    if (witch && witch.role.poisonedPerson) {
+      const nguoiBiDinhDoc = this.players.find(
+        (p) => p.userId === witch.role.poisonedPerson
+      );
+      this.gameState.log.push(
+        `Phù thuỷ đã đầu độc <@${nguoiBiDinhDoc.userId}>`
+      );
+      sureDieInTheNight.add(nguoiBiDinhDoc.userId);
+      killedPlayers.delete(nguoiBiDinhDoc.userId);
+
+      witch.role.poisonCount -= 1;
+    }
+
+    const guard = this.players.find((p) => p.role.id === 2);
+    for (const killedId of killedPlayers) {
+      // người bị chó cắn
+      if (!guard || !guard.alive) break;
+
+      if (
+        killedId === guard.role.protectedPerson ||
+        killedId === guard.userId
+      ) {
+        const hp = (guard.role.hp -= 1);
+        this.gameState.log.push(
+          `Bảo vệ đã bảo vệ ${killedId}, anh ấy còn ${hp} máu`
+        );
+        if (hp <= 0) {
+          sureDieInTheNight.add(guard.userId);
+          this.gameState.log.push(`Bảo vệ đã chết do chịu 2 lần cắn của sói`);
+        }
+        killedPlayers.delete(killedId);
+      }
+    }
+    if (witch && witch.role.healedPerson) {
+      const saved = this.players.find(
+        (p) => p.userId === witch.role.healedPerson
+      );
+      // chưa được ai bảo vệ trước đó
+      this.gameState.log.push(`Phù thuỷ đã chọn cứu <@${saved.userId}>`);
+      if (saved && killedPlayers.has(saved.userId)) {
+        this.gameState.log.push(`Phù thuỷ cứu được <@${saved.userId}>`);
+
+        witch.role.healCount -= 1;
+        killedPlayers.delete(saved.userId);
+      }
+    }
+
+    const medium = this.players.find((p) => p.role.id === 8);
+    if (medium && medium.role.revivedPerson) {
+      const saved = this.players.find(
+        (p) => p.userId === medium.role.revivedPerson && !p.alive
+      );
+      if (saved) {
+        this.gameState.log.push(
+          `Thầy đồng đã hồi sinh thành công <@${saved.userId}> có id ${saved.role.id}`
+        );
+
+        saved.role = assignRolesGame(saved.role.originalRoleId);
+        saved.alive = true;
+        revivedPlayers.add(saved.userId);
+
+        medium.role.revivedCount -= 1;
+      }
+    }
+
+    for (const killedId of killedPlayers) {
+      const killed = this.players.find((p) => p.userId === killedId);
+      if (killed.role.id === 3) {
+        this.gameState.log.push(
+          `Bán sói <@${killed.userId}> đã biến thành sói`
+        );
+
+        killed.role = new Werewolf();
+        killed.alive = true;
+      } else {
+        killed.role = new Dead(killed.role.faction, killed.role.id);
+        killed.alive = false;
+      }
+    }
+    for (const killedId of sureDieInTheNight) {
+      const killed = this.players.find((p) => p.userId === killedId);
+      killed.role = new Dead(killed.role.faction, killed.role.id);
+      killed.alive = false;
+    }
+    console.log('hoi sinh thanh cong', Array.from(revivedPlayers));
+
+    const allDeadTonight = new Set([...killedPlayers, ...sureDieInTheNight]);
+
+    for (const player of this.players) {
+      const user = await this.fetchUser(player.userId);
+      if (!user) continue;
+
+      if (allDeadTonight.size === 0) {
+        await user.send('🌙 Đêm nay không ai thiệt mạng.\n');
+      } else {
+        const killedPlayersList = Array.from(allDeadTonight)
+          .map((id) => `<@${id}>`)
+          .join(', ');
+        await user.send(`🌙 Đêm nay, ${killedPlayersList} đã thiệt mạng.\n`);
+
+        if (allDeadTonight.has(player.userId)) {
+          await user.send('💀 Bạn đã bị giết trong đêm nay.');
+          player.alive = false;
+        }
+      }
+
+      if (revivedPlayers.size > 0) {
+        const revivedPlayersList = Array.from(revivedPlayers)
+          .map((id) => `<@${id}>`)
+          .join(', ');
+        await user.send(
+          `### 🔮 ${revivedPlayersList} đã được hồi sinh bởi Thầy Đồng.\n`
+        );
+
+        if (revivedPlayers.has(player.userId)) {
+          await user.send('### ✨ Bạn đã được Thầy Đồng hồi sinh!');
+        }
+      }
+    }
+
+    for (const player of this.players) {
+      player.role.resetDay();
+    }
+
+    console.log(this.gameState.log);
+  }
+
+  /**
+   *
+   * @returns {Promise<void>}
+   * Đoạn này xin được phép comment nhiều vì sợ đọc lại không hiểu <(")
+   */
   async solvePhase() {
     const mostVotedUserId = this.totalVotedWolvesSolve();
     let killedPlayers = new Set();
@@ -512,7 +675,7 @@ class GameRoom extends EventEmitter {
     }
 
     for (const player of this.players.filter((p) => p.alive === false)) {
-      player.role = new Dead(player.role.faction);
+      player.role = new Dead(player.role.factio, player.role.id);
     }
 
     for (const player of this.players) {
@@ -633,7 +796,10 @@ class GameRoom extends EventEmitter {
         );
       } else {
         hangedPlayer.alive = false;
-        hangedPlayer.role = new Dead(hangedPlayer.role.faction);
+        hangedPlayer.role = new Dead(
+          hangedPlayer.role.faction,
+          hangedPlayer.role.id
+        );
 
         console.log(hangedPlayer);
 
@@ -678,6 +844,7 @@ class GameRoom extends EventEmitter {
         await user.send(winMessage);
       }
 
+      console.log(this.gameState.log);
       return true;
     }
 
@@ -687,7 +854,7 @@ class GameRoom extends EventEmitter {
   async gameLoop() {
     while (this.status === 'starting') {
       await this.nightPhase();
-      await this.solvePhase();
+      await this.solvePhase2();
       // if (await this.checkEndGame()) {
       //   break;
       // }
