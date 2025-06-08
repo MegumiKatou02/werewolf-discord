@@ -109,7 +109,7 @@ class GameRoom extends EventEmitter {
     }
 
     const roles = this.assignRoles(this.players.length);
-    const fakeRoles = [0, 2, 3, 5];
+    const fakeRoles = [0, 2, 8, 7];
 
     const dmPromises = this.players.map(async (player, i) => {
       const role = assignRolesGame(fakeRoles[i]);
@@ -134,7 +134,7 @@ class GameRoom extends EventEmitter {
         });
       }
     });
-    await Promise.all(dmPromises);
+    await Promise.allSettled(dmPromises);
 
     this.status = 'starting';
 
@@ -142,7 +142,6 @@ class GameRoom extends EventEmitter {
     console.log(this.players);
 
     this.gameState.phase = 'night';
-    // this.gameState.nightCount = 0;
     this.gameLoop();
   }
 
@@ -192,9 +191,9 @@ class GameRoom extends EventEmitter {
 
     const wolfMessages = [];
 
-    for (const player of this.players) {
+    const dmPromises = this.players.map(async (player) => {
       const user = await this.fetchUser(player.userId);
-      if (!user) continue;
+      if (!user) return;
 
       await user.send(
         `# 🌑 Đêm ${this.gameState.nightCount === 1 ? 'đầu tiên' : `thứ ${this.gameState.nightCount}`}.`
@@ -209,7 +208,7 @@ class GameRoom extends EventEmitter {
         .setImage('attachment://avatars.png')
         .setTimestamp();
 
-      if (player.role.id === 0) {
+      if (player.role.id === WEREROLE.WEREWOLF) {
         // Sói
         const voteButton = new ButtonBuilder()
           .setCustomId(`vote_target_wolf_${player.userId}`)
@@ -227,7 +226,7 @@ class GameRoom extends EventEmitter {
           components: [row],
         });
         wolfMessages.push(message);
-      } else if (player.role.id === 2) {
+      } else if (player.role.id === WEREROLE.BODYGUARD) {
         // Bảo Vệ
         const protectButton = new ButtonBuilder()
           .setCustomId(`protect_target_bodyguard_${player.userId}`)
@@ -244,7 +243,7 @@ class GameRoom extends EventEmitter {
           files: [attachment],
           components: [row],
         });
-      } else if (player.role.id === 4) {
+      } else if (player.role.id === WEREROLE.SEER) {
         // Tiên Tri
         const viewButton = new ButtonBuilder()
           .setCustomId(`view_target_seer_${player.userId}`)
@@ -261,7 +260,7 @@ class GameRoom extends EventEmitter {
           files: [attachment],
           components: [row],
         });
-      } else if (player.role.id === 5) {
+      } else if (player.role.id === WEREROLE.DETECTIVE) {
         // Thám Tử
         const investigateButton = new ButtonBuilder()
           .setCustomId(`investigate_target_detective_${player.userId}`)
@@ -278,7 +277,7 @@ class GameRoom extends EventEmitter {
           files: [attachment],
           components: [row],
         });
-      } else if (player.role.id === 6) {
+      } else if (player.role.id === WEREROLE.WITCH) {
         // Phù Thuỷ
         const poisonButton = new ButtonBuilder()
           .setCustomId(`poison_target_witch_${player.userId}`)
@@ -306,7 +305,7 @@ class GameRoom extends EventEmitter {
         });
 
         this.witchMessages.set(player.userId, message);
-      } else if (player.role.id === 8) {
+      } else if (player.role.id === WEREROLE.MEDIUM) {
         // Thầy Đồng
         const reviveButton = new ButtonBuilder()
           .setCustomId(`revive_target_medium_${player.userId}`)
@@ -334,16 +333,23 @@ class GameRoom extends EventEmitter {
           files: [attachment],
           components: [row],
         });
-      } else if (player.role.id === 9) {
+      } else if (player.role.id === WEREROLE.DEAD) {
         await user.send(
           '💀 Bạn đã bị chết, hãy trò chuyện với hội người âm của bạn.'
+        );
+        await user.send({ embeds: [embed], files: [attachment] });
+      } else if (player.role.id === WEREROLE.FOOL) {
+        await user.send(
+          '⚜️ Bạn là thằng ngố, nhiệm vụ của bạn là lừa những người khác vote bạn để chiến thắng.'
         );
         await user.send({ embeds: [embed], files: [attachment] });
       } else {
         await user.send('🌙 Một đêm yên tĩnh trôi qua. Bạn hãy chờ đến sáng.');
         await user.send({ embeds: [embed], files: [attachment] });
       }
-    }
+    });
+
+    await Promise.allSettled(dmPromises);
 
     setTimeout(async () => {
       for (const message of wolfMessages) {
@@ -359,7 +365,7 @@ class GameRoom extends EventEmitter {
       const mostVotedUserId = this.totalVotedWolvesSolve();
       if (mostVotedUserId) {
         for (const player of this.players) {
-          if (player.role.id === 6) {
+          if (player.role.id === WEREROLE.WITCH) {
             const user = await this.fetchUser(player.userId);
             if (user) {
               player.role.needHelpPerson = mostVotedUserId;
@@ -513,41 +519,46 @@ class GameRoom extends EventEmitter {
       killed.role = new Dead(killed.role.faction, killed.role.id);
       killed.alive = false;
     }
-    console.log('hoi sinh thanh cong', Array.from(revivedPlayers));
 
     const allDeadTonight = new Set([...killedPlayers, ...sureDieInTheNight]);
 
-    for (const player of this.players) {
+    const dmPromises = this.players.map(async (player) => {
       const user = await this.fetchUser(player.userId);
-      if (!user) continue;
+      if (!user) return;
 
-      if (allDeadTonight.size === 0) {
-        await user.send('🌙 Đêm nay không ai thiệt mạng.\n');
-      } else {
-        const killedPlayersList = Array.from(allDeadTonight)
-          .map((id) => `<@${id}>`)
-          .join(', ');
-        await user.send(`🌙 Đêm nay, ${killedPlayersList} đã thiệt mạng.\n`);
+      try {
+        if (allDeadTonight.size === 0) {
+          await user.send('🌙 Đêm nay không ai thiệt mạng.\n');
+        } else {
+          const killedPlayersList = Array.from(allDeadTonight)
+            .map((id) => `<@${id}>`)
+            .join(', ');
+          await user.send(`🌙 Đêm nay, ${killedPlayersList} đã thiệt mạng.\n`);
 
-        if (allDeadTonight.has(player.userId)) {
-          await user.send('💀 Bạn đã bị giết trong đêm nay.');
-          player.alive = false;
+          if (allDeadTonight.has(player.userId)) {
+            await user.send('💀 Bạn đã bị giết trong đêm nay.');
+            player.alive = false;
+          }
         }
-      }
 
-      if (revivedPlayers.size > 0) {
-        const revivedPlayersList = Array.from(revivedPlayers)
-          .map((id) => `<@${id}>`)
-          .join(', ');
-        await user.send(
-          `### 🔮 ${revivedPlayersList} đã được hồi sinh bởi Thầy Đồng.\n`
-        );
+        if (revivedPlayers.size > 0) {
+          const revivedPlayersList = Array.from(revivedPlayers)
+            .map((id) => `<@${id}>`)
+            .join(', ');
+          await user.send(
+            `### 🔮 ${revivedPlayersList} đã được hồi sinh bởi Thầy Đồng.\n`
+          );
 
-        if (revivedPlayers.has(player.userId)) {
-          await user.send('### ✨ Bạn đã được Thầy Đồng hồi sinh!');
+          if (revivedPlayers.has(player.userId)) {
+            await user.send('### ✨ Bạn đã được Thầy Đồng hồi sinh!');
+          }
         }
+      } catch (err) {
+        console.error(`Không thể gửi tin nhắn cho ${player.userId}`, err);
       }
-    }
+    });
+
+    await Promise.allSettled(dmPromises);
 
     for (const player of this.players) {
       player.role.resetDay();
@@ -733,9 +744,9 @@ class GameRoom extends EventEmitter {
     this.gameState.phase = 'day';
     this.emit('day', this.guildId, this.players, this.gameState);
 
-    for (const player of this.players) {
+    const dmPromises = this.players.map(async (player) => {
       const user = await this.fetchUser(player.userId);
-      if (!user) continue;
+      if (!user) return;
       await user.send(
         '# ☀️ Ban ngày đã đến. \nHãy thảo luận và bỏ phiếu để loại trừ người khả nghi nhất. Bạn có 1 phút 30 giây để quyết định.'
       );
@@ -753,7 +764,9 @@ class GameRoom extends EventEmitter {
         embeds: [embed],
         files: [attachment],
       });
-    }
+    });
+
+    await Promise.allSettled(dmPromises);
 
     // Thảo luận 1p 30 giây
     await new Promise((resolve) => setTimeout(resolve, 10_000));
@@ -763,11 +776,11 @@ class GameRoom extends EventEmitter {
     this.gameState.phase = 'voting';
     this.emit('vote', this.guildId, this.players, this.gameState);
 
-    const alivePlayers = this.players.filter((p) => p.alive);
+    // const alivePlayers = this.players.filter((p) => p.alive);
 
-    for (const player of this.players) {
+    const dmPromises = this.players.map(async (player) => {
       const user = await this.fetchUser(player.userId);
-      if (!user) continue;
+      if (!user) return;
       await user.send(
         `🗳️ Thời gian bỏ phiếu đã đến. Người có số phiếu cao nhất và có ít nhất 2 phiếu sẽ bị treo cổ. Hãy chọn người bạn muốn loại trừ trong 30 giây tới.`
       );
@@ -792,50 +805,56 @@ class GameRoom extends EventEmitter {
         files: [attachment],
         components: [row],
       });
-    }
+    });
+
+    await Promise.allSettled(dmPromises);
 
     // Vote 30 giây
     await new Promise((resolve) => setTimeout(resolve, 30_000));
 
     const hangedPlayer = this.processVote();
 
-    for (const player of this.players) {
-      const user = await this.fetchUser(player.userId);
-      if (!user) continue;
-
-      if (!hangedPlayer) {
+    if (!hangedPlayer) {
+      const noHangPromises = this.players.map(async (player) => {
+        const user = await this.fetchUser(player.userId);
+        if (!user) return;
         await user.send(
           '🎭 Không đủ số phiếu hoặc có nhiều người cùng số phiếu cao nhất, không ai bị treo cổ trong ngày hôm nay.'
         );
-      } else {
-        // check ngố
-        if (hangedPlayer.role.id === WEREROLE.FOOL) {
-          this.status = 'ended';
-          for (const player of this.players) {
-            const user = await this.fetchUser(player.userId);
-            if (!user) continue;
-            await user.send(
-              '🎭 <@${hangedPlayer.userId}> là **Ngố** và đã bị treo cổ. \n🎉 **Ngố** thắng !!.'
-            );
-          }
-          return; //
-        }
+      });
+      await Promise.allSettled(noHangPromises);
+    } else {
+      if (hangedPlayer.role.id === WEREROLE.FOOL) {
+        this.status = 'ended';
+        const foolMessages = this.players.map(async (player) => {
+          const user = await this.fetchUser(player.userId);
+          if (!user) return;
+          await user.send(
+            `🎭 <@${hangedPlayer.userId}> là **Ngố** và đã bị treo cổ. \n🎉 **Ngố** thắng !!.`
+          );
+        });
+        await Promise.allSettled(foolMessages);
+        return; //
+      }
 
-        hangedPlayer.alive = false;
-        hangedPlayer.role = new Dead(
-          hangedPlayer.role.faction,
-          hangedPlayer.role.id
-        );
+      hangedPlayer.alive = false;
+      hangedPlayer.role = new Dead(
+        hangedPlayer.role.faction,
+        hangedPlayer.role.id
+      );
 
-        console.log(hangedPlayer);
-
+      const hangMessages = this.players.map(async (player) => {
+        const user = await this.fetchUser(player.userId);
+        if (!user) return;
         await user.send(
           `🎭 <@${hangedPlayer.userId}> đã bị dân làng treo cổ vì có số phiếu cao nhất.`
         );
         if (hangedPlayer.userId === player.userId) {
           await user.send('💀 Bạn đã bị dân làng treo cổ.');
         }
-      }
+      });
+
+      await Promise.allSettled(hangMessages);
     }
 
     // Reset vote
