@@ -2,6 +2,7 @@ class GameState {
   constructor() {
     this.nightCount = 0;
     this.phase = 'waiting'; // waiting, night, day, voting, ended
+    this.log = [];
   }
 
   nextPhase() {
