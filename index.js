@@ -15,7 +15,7 @@ const { RoleResponse } = require('./utils/response');
 const { FactionRole } = require('./types/faction');
 const { store } = require('./core/store');
 const { gameRooms } = require('./core/room');
-const { send } = require('node:process');
+const { WEREROLE } = require('./utils/role');
 
 require('dotenv').config();
 
@@ -109,9 +109,9 @@ client.on('messageCreate', async (message) => {
 
     if (gameRoom.gameState.phase === 'night') {
       // Gửi tin nhắn cho các sói khác
-      if (sender.role.id === 0) {
+      if (sender.role.id === WEREROLE.WEREWOLF) {
         const wolves = gameRoom.players.filter(
-          (p) => p.role.id === 0 && p.userId !== sender.userId
+          (p) => p.role.id === WEREROLE.WEREWOLF && p.userId !== sender.userId
         );
         for (const wolf of wolves) {
           try {
@@ -122,23 +122,27 @@ client.on('messageCreate', async (message) => {
           }
         }
       }
-      const playersDead = gameRoom.players.filter((p) => {
-        return (
-          p.userId !== sender.userId && (p.alive === false || p.role.id === 8)
-        );
-      });
-      console.log('Hội người âm', playersDead);
 
-      for (const player of playersDead) {
-        try {
-          const user = await client.users.fetch(player.userId);
-          if (sender.role.id === 8 && sender.alive) {
-            await user.send(`_🔮 <@${sender.userId}>: ${message.content}_`);
-          } else {
-            await user.send(`_💀 <@${sender.userId}>: ${message.content}_`);
+      if (sender.role.id === WEREROLE.MEDIUM || sender.alive === false) {
+        const playersDead = gameRoom.players.filter((p) => {
+          return (
+            p.userId !== sender.userId &&
+            (p.alive === false || p.role.id === WEREROLE.MEDIUM)
+          );
+        });
+        console.log('Hội người âm', playersDead);
+
+        for (const player of playersDead) {
+          try {
+            const user = await client.users.fetch(player.userId);
+            if (sender.role.id === WEREROLE.MEDIUM && sender.alive) {
+              await user.send(`_🔮 <@${sender.userId}>: ${message.content}_`);
+            } else {
+              await user.send(`_💀 <@${sender.userId}>: ${message.content}_`);
+            }
+          } catch (err) {
+            console.error('Không gửi được tin nhắn cho người chơi', err);
           }
-        } catch (err) {
-          console.error('Không gửi được tin nhắn cho người chơi', err);
         }
       }
     }
