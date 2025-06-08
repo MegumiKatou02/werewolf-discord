@@ -36,13 +36,13 @@ module.exports = {
     // remove player
     room.removePlayer(userId);
 
+    await interaction.reply({
+      content: `Bạn đã rời khỏi phòng chơi ma sói, ${room.players.length <= 0 ? 'không còn lại ai cả' : `còn lại ${room.players.length} người`}`,
+      ephemeral: false,
+    });
+
     if (room.players.length === 0) {
       gameRooms.delete(guildId);
-
-      await interaction.reply({
-        content: 'Bạn đã rời khỏi phòng chơi ma sói',
-        ephemeral: true,
-      });
 
       return interaction.channel.send(
         'Không còn ai trong phòng nên phòng đã bị hủy'
@@ -50,10 +50,5 @@ module.exports = {
     }
 
     gameRooms.set(guildId, room);
-
-    return interaction.reply({
-      content: 'Bạn đã rời khỏi phòng chơi ma sói',
-      ephemeral: true,
-    });
   },
 };
