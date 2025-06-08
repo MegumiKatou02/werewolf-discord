@@ -1,30 +1,64 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { gameRooms, GameRoom } = require('../core/room');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('masoi-create')
-    .setDescription('Khởi tạo trò chơi ma sói'),
+    .setDescription('Tạo phòng chơi Ma Sói mới'),
 
   async execute(interaction) {
     const guildId = interaction.guildId;
-    const userId = interaction.user.id;
+    const existingRoom = gameRooms.get(guildId);
 
-    if (gameRooms.has(guildId)) {
-      return interaction.reply({
-        content: '⚠️ Phòng Ma Sói đã tồn tại trong server này',
-        emphemeral: true,
-      });
+    // Kiểm tra nếu có phòng tồn tại
+    if (existingRoom) {
+      // Nếu phòng đã kết thúc, xóa phòng cũ và tạo phòng mới
+      if (existingRoom.status === 'ended') {
+        gameRooms.delete(guildId);
+      } else if (existingRoom.status === 'waiting') {
+        await interaction.reply({
+          content: '❌ Đã có phòng đang chờ người chơi trong server này!',
+          ephemeral: true
+        });
+        return;
+      } else if (existingRoom.status === 'starting') {
+        await interaction.reply({
+          content: '❌ Đã có game đang diễn ra trong server này!',
+          ephemeral: true
+        });
+        return;
+      }
     }
 
-    const room = new GameRoom(interaction.client, guildId, userId);
-    room.addPlayer(userId);
+    // Tạo phòng mới
+    const newRoom = new GameRoom(interaction.client, guildId, interaction.user.id);
+    gameRooms.set(guildId, newRoom);
+    newRoom.addPlayer(interaction.user.id);
 
-    gameRooms.set(guildId, room);
+    const embed = new EmbedBuilder()
+      .setColor(0x3498db)
+      .setTitle('🎮 PHÒNG CHƠI MA SÓI MỚI')
+      .setDescription('```🟢 Phòng đã được tạo thành công!```')
+      .addFields(
+        {
+          name: '👑 Chủ Phòng',
+          value: `${interaction.user.username}`,
+          inline: true
+        },
+        {
+          name: '👥 Số Người Chơi',
+          value: '1/18',
+          inline: true
+        },
+        {
+          name: '⌛ Trạng Thái',
+          value: 'Đang chờ',
+          inline: true
+        }
+      )
+      .setFooter({ text: '💡 Sử dụng /masoi-join để tham gia phòng' })
+      .setTimestamp();
 
-    return interaction.reply({
-      content: `✅ Phòng Ma Sói đã được tạo bởi <@${userId}>.\nDùng lệnh \`/masoi-join\` để tham gia.`,
-      ephemeral: false,
-    });
+    await interaction.reply({ embeds: [embed] });
   },
 };
