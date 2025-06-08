@@ -7,7 +7,9 @@ class Role {
   }
 
   getDescription() {}
-  resetDay() {}
+  resetDay() {
+    this.voteHanged = null;
+  }
 }
 
 module.exports = Role;

@@ -9,6 +9,7 @@ class Villager extends Role {
   getDescription() {
     return 'Bạn là một dân làng bình thường và không có khả năng gì đặc biệt.';
   }
+  resetDay() {}
 }
 
 module.exports = Villager;
