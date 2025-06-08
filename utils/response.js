@@ -20,7 +20,7 @@ const RoleResponse = async (
 ) => {
   const msg = message.content.toLowerCase();
 
-  if (commandNames.map(cmd => cmd.toLowerCase()).includes(msg)) {
+  if (commandNames.map((cmd) => cmd.toLowerCase()).includes(msg)) {
     const { embed, file } = EmbedBuilderWerewolf(fileName, {
       title: `${roles[indexRole].title} (${roles[indexRole].eName})`,
       description: `${roles[indexRole].description}\n\nPhe: ${factionRole}`,
