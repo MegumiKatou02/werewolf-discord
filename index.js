@@ -113,26 +113,27 @@ client.on('messageCreate', async (message) => {
         const wolves = gameRoom.players.filter(
           (p) => p.role.id === WEREROLE.WEREWOLF && p.userId !== sender.userId
         );
-        for (const wolf of wolves) {
+        const notifyPromises = wolves.map(async (wolf) => {
           try {
             const user = await client.users.fetch(wolf.userId);
             await user.send(`🐺 <@${sender.userId}>: ${message.content}`);
           } catch (err) {
             console.error('Không gửi được tin nhắn cho Sói khác', err);
           }
-        }
+        });
+        await Promise.allSettled(notifyPromises);
       }
 
       if (sender.role.id === WEREROLE.MEDIUM || sender.alive === false) {
+        // Gửi tin nhắn cho hội người âm
         const playersDead = gameRoom.players.filter((p) => {
           return (
             p.userId !== sender.userId &&
             (p.alive === false || p.role.id === WEREROLE.MEDIUM)
           );
         });
-        console.log('Hội người âm', playersDead);
 
-        for (const player of playersDead) {
+        const notifyPromises = playersDead.map(async (player) => {
           try {
             const user = await client.users.fetch(player.userId);
             if (sender.role.id === WEREROLE.MEDIUM && sender.alive) {
@@ -143,7 +144,8 @@ client.on('messageCreate', async (message) => {
           } catch (err) {
             console.error('Không gửi được tin nhắn cho người chơi', err);
           }
-        }
+        });
+        await Promise.allSettled(notifyPromises);
       }
     }
     if (
@@ -154,7 +156,8 @@ client.on('messageCreate', async (message) => {
       const playersInGame = gameRoom.players.filter(
         (p) => p.userId !== sender.userId
       );
-      for (const player of playersInGame) {
+
+      const notifyPromises = playersInGame.map(async (player) => {
         try {
           const user = await client.users.fetch(player.userId);
           if (!sender.alive) {
@@ -167,7 +170,8 @@ client.on('messageCreate', async (message) => {
         } catch (err) {
           console.error('Không gửi được tin nhắn cho người chơi', err);
         }
-      }
+      });
+      await Promise.allSettled(notifyPromises);
     }
   }
 });
