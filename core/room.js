@@ -17,6 +17,7 @@ const GameState = require('./gamestate');
 const rolesData = require('../data/data.json');
 const { createAvatarCollage } = require('./canvas');
 const { store } = require('./store');
+const Dead = require('../types/roles/Dead');
 
 class GameRoom extends EventEmitter {
   constructor(client, guildId, hostId) {
@@ -192,7 +193,7 @@ class GameRoom extends EventEmitter {
       if (!user) continue;
 
       await user.send(
-        `# Đêm ${this.gameState.nightCount === 1 ? 'đầu tiên' : `thứ ${this.gameState.nightCount}`}`
+        `# 🌑 Đêm ${this.gameState.nightCount === 1 ? 'đầu tiên' : `thứ ${this.gameState.nightCount}`}.`
       );
 
       const buffer = await createAvatarCollage(this.players, this.client);
@@ -292,7 +293,7 @@ class GameRoom extends EventEmitter {
         );
 
         await user.send(
-          '🌙 Bạn là **Phù Thuỷ**. Bạn có hai bình thuốc: một để đầu độc và một để cứu người. Bình cứu chỉ có tác dụng nếu người đó bị tấn công.'
+          `🌙 Bạn là **Phù Thuỷ**. Bạn có hai bình thuốc: một để đầu độc và một để cứu người. Bình cứu chỉ có tác dụng nếu người đó bị tấn công.\n (Bình độc: ${player.role.poisonCount}, Bình cứu: ${player.role.healCount}).`
         );
         const message = await user.send({
           embeds: [embed],
@@ -301,6 +302,39 @@ class GameRoom extends EventEmitter {
         });
 
         this.witchMessages.set(player.userId, message);
+      } else if (player.role.id === 8) {
+        // Thầy Đồng
+        const reviveButton = new ButtonBuilder()
+          .setCustomId(`revive_target_medium_${player.userId}`)
+          .setLabel('🔮 Hồi sinh người')
+          .setStyle(ButtonStyle.Primary);
+
+        const row = new ActionRowBuilder().addComponents(reviveButton);
+
+        const villagerDead = this.players
+          .filter((player) => {
+            return player.role.faction === 1 && !player.alive;
+          })
+          .map((player) => `<@${player.userId}>`)
+          .join(', ');
+        await user.send(
+          '🌙 Bạn là **Thầy Đồng**. Bạn có thể hồi sinh một người phe dân đã chết trong đêm nay. Bạn chỉ có thể làm điều này một lần trong ván đấu.'
+        );
+        if (player.alive && villagerDead.length > 0) {
+          await user.send(
+            `${villagerDead} là những người thuộc phe dân làng đã bị chết, bạn có thể hồi sinh trong số họ.`
+          );
+        }
+        await user.send({
+          embeds: [embed],
+          files: [attachment],
+          components: [row],
+        });
+      } else if (player.role.id === 9) {
+        await user.send(
+          '💀 Bạn đã bị chết, hãy trò chuyện với hội người âm của bạn.'
+        );
+        await user.send({ embeds: [embed], files: [attachment] });
       } else {
         await user.send('🌙 Một đêm yên tĩnh trôi qua. Bạn hãy chờ đến sáng.');
         await user.send({ embeds: [embed], files: [attachment] });
@@ -354,6 +388,7 @@ class GameRoom extends EventEmitter {
     const mostVotedUserId = this.totalVotedWolvesSolve();
     let killedPlayers = new Set();
     let savedPlayers = new Set();
+    let revivedPlayers = new Set();
 
     // Nếu không ai bị vote
     if (!mostVotedUserId) {
@@ -434,6 +469,7 @@ class GameRoom extends EventEmitter {
 
           savedPlayers.add(mostVotedUserId);
         } else {
+          player.alive = false;
           killedPlayers.add(mostVotedUserId);
         }
       }
@@ -441,8 +477,42 @@ class GameRoom extends EventEmitter {
       // Kiểm tra phù thủy có đầu độc ai không
       if (player.role.id === 6 && player.role.poisonedPerson) {
         player.role.poisonCount -= 1;
+        const killed = this.players.find(
+          (p) => p.userId === player.role.poisonedPerson
+        );
+        killed.alive = false;
         killedPlayers.add(player.role.poisonedPerson);
       }
+
+      // Kiểm tra thầy đồng có hồi sinh ai không
+      if (player.role.id === 8 && player.role.revivedPerson) {
+        console.log('Người được cứu', player.role.revivedPerson);
+        const revivedPlayer = this.players.find(
+          (p) => p.userId === player.role.revivedPerson
+        );
+        if (
+          revivedPlayer &&
+          !revivedPlayer.alive &&
+          revivedPlayer.role.faction === 1
+        ) {
+          console.log('true');
+
+          revivedPlayer.alive = true;
+          revivedPlayers.add(revivedPlayer.userId);
+          revivedPlayer.role = assignRolesGame(revivedPlayer.role.id);
+          player.role.reviveCount -= 1;
+        } else {
+          console.log('false');
+        }
+      }
+    }
+
+    for (const revived of revivedPlayers) {
+      killedPlayers.delete(revived);
+    }
+
+    for (const player of this.players.filter((p) => p.alive === false)) {
+      player.role = new Dead(player.role.faction);
     }
 
     for (const player of this.players) {
@@ -462,6 +532,19 @@ class GameRoom extends EventEmitter {
           player.alive = false;
         }
       }
+
+      if (revivedPlayers.size > 0) {
+        const revivedPlayersList = Array.from(revivedPlayers)
+          .map((id) => `<@${id}>`)
+          .join(', ');
+        await user.send(
+          `### 🔮 ${revivedPlayersList} đã được hồi sinh bởi Thầy Đồng.\n`
+        );
+
+        if (revivedPlayers.has(player.userId)) {
+          await user.send('### ✨ Bạn đã được Thầy Đồng hồi sinh!');
+        }
+      }
     }
 
     for (const player of this.players) {
@@ -477,7 +560,7 @@ class GameRoom extends EventEmitter {
       const user = await this.fetchUser(player.userId);
       if (!user) continue;
       await user.send(
-        '☀️ Ban ngày đã đến. Hãy thảo luận và bỏ phiếu để loại trừ người khả nghi nhất. Bạn có 1 phút 30 giây để quyết định.'
+        '# ☀️ Ban ngày đã đến. \nHãy thảo luận và bỏ phiếu để loại trừ người khả nghi nhất. Bạn có 1 phút 30 giây để quyết định.'
       );
 
       const buffer = await createAvatarCollage(this.players, this.client);
@@ -496,7 +579,7 @@ class GameRoom extends EventEmitter {
     }
 
     // Thảo luận 1p 30 giây
-    await new Promise((resolve) => setTimeout(resolve, 30_000 + 60_000));
+    await new Promise((resolve) => setTimeout(resolve, 10_000));
   }
 
   async votePhase() {
@@ -549,6 +632,11 @@ class GameRoom extends EventEmitter {
           '🎭 Không đủ số phiếu để treo cổ ai trong ngày hôm nay.'
         );
       } else {
+        hangedPlayer.alive = false;
+        hangedPlayer.role = new Dead(hangedPlayer.role.faction);
+
+        console.log(hangedPlayer);
+
         await user.send(
           `🎭 <@${hangedPlayer.userId}> đã bị dân làng treo cổ với đủ số phiếu cần thiết.`
         );
@@ -600,9 +688,9 @@ class GameRoom extends EventEmitter {
     while (this.status === 'starting') {
       await this.nightPhase();
       await this.solvePhase();
-      if (await this.checkEndGame()) {
-        break;
-      }
+      // if (await this.checkEndGame()) {
+      //   break;
+      // }
       await this.dayPhase();
       await this.votePhase();
     }

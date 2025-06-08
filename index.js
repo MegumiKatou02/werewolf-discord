@@ -358,6 +358,32 @@ client.on('interactionCreate', async (interaction) => {
 
       await interaction.showModal(modal);
     }
+    if (interaction.customId.startsWith('revive_target_medium_')) {
+      const playerId = interaction.customId.split('_')[3];
+
+      if (interaction.user.id !== playerId) {
+        return interaction.reply({
+          content: 'Bạn không được nhấn nút này.',
+          ephemeral: true,
+        });
+      }
+
+      const modal = new ModalBuilder()
+        .setCustomId(`submit_revive_medium_${playerId}`)
+        .setTitle('Hồi sinh người chơi');
+
+      const input = new TextInputBuilder()
+        .setCustomId('revive_index_medium')
+        .setLabel('Số thứ tự người chết (bắt đầu từ 1)')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('VD: 3')
+        .setRequired(true);
+
+      const row = new ActionRowBuilder().addComponents(input);
+      modal.addComponents(row);
+
+      await interaction.showModal(modal);
+    }
   }
 
   if (interaction.isModalSubmit()) {
@@ -399,6 +425,13 @@ client.on('interactionCreate', async (interaction) => {
       const targetPlayer = gameRoom.players[voteIndex - 1];
 
       if (sender.role.id === 0) {
+        if (!targetPlayer.alive) {
+          return interaction.reply({
+            content: 'Không có tác dụng lên người chết',
+            ephemeral: true,
+          });
+        }
+
         if (sender.role.biteCount <= 0) {
           return interaction.reply({
             content: 'Bạn đã hết lượt dùng chức năng',
@@ -471,6 +504,13 @@ client.on('interactionCreate', async (interaction) => {
 
       const targetPlayer = gameRoom.players[protectIndex - 1];
       if (sender.role.id === 2) {
+        if (!targetPlayer.alive) {
+          return interaction.reply({
+            content: 'Không có tác dụng lên người chết',
+            ephemeral: true,
+          });
+        }
+
         if (sender.role.protectedCount <= 0) {
           return interaction.reply({
             content: 'Bạn đã hết lượt dùng chức năng',
@@ -522,6 +562,13 @@ client.on('interactionCreate', async (interaction) => {
 
       const targetPlayer = gameRoom.players[viewIndex - 1];
       if (sender.role.id === 4) {
+        if (!targetPlayer.alive) {
+          return interaction.reply({
+            content: 'Không có tác dụng lên người chết',
+            ephemeral: true,
+          });
+        }
+
         if (sender.role.viewCount <= 0) {
           return interaction.reply({
             content: 'Bạn đã hết lượt dùng chức năng',
@@ -592,6 +639,13 @@ client.on('interactionCreate', async (interaction) => {
       const targetPlayer2 = gameRoom.players[index2 - 1];
 
       if (sender.role.id === 5) {
+        if (!targetPlayer1.alive || !targetPlayer2.alive) {
+          return interaction.reply({
+            content: 'Không có tác dụng lên người chết',
+            ephemeral: true,
+          });
+        }
+
         if (sender.role.investigatedCount <= 0) {
           return interaction.reply({
             content: 'Bạn đã hết lượt dùng chức năng',
@@ -658,6 +712,13 @@ client.on('interactionCreate', async (interaction) => {
 
       const targetPlayer = gameRoom.players[pointIndex - 1];
       if (sender.role.id === 6) {
+        if (!targetPlayer.alive) {
+          return interaction.reply({
+            content: 'Không có tác dụng lên người chết',
+            ephemeral: true,
+          });
+        }
+
         if (sender.role.poisonCount <= 0) {
           return interaction.reply({
             content: 'Bạn đã hết lượt dùng chức năng',
@@ -719,6 +780,13 @@ client.on('interactionCreate', async (interaction) => {
 
       const targetPlayer = gameRoom.players[healIndex - 1];
       if (sender.role.id === 6) {
+        if (!targetPlayer.alive) {
+          return interaction.reply({
+            content: 'Không có tác dụng lên người chết',
+            ephemeral: true,
+          });
+        }
+
         if (sender.role.healCount <= 0) {
           return interaction.reply({
             content: 'Bạn đã hết lượt dùng chức năng',
@@ -760,10 +828,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('submit_vote_hanged_')) {
       if (!gameRoom) return;
 
-      if (
-        gameRoom.gameState.phase !== 'voting' &&
-        gameRoom.gameState.phase === 'day'
-      ) {
+      if (gameRoom.gameState.phase === 'day') {
         return interaction.reply({
           content: 'Bạn chưa thể vote ngay lúc này',
           ephemeral: true,
@@ -819,21 +884,93 @@ client.on('interactionCreate', async (interaction) => {
 
       sender.role.voteHanged = targetPlayer.userId;
 
+      await interaction.deferReply({ ephemeral: true });
+
       try {
-        const user = await client.users.fetch(playerId);
-        for (const player of gameRoom.players) {
+        const notifyPromises = gameRoom.players.map(async (player) => {
+          const targetUser = await client.users.fetch(player.userId);
           if (player.userId !== playerId) {
-            const targetUser = await client.users.fetch(player.userId);
-            await targetUser.send(`✅ <@${sender.userId}> đã vote.`);
+            return targetUser.send(`✅ <@${sender.userId}> đã vote.`);
           } else {
-            await user.send(
-              `✅ Bạn đã vote treo cổ: <@${targetPlayer.userId}>.`
-            );
+            return targetUser.send(`✅ Bạn đã vote treo cổ: <@${targetPlayer.userId}>.`);
           }
-        }
+        });
+
+        await Promise.allSettled(notifyPromises);
       } catch (err) {
         console.error(`Không thể gửi DM cho ${playerId}:`, err);
       }
+      await interaction.editReply({
+        content: '✅ Chọn người chơi thành công.',
+      });
+    }
+    if (interaction.customId.startsWith('submit_revive_medium_')) {
+      if (!gameRoom || gameRoom.gameState.phase !== 'night') return;
+
+      const playerId = interaction.customId.split('_')[3];
+
+      if (interaction.user.id !== playerId) {
+        return interaction.reply({
+          content: 'Bạn không được gửi form này.',
+          ephemeral: true,
+        });
+      }
+
+      const reviveIndexStr = interaction.fields.getTextInputValue(
+        'revive_index_medium'
+      );
+      const reviveIndex = parseInt(reviveIndexStr, 10);
+
+      if (
+        isNaN(reviveIndex) ||
+        reviveIndex < 1 ||
+        reviveIndex > gameRoom.players.length
+      ) {
+        return interaction.reply({
+          content: 'Số thứ tự không hợp lệ.',
+          ephemeral: true,
+        });
+      }
+
+      const targetPlayer = gameRoom.players[reviveIndex - 1];
+      if (sender.role.id === 8) {
+        if (sender.role.revivedCount <= 0) {
+          return interaction.reply({
+            content: 'Bạn đã hết lượt dùng chức năng',
+            ephemeral: true,
+          });
+        }
+
+        if (targetPlayer.alive) {
+          return interaction.reply({
+            content: 'Người chơi này vẫn còn sống, không thể hồi sinh.',
+            ephemeral: true,
+          });
+        }
+
+        if (targetPlayer.role.faction !== 1) {
+          return interaction.reply({
+            content: `Người chơi này không thuộc phe dân làng, không thể hồi sinh.${targetPlayer.role.id}`,
+            ephemeral: true,
+          });
+        }
+
+        // sender.role.revivedCount -= 1; // Lỡ chọn lại
+        sender.role.revivedPerson = targetPlayer.userId;
+      }
+
+      try {
+        const user = await client.users.fetch(playerId);
+        await user.send(
+          `✅ Bạn đã chọn người chơi để hồi sinh: <@${targetPlayer.userId}>.`
+        );
+      } catch (err) {
+        console.error(`Không thể gửi DM cho ${playerId}:`, err);
+      }
+      await interaction.reply({
+        content: '✅ Chọn người chơi thành công.',
+        ephemeral: true,
+      });
     }
   }
 
