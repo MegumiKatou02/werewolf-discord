@@ -30,6 +30,16 @@ const RoleResponse = async (
   }
 };
 
+/**
+ * Tạo embed theo từng role và gửi qua DM
+ *
+ * @param {import('discord.js').User} user - user discord
+ * @param {string} fileName - Tên file
+ * @param {number} indexRole - Role id
+ * @param {string} factionRole - 'Dân làng', 'Ma sói'
+ *
+ * @returns {Promise<void>}
+ */
 const RoleResponseDMs = async (user, fileName, indexRole, factionRole) => {
   const { embed, file } = EmbedBuilderWerewolf(fileName, {
     title: `${roles[indexRole].title} (${roles[indexRole].eName})`,
