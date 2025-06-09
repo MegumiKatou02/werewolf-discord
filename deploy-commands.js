@@ -28,7 +28,8 @@ const rest = new REST({ version: '10' }).setToken(token);
       'Lệnh sẽ được đăng ký:',
       commands.map((c) => c.name)
     );
-    await rest.put(Routes.applicationCommands(clientId), { // co s
+    await rest.put(Routes.applicationCommands(clientId), {
+      // co s
       body: commands,
     });
     console.log('✅ Slash command đã được đăng ký!');
