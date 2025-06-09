@@ -22,7 +22,7 @@ module.exports = {
         })
         .setTimestamp();
 
-      await interaction.reply({ embeds: [noGameEmbed], ephemeral: true });
+      await interaction.reply({ embeds: [noGameEmbed], ephemeral: false });
       return;
     }
 
@@ -45,7 +45,7 @@ module.exports = {
       );
 
       statusEmbed
-        .setDescription('```🟢 Phòng đang chờ người chơi tham gia...```')
+        .setDescription('```🕓 Phòng đang chờ người chơi tham gia...```')
         .addFields(
           {
             name: '👑 Chủ Phòng',
@@ -132,6 +132,6 @@ module.exports = {
         .setFooter({ text: '💡 Sử dụng /masoi-create để tạo phòng mới' });
     }
 
-    await interaction.reply({ embeds: [statusEmbed], ephemeral: true });
+    await interaction.reply({ embeds: [statusEmbed], ephemeral: false });
   },
 };
