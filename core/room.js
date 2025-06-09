@@ -602,13 +602,27 @@ class GameRoom extends EventEmitter {
 
     const allDeadTonight = new Set([...killedPlayers, ...sureDieInTheNight]);
 
+    if (allDeadTonight.length !== 0) {
+      this.gameState.log.push(
+        `${Array.from(allDeadTonight)
+          .map((id) => {
+            const player = this.players.find((p) => p.userId === id);
+            return `**${player.name}**`;
+          })
+          .join(', ')} đã thiệt mạng\n`
+      );
+    }
+
+    if (allDeadTonight.size === 0) {
+      this.gameState.log.push(`Không có ai thiệt mạng\n`);
+    }
+
     const dmPromises = this.players.map(async (player) => {
       const user = await this.fetchUser(player.userId);
       if (!user) return;
 
       try {
         if (allDeadTonight.size === 0) {
-          this.gameState.log.push(`Đêm thứ ${this.gameState.nightCount} không có ai thiệt mạng\n\n`);
           await user.send('🌙 Đêm nay không ai thiệt mạng.\n');
         } else {
           const killedPlayersList = Array.from(allDeadTonight)
@@ -617,7 +631,7 @@ class GameRoom extends EventEmitter {
               return `**${player.name}**`;
             })
             .join(', ');
-          this.gameState.log.push(`Đêm thứ ${this.gameState.nightCount}, ${killedPlayersList} đã thiệt mạng\n\n`);
+
           await user.send(`🌙 Đêm nay, ${killedPlayersList} đã thiệt mạng.\n`);
 
           if (allDeadTonight.has(player.userId)) {
@@ -939,19 +953,23 @@ class GameRoom extends EventEmitter {
     const hangedPlayer = this.processVote();
 
     if (!hangedPlayer) {
+      this.gameState.log.push('Không ai bị treo cổ do không đủ phiếu bầu\n');
       const noHangPromises = this.players.map(async (player) => {
         const user = await this.fetchUser(player.userId);
         if (!user) return;
-        this.gameState.log.push('Không ai bị treo cổ do không đủ phiếu bầu\n\n');
         await user.send(
           '🎭 Không đủ số phiếu hoặc có nhiều người cùng số phiếu cao nhất, không ai bị treo cổ trong ngày hôm nay.'
         );
       });
       await Promise.allSettled(noHangPromises);
     } else {
-      this.gameState.log.push(`**${hangedPlayer.name}** đã bị dân làng treo cổ`);
+      this.gameState.log.push(
+        `**${hangedPlayer.name}** đã bị dân làng treo cổ`
+      );
       if (hangedPlayer.role.id === WEREROLE.FOOL) {
-        this.gameState.log.push(`**${hangedPlayer.name}** là Thằng Ngố - Thằng Ngố thắng!`);
+        this.gameState.log.push(
+          `**${hangedPlayer.name}** là Thằng Ngố - Thằng Ngố thắng!`
+        );
         this.status = 'ended';
         const foolMessages = this.players.map(async (player) => {
           const user = await this.fetchUser(player.userId);

@@ -21,7 +21,8 @@ module.exports = {
 
     if (room.status !== 'waiting') {
       return interaction.reply({
-        content: 'Trò chơi đã bắt đầu, không thể tham gia. Bạn có thể kiểm tra bằng `/status`',
+        content:
+          'Trò chơi đã bắt đầu, không thể tham gia. Bạn có thể kiểm tra bằng `/status`',
         ephemeral: true,
       });
     }
