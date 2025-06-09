@@ -11,6 +11,7 @@ const {
   EmbedBuilder,
   ButtonBuilder,
   ButtonStyle,
+  ActivityType,
 } = require('discord.js');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -51,6 +52,10 @@ for (const file of commandFiles) {
 
 client.once('ready', () => {
   console.log('Bot online với tên', client.user.tag);
+  client.user.setPresence({
+    activities: [{ name: '/huongdan', type: ActivityType.Watching }],
+    status: 'dnd',
+  });
 });
 
 client.on('messageCreate', async (message) => {
