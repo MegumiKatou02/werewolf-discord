@@ -33,7 +33,7 @@ module.exports = {
       });
     }
 
-    room.addPlayer(userId);
+    await room.addPlayer(userId);
     gameRooms.set(guildId, room);
 
     return interaction.reply({

@@ -62,7 +62,7 @@ module.exports = {
     const response = await interaction.reply({
       embeds: [tipsEmbed],
       components: [row],
-      ephemeral: true,
+      ephemeral: false,
     });
 
     const collector = response.createMessageComponentCollector({

@@ -49,9 +49,14 @@ class GameRoom extends EventEmitter {
     }
   }
 
-  addPlayer(userId) {
+  async addPlayer(userId) {
+    const user = await this.fetchUser(userId);
+    if (!user) return;
+
+    const name = user.globalName || user.username;
+
     if (!this.players.some((p) => p.userId === userId)) {
-      this.players.push(new Player(userId));
+      this.players.push(new Player(userId, name));
     }
   }
 
@@ -144,7 +149,7 @@ class GameRoom extends EventEmitter {
       } catch (err) {
         console.error(`Không thể gửi tin nhắn cho ${player.userId}`, err);
         await interaction.reply({
-          content: 'Không thể gửi tin nhắn cho bạn, hãy kiểm tra cài đặt quyền',
+          content: `Không thể gửi tin nhắn cho bạn (<@${player.userId}>), hãy kiểm tra cài đặt quyền`,
           ephemeral: true,
         });
       }
@@ -416,7 +421,7 @@ class GameRoom extends EventEmitter {
                 await witchMessage.edit({ components: [row] });
               }
               await user.send(
-                `🌙 Sói đã chọn giết người chơi <@${mostVotedUserId}>.`
+                `🌙 Sói đã chọn giết người chơi **${this.players.find((p) => p.userId === mostVotedUserId).name}**.`
               );
             }
           }
@@ -445,7 +450,9 @@ class GameRoom extends EventEmitter {
 
     const witch = this.players.find((p) => p.role.id === WEREROLE.WITCH);
     if (mostVotedUserId) {
-      this.gameState.log.push(`Sói đã chọn cắn <@${mostVotedUserId}>`);
+      this.gameState.log.push(
+        `Sói đã chọn cắn **${this.players.find((p) => p.userId === mostVotedUserId).name}**`
+      );
       const nguoiBiChoCan = this.players.find(
         (p) => p.userId === mostVotedUserId
       );
@@ -466,9 +473,7 @@ class GameRoom extends EventEmitter {
       const nguoiBiDinhDoc = this.players.find(
         (p) => p.userId === witch.role.poisonedPerson
       );
-      this.gameState.log.push(
-        `Phù thuỷ đã đầu độc <@${nguoiBiDinhDoc.userId}>`
-      );
+      this.gameState.log.push(`Phù thuỷ đã đầu độc **${nguoiBiDinhDoc.name}**`);
       sureDieInTheNight.add(nguoiBiDinhDoc.userId);
       killedPlayers.delete(nguoiBiDinhDoc.userId);
 
@@ -486,7 +491,7 @@ class GameRoom extends EventEmitter {
       ) {
         const hp = (guard.role.hp -= 1);
         this.gameState.log.push(
-          `Bảo vệ đã bảo vệ ${killedId}, anh ấy còn ${hp} máu`
+          `Bảo vệ đã bảo vệ **${this.players.find((p) => p.userId === killedId).name}**, anh ấy còn ${hp} máu`
         );
         if (hp <= 0) {
           sureDieInTheNight.add(guard.userId);
@@ -500,13 +505,13 @@ class GameRoom extends EventEmitter {
         (p) => p.userId === witch.role.healedPerson
       );
       // chưa được ai bảo vệ trước đó
-      this.gameState.log.push(`Phù thuỷ đã chọn cứu <@${saved.userId}>`);
+      this.gameState.log.push(`Phù thuỷ đã chọn cứu **${saved.name}**`);
       if (
         saved &&
         killedPlayers.has(saved.userId) &&
         killedPlayers.has(witch.role.healedPerson)
       ) {
-        this.gameState.log.push(`Phù thuỷ cứu được <@${saved.userId}>`);
+        this.gameState.log.push(`Phù thuỷ cứu được **${saved.name}**`);
 
         witch.role.healCount -= 1;
         killedPlayers.delete(saved.userId);
@@ -520,7 +525,7 @@ class GameRoom extends EventEmitter {
       );
       if (saved) {
         this.gameState.log.push(
-          `Thầy đồng đã hồi sinh thành công <@${saved.userId}> có id ${saved.role.id}`
+          `Thầy đồng đã hồi sinh thành công **${saved.name}** có id ${saved.role.id}`
         );
 
         saved.role = assignRolesGame(saved.role.originalRoleId);
@@ -538,9 +543,7 @@ class GameRoom extends EventEmitter {
         mostVotedUserId &&
         killed.userId === mostVotedUserId
       ) {
-        this.gameState.log.push(
-          `Bán sói <@${killed.userId}> đã biến thành sói`
-        );
+        this.gameState.log.push(`Bán sói **${killed.name}** đã biến thành sói`);
         const user = await this.fetchUser(killed.userId);
         if (user) {
           await user.send(`### Bạn đã bị sói cắn và biến thành sói`);
@@ -571,7 +574,10 @@ class GameRoom extends EventEmitter {
           await user.send('🌙 Đêm nay không ai thiệt mạng.\n');
         } else {
           const killedPlayersList = Array.from(allDeadTonight)
-            .map((id) => `<@${id}>`)
+            .map((id) => {
+              const player = this.players.find((p) => p.userId === id);
+              return `**${player.name}**`;
+            })
             .join(', ');
           await user.send(`🌙 Đêm nay, ${killedPlayersList} đã thiệt mạng.\n`);
 
@@ -583,7 +589,10 @@ class GameRoom extends EventEmitter {
 
         if (revivedPlayers.size > 0) {
           const revivedPlayersList = Array.from(revivedPlayers)
-            .map((id) => `<@${id}>`)
+            .map((id) => {
+              const player = this.players.find((p) => p.userId === id);
+              return `**${player.name}**`;
+            })
             .join(', ');
           await user.send(
             `### 🔮 ${revivedPlayersList} đã được hồi sinh bởi Thầy Đồng.\n`
@@ -751,7 +760,10 @@ class GameRoom extends EventEmitter {
         await user.send('🌙 Đêm nay không ai thiệt mạng.\n');
       } else {
         const killedPlayersList = Array.from(killedPlayers)
-          .map((id) => `<@${id}>`)
+          .map((id) => {
+            const player = this.players.find((p) => p.userId === id);
+            return `**${player.name}**`;
+          })
           .join(', ');
         await user.send(`🌙 Đêm nay, ${killedPlayersList} đã thiệt mạng.\n`);
 
@@ -763,7 +775,10 @@ class GameRoom extends EventEmitter {
 
       if (revivedPlayers.size > 0) {
         const revivedPlayersList = Array.from(revivedPlayers)
-          .map((id) => `<@${id}>`)
+          .map((id) => {
+            const player = this.players.find((p) => p.userId === id);
+            return `**${player.name}**`;
+          })
           .join(', ');
         await user.send(
           `### 🔮 ${revivedPlayersList} đã được hồi sinh bởi Thầy Đồng.\n`
@@ -870,7 +885,7 @@ class GameRoom extends EventEmitter {
           const user = await this.fetchUser(player.userId);
           if (!user) return;
           await user.send(
-            `🎭 <@${hangedPlayer.userId}> là **Ngố** và đã bị treo cổ. \n🎉 **Ngố** thắng !!.`
+            `🎭 **${hangedPlayer.name}** là **Ngố** và đã bị treo cổ. \n🎉 **Ngố** thắng !!.`
           );
           const roleRevealEmbed = new EmbedBuilder()
             .setColor(0x2ecc71)
@@ -910,7 +925,7 @@ class GameRoom extends EventEmitter {
                 }
                 return {
                   name: `${roleEmoji} ${player.role.name}`,
-                  value: `<@${player.userId}>${!player.alive ? ' (💀 Đã chết)' : ''}`,
+                  value: `**${player.name}**${!player.alive ? ' (�� Đã chết)' : ''}`,
                   inline: true,
                 };
               })
@@ -933,7 +948,7 @@ class GameRoom extends EventEmitter {
         const user = await this.fetchUser(player.userId);
         if (!user) return;
         await user.send(
-          `🎭 <@${hangedPlayer.userId}> đã bị dân làng treo cổ vì có số phiếu cao nhất.`
+          `🎭 **${hangedPlayer.name}** đã bị dân làng treo cổ vì có số phiếu cao nhất.`
         );
         if (hangedPlayer.userId === player.userId) {
           await user.send('💀 Bạn đã bị dân làng treo cổ.');
@@ -1007,7 +1022,7 @@ class GameRoom extends EventEmitter {
             }
             return {
               name: `${roleEmoji} ${player.role.name}`,
-              value: `<@${player.userId}>${!player.alive ? ' (💀 Đã chết)' : ''}`,
+              value: `**${player.name}**${!player.alive ? ' (💀 Đã chết)' : ''}`,
               inline: true,
             };
           })

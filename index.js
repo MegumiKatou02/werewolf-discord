@@ -29,7 +29,7 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.DirectMessages,
-    GatewayIntentBits.GuildMembers
+    GatewayIntentBits.GuildMembers,
   ],
   partials: [
     Partials.Channel,
@@ -143,7 +143,7 @@ client.on('messageCreate', async (message) => {
         const notifyPromises = wolves.map(async (wolf) => {
           try {
             const user = await client.users.fetch(wolf.userId);
-            await user.send(`🐺 <@${sender.userId}>: ${message.content}`);
+            await user.send(`🐺 **${sender.name}**: ${message.content}`);
           } catch (err) {
             console.error('Không gửi được tin nhắn cho Sói khác', err);
           }
@@ -164,9 +164,9 @@ client.on('messageCreate', async (message) => {
           try {
             const user = await client.users.fetch(player.userId);
             if (sender.role.id === WEREROLE.MEDIUM && sender.alive) {
-              await user.send(`_🔮 <@${sender.userId}>: ${message.content}_`);
+              await user.send(`_🔮 **${sender.name}**: ${message.content}_`);
             } else {
-              await user.send(`_💀 <@${sender.userId}>: ${message.content}_`);
+              await user.send(`_💀 **${sender.name}**: ${message.content}_`);
             }
           } catch (err) {
             console.error('Không gửi được tin nhắn cho người chơi', err);
@@ -189,10 +189,10 @@ client.on('messageCreate', async (message) => {
           const user = await client.users.fetch(player.userId);
           if (!sender.alive) {
             if (!player.alive) {
-              await user.send(`_💀 <@${sender.userId}>: ${message.content}_`);
+              await user.send(`_💀 **${sender.name}**: ${message.content}_`);
             }
           } else {
-            await user.send(`🗣️ <@${sender.userId}>: ${message.content}`);
+            await user.send(`🗣️ **${sender.name}**: ${message.content}`);
           }
         } catch (err) {
           console.error('Không gửi được tin nhắn cho người chơi', err);
@@ -558,10 +558,10 @@ client.on('interactionCreate', async (interaction) => {
             if (player.userId !== playerId) {
               const targetUser = await client.users.fetch(player.userId);
               await targetUser.send(
-                `<@${sender.userId}> đã vote giết <@${targetPlayer.userId}>.`
+                `🐺 **${sender.name}** đã vote giết **${targetPlayer.name}**.`
               );
             } else {
-              await user.send(`Bạn đã vote giết: <@${targetPlayer.userId}>.`);
+              await user.send(`🔪 Bạn đã vote giết: **${targetPlayer.name}**.`);
             }
           }
         }
@@ -631,7 +631,7 @@ client.on('interactionCreate', async (interaction) => {
 
       try {
         const user = await client.users.fetch(playerId);
-        await user.send(`🥋 Bạn đã bảo vệ: <@${targetPlayer.userId}>.`);
+        await user.send(`🥋 Bạn đã bảo vệ: **${targetPlayer.name}**.`);
       } catch (err) {
         console.error(`Không thể gửi DM cho ${playerId}:`, err);
       }
@@ -696,7 +696,7 @@ client.on('interactionCreate', async (interaction) => {
         try {
           const user = await client.users.fetch(playerId);
           await user.send(
-            `👁️ Vai trò của <@${targetPlayer.userId}> là: **${targetPlayer.role.name}**.`
+            `👁️ Vai trò của **${targetPlayer.name}** là: **${targetPlayer.role.name}**.`
           );
         } catch (err) {
           console.error(`Không thể gửi DM cho ${playerId}:`, err);
@@ -788,7 +788,7 @@ client.on('interactionCreate', async (interaction) => {
         try {
           const user = await client.users.fetch(playerId);
           await user.send(
-            `🔎 Bạn đã điều tra: <@${targetPlayer1.userId}> và <@${targetPlayer2.userId}>. Họ ${checkFaction() ? 'cùng phe' : 'khác phe'}.`
+            `🔎 Bạn đã điều tra: **${targetPlayer1.name}** và **${targetPlayer2.name}**. Họ ${checkFaction() ? 'cùng phe' : 'khác phe'}.`
           );
         } catch (err) {
           console.error(`Không thể gửi DM cho ${playerId}:`, err);
@@ -857,7 +857,7 @@ client.on('interactionCreate', async (interaction) => {
       try {
         const user = await client.users.fetch(playerId);
         await user.send(
-          `💉 Bạn đã chọn người chơi để dùng thuốc: <@${targetPlayer.userId}>.`
+          `💉 Bạn đã chọn người chơi để dùng thuốc: **${targetPlayer.name}**.`
         );
       } catch (err) {
         console.error(`Không thể gửi DM cho ${playerId}:`, err);
@@ -931,7 +931,7 @@ client.on('interactionCreate', async (interaction) => {
       try {
         const user = await client.users.fetch(playerId);
         await user.send(
-          `💫 Bạn đã chọn người chơi để cứu: <@${targetPlayer.userId}>.`
+          `💫 Bạn đã chọn người chơi để cứu: **${targetPlayer.name}**.`
         );
       } catch (err) {
         console.error(`Không thể gửi DM cho ${playerId}:`, err);
@@ -1007,10 +1007,10 @@ client.on('interactionCreate', async (interaction) => {
         const notifyPromises = gameRoom.players.map(async (player) => {
           const targetUser = await client.users.fetch(player.userId);
           if (player.userId !== playerId) {
-            return targetUser.send(`✅ <@${sender.userId}> đã vote.`);
+            return targetUser.send(`✅ **${sender.name}** đã vote.`);
           } else {
             return targetUser.send(
-              `✅ Bạn đã vote treo cổ: <@${targetPlayer.userId}>.`
+              `✅ Bạn đã vote treo cổ: **${targetPlayer.name}**.`
             );
           }
         });
@@ -1081,7 +1081,7 @@ client.on('interactionCreate', async (interaction) => {
       try {
         const user = await client.users.fetch(playerId);
         await user.send(
-          `💫 Bạn đã chọn người chơi để hồi sinh: <@${targetPlayer.userId}>.`
+          `💫 Bạn đã chọn người chơi để hồi sinh: **${targetPlayer.name}**.`
         );
       } catch (err) {
         console.error(`Không thể gửi DM cho ${playerId}:`, err);
