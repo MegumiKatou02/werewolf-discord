@@ -124,12 +124,12 @@ class GameRoom extends EventEmitter {
     }
 
     const roles = this.assignRoles(this.players.length);
-    const fakeRoles = [0, 1, 8, 7];
+    const fakeRoles = [0, WEREROLE.CURSED, 8, 7];
 
     const allWerewolves = [];
 
     const dmPromises = this.players.map(async (player, i) => {
-      const role = assignRolesGame(roles[i]);
+      const role = assignRolesGame(fakeRoles[i]);
       player.role = role;
       if (player.role.faction === 0) {
         allWerewolves.push(player.userId);
@@ -477,7 +477,7 @@ class GameRoom extends EventEmitter {
    * Đoạn này xin được phép comment nhiều vì sợ đọc lại không hiểu <(")
    */
   async solvePhase2() {
-    this.gameState.log.push(`Đêm thứ ${this.gameState.nightCount}`);
+    this.gameState.log.push(`## Đêm thứ ${this.gameState.nightCount}`);
 
     const mostVotedUserId = this.totalVotedWolvesSolve();
     let killedPlayers = new Set(); // vẫn có thể cứu được
@@ -904,7 +904,7 @@ class GameRoom extends EventEmitter {
       const user = await this.fetchUser(player.userId);
       if (!user) return;
       await user.send(
-        `🗳️ Thời gian bỏ phiếu đã đến. Người có số phiếu cao nhất và có ít nhất 2 phiếu sẽ bị treo cổ. Hãy chọn người bạn muốn loại trừ trong ${this.settings.voteTime} giây tới.`
+        `🗳️ Thời gian bỏ phiếu đã đến. Người có số phiếu cao nhất và có ít nhất 2 phiếu sẽ bị treo cổ. Hãy chọn người bạn muốn loại trừ trong ${this.settings.voteTime} giây tới.\n💡 Nhập số 0 hoặc 36 để bỏ qua vote.`
       );
 
       const buffer = await createAvatarCollage(this.players, this.client);
@@ -931,8 +931,16 @@ class GameRoom extends EventEmitter {
 
     await Promise.allSettled(dmPromises);
 
-    setTimeout(
-      async () => {
+    const timeoutPromise = new Promise((resolve) =>
+      setTimeout(resolve, this.settings.voteTime * 1000)
+    );
+
+    const voteCompletePromise = new Promise((resolve) => {
+      this.once('voteComplete', resolve);
+    });
+
+    const notificationPromise = new Promise((resolve) => {
+      setTimeout(async () => {
         const notifyPlayers = this.players.map(async (player) => {
           try {
             const user = await this.fetchUser(player.userId);
@@ -942,14 +950,12 @@ class GameRoom extends EventEmitter {
           }
         });
         await Promise.allSettled(notifyPlayers);
-      },
-      this.settings.voteTime * 1000 - 10000
-    );
+        resolve();
+      }, this.settings.voteTime * 1000 - 10000);
+    });
 
-    await new Promise((resolve) =>
-      setTimeout(resolve, this.settings.voteTime * 1000)
-    );
-
+    await Promise.race([timeoutPromise, voteCompletePromise]);
+    
     const hangedPlayer = this.processVote();
 
     if (!hangedPlayer) {
@@ -983,6 +989,13 @@ class GameRoom extends EventEmitter {
             .setDescription('```Danh sách vai trò của tất cả người chơi:```')
             .addFields(
               this.players.map((player) => {
+                let nameRole = player.role.name;
+                if (player.role.id === WEREROLE.DEAD) {
+                  nameRole = rolesData[player.role.originalRoleId].title;
+                  if (player.role.originalRoleId === WEREROLE.CURSED) {
+                    nameRole = `${nameRole} (Bán Sói)`;
+                  }
+                }
                 let roleEmoji = '👤';
                 switch (player.role.originalRoleId || player.role.id) {
                   case 0:
@@ -1014,8 +1027,8 @@ class GameRoom extends EventEmitter {
                     break;
                 }
                 return {
-                  name: `${roleEmoji} ${player.role.name}`,
-                  value: `**${player.name}**${!player.alive ? ' (�� Đã chết)' : ''}`,
+                  name: `${roleEmoji} ${nameRole}`,
+                  value: `**${player.name}**${!player.alive ? ' (💀 Đã chết)' : ''}`,
                   inline: true,
                 };
               })
@@ -1025,7 +1038,7 @@ class GameRoom extends EventEmitter {
           await user.send({ embeds: [roleRevealEmbed] });
         });
         await Promise.allSettled(foolMessages);
-        return; //
+        return;
       }
 
       hangedPlayer.alive = false;
@@ -1056,6 +1069,41 @@ class GameRoom extends EventEmitter {
     await this.checkEndGame();
   }
 
+  processVote() {
+    const totalVotes = this.players.reduce((acc, player) => {
+      if (player.alive && player.role.voteHanged && player.role.voteHanged !== 'skip') {
+        acc[player.role.voteHanged] = (acc[player.role.voteHanged] || 0) + 1;
+      }
+      return acc;
+    }, {});
+
+    const voteEntries = Object.entries(totalVotes);
+
+    if (voteEntries.length === 0) return null;
+
+    let maxVotes = 0;
+    let candidates = [];
+
+    for (const [userId, count] of voteEntries) {
+      if (count > maxVotes) {
+        maxVotes = count;
+        candidates = [userId];
+      } else if (count === maxVotes) {
+        candidates.push(userId);
+      }
+    }
+
+    if (candidates.length === 1 && maxVotes >= 2) {
+      const hangedPlayer = this.players.find((p) => p.userId === candidates[0]);
+      if (hangedPlayer && hangedPlayer.alive) {
+        hangedPlayer.alive = false;
+        return hangedPlayer;
+      }
+    }
+
+    return null;
+  }
+
   async checkEndGame() {
     const victoryResult = this.checkVictory();
     if (victoryResult) {
@@ -1080,6 +1128,13 @@ class GameRoom extends EventEmitter {
         .setDescription('```Danh sách vai trò của tất cả người chơi:```')
         .addFields(
           this.players.map((player) => {
+            let nameRole = player.role.name;
+            if (player.role.id === WEREROLE.DEAD) {
+              nameRole = rolesData[player.role.originalRoleId].title;
+              if (player.role.originalRoleId === WEREROLE.CURSED) {
+                nameRole = `${nameRole} (Bán Sói)`;
+              }
+            }
             let roleEmoji = '👤';
             switch (player.role.originalRoleId || player.role.id) {
               case 0:
@@ -1111,7 +1166,7 @@ class GameRoom extends EventEmitter {
                 break;
             }
             return {
-              name: `${roleEmoji} ${player.role.name}`,
+              name: `${roleEmoji} ${nameRole}`,
               value: `**${player.name}**${!player.alive ? ' (💀 Đã chết)' : ''}`,
               inline: true,
             };
@@ -1151,44 +1206,6 @@ class GameRoom extends EventEmitter {
     }
   }
 
-  /**
-   *
-   * @returns {Player|null}
-   */
-  processVote() {
-    const totalVotes = this.players.reduce((acc, player) => {
-      if (player.alive && player.role.voteHanged) {
-        acc[player.role.voteHanged] = (acc[player.role.voteHanged] || 0) + 1;
-      }
-      return acc;
-    }, {});
-
-    const voteEntries = Object.entries(totalVotes);
-
-    if (voteEntries.length === 0) return null;
-
-    let maxVotes = 0;
-    let candidates = [];
-
-    for (const [userId, count] of voteEntries) {
-      if (count > maxVotes) {
-        maxVotes = count;
-        candidates = [userId];
-      } else if (count === maxVotes) {
-        candidates.push(userId);
-      }
-    }
-
-    if (candidates.length === 1 && maxVotes >= 2) {
-      const hangedPlayer = this.players.find((p) => p.userId === candidates[0]);
-      if (hangedPlayer && hangedPlayer.alive) {
-        hangedPlayer.alive = false;
-        return hangedPlayer;
-      }
-    }
-
-    return null;
-  }
   /**
    *
    * @returns {Object|null}
