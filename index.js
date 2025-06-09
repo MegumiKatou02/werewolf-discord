@@ -8,12 +8,15 @@ const {
   TextInputBuilder,
   ActionRowBuilder,
   TextInputStyle,
+  EmbedBuilder,
+  ButtonBuilder,
+  ButtonStyle,
 } = require('discord.js');
 const fs = require('node:fs');
 const path = require('node:path');
 const { RoleResponse } = require('./utils/response');
 const { FactionRole } = require('./types/faction');
-const { store } = require('./core/store');
+const { store, serverSettings } = require('./core/store');
 const { gameRooms } = require('./core/room');
 const { WEREROLE } = require('./utils/role');
 
@@ -53,41 +56,59 @@ client.once('ready', () => {
 client.on('messageCreate', async (message) => {
   // if (message.author.bot) return;
 
-  await RoleResponse(message, '!soi', 'werewolf.png', 0, FactionRole.Werewolf);
   await RoleResponse(
     message,
-    '!danlang',
+    ['!soi', '!masoi', '!werewolf'],
+    'werewolf.png',
+    0,
+    FactionRole.Werewolf
+  );
+  await RoleResponse(
+    message,
+    ['!danlang', '!villager'],
     'villager.png',
     1,
     FactionRole.Village
   );
   await RoleResponse(
     message,
-    '!baove',
+    ['!baove', '!bodyguard'],
     'bodyguard.png',
     2,
     FactionRole.Village
   );
   await RoleResponse(
     message,
-    '!bansoi',
+    ['!bansoi', '!cursed'],
     'cursed.png',
     3,
     FactionRole['Vi-Wolf']
   );
-  await RoleResponse(message, '!tientri', 'seer.png', 4, FactionRole.Village);
+  await RoleResponse(message, ['!tientri'], 'seer.png', 4, FactionRole.Village);
   await RoleResponse(
     message,
-    '!thamtu',
+    ['!thamtu', '!detective'],
     'detective.png',
     5,
     FactionRole.Village
   );
-  await RoleResponse(message, '!phuthuy', 'witch.png', 6, FactionRole.Village);
-  await RoleResponse(message, '!thangngo', 'fool.png', 7, FactionRole.Solo);
   await RoleResponse(
     message,
-    '!thaydong',
+    ['!phuthuy', '!witch'],
+    'witch.png',
+    6,
+    FactionRole.Village
+  );
+  await RoleResponse(
+    message,
+    ['!thangngo', '!fool'],
+    'fool.png',
+    7,
+    FactionRole.Solo
+  );
+  await RoleResponse(
+    message,
+    ['!thaydong', '!medium'],
     'medium.png',
     8,
     FactionRole.Village
@@ -452,13 +473,21 @@ client.on('interactionCreate', async (interaction) => {
   }
 
   if (interaction.isModalSubmit()) {
-    const guildId = store.get(interaction.user.id);
-    const gameRoom = gameRooms.get(guildId);
+    const guildId = interaction.guild.id || store.get(interaction.user.id);
 
-    const sender = gameRoom.players.find(
-      (p) => p.userId === interaction.user.id
-    ); // player
-    if (!sender) return;
+    if (!guildId) {
+      return interaction.reply({
+        content: 'Không tìm thấy guild liên kết với người dùng này.',
+        ephemeral: true,
+      });
+    }
+
+    const gameRoom = gameRooms.get(guildId);
+    let sender = null;
+    if (gameRoom) {
+      sender = gameRoom.players.find((p) => p.userId === interaction.user.id); // player
+      if (!sender) return;
+    }
 
     if (interaction.customId.startsWith('submit_vote_wolf_')) {
       if (!gameRoom || gameRoom.gameState.phase !== 'night') return;
@@ -1054,6 +1083,83 @@ client.on('interactionCreate', async (interaction) => {
       await interaction.reply({
         content: '✅ Chọn người chơi thành công.',
         ephemeral: true,
+      });
+    }
+    if (interaction.customId === 'settings_modal') {
+      const newSettings = {
+        wolfVoteTime: parseInt(
+          interaction.fields.getTextInputValue('wolfVoteTime')
+        ),
+        nightTime: parseInt(interaction.fields.getTextInputValue('nightTime')),
+        discussTime: parseInt(
+          interaction.fields.getTextInputValue('discussTime')
+        ),
+        voteTime: parseInt(interaction.fields.getTextInputValue('voteTime')),
+      };
+
+      if (
+        Object.values(newSettings).some(
+          (value) => isNaN(value) || value < 10 || value > 300
+        )
+      ) {
+        await interaction.reply({
+          content: '❌ Vui lòng nhập số từ 10 đến 300 giây!',
+          ephemeral: true,
+        });
+        return;
+      }
+
+      if (newSettings.wolfVoteTime >= newSettings.nightTime) {
+        return interaction.reply({
+          content:
+            'Thời gian sói vote không thể lớn hơn hoặc bằng thời gian trong đêm.',
+          ephemeral: true,
+        });
+      }
+
+      const guildId = interaction.guild.id;
+      serverSettings.set(guildId, newSettings);
+
+      const updatedEmbed = new EmbedBuilder()
+        .setColor(0x2ecc71)
+        .setTitle('⚙️ CÀI ĐẶT GAME MA SÓI')
+        .setDescription('```✅ Cài đặt đã được cập nhật thành công!```')
+        .addFields(
+          {
+            name: '🐺 Thời Gian Sói Vote',
+            value: `\`${newSettings.wolfVoteTime}\` giây`,
+            inline: true,
+          },
+          {
+            name: '🌙 Thời Gian Ban Đêm',
+            value: `\`${newSettings.nightTime}\` giây`,
+            inline: true,
+          },
+          {
+            name: '💭 Thời Gian Thảo Luận',
+            value: `\`${newSettings.discussTime}\` giây`,
+            inline: true,
+          },
+          {
+            name: '🗳️ Thời Gian Vote Treo Cổ',
+            value: `\`${newSettings.voteTime}\` giây`,
+            inline: true,
+          }
+        )
+        .setFooter({
+          text: '💡 Cài đặt sẽ được áp dụng cho các game tiếp theo',
+        });
+
+      await interaction.update({
+        embeds: [updatedEmbed],
+        components: [
+          new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+              .setCustomId('edit_settings')
+              .setLabel('🔧 Điều Chỉnh Cài Đặt')
+              .setStyle(ButtonStyle.Primary)
+          ),
+        ],
       });
     }
   }

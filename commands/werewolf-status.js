@@ -15,12 +15,11 @@ module.exports = {
         .setColor(0x95a5a6)
         .setTitle('🎮 TRẠNG THÁI PHÒNG CHƠI')
         .setDescription('```⚠️ Hiện không có phòng Ma Sói nào trong server!```')
-        .addFields(
-          {
-            name: '💡 Tạo Phòng Mới',
-            value: 'Sử dụng lệnh `/masoi-create` để tạo phòng mới và bắt đầu trò chơi.'
-          }
-        )
+        .addFields({
+          name: '💡 Tạo Phòng Mới',
+          value:
+            'Sử dụng lệnh `/masoi-create` để tạo phòng mới và bắt đầu trò chơi.',
+        })
         .setTimestamp();
 
       await interaction.reply({ embeds: [noGameEmbed], ephemeral: true });
@@ -29,7 +28,7 @@ module.exports = {
 
     const host = await interaction.client.users.fetch(gameRoom.hostId);
     const playerCount = gameRoom.players.length;
-    const aliveCount = gameRoom.players.filter(p => p.alive).length;
+    const aliveCount = gameRoom.players.filter((p) => p.alive).length;
     const deadCount = playerCount - aliveCount;
 
     let statusEmbed = new EmbedBuilder()
@@ -51,21 +50,24 @@ module.exports = {
           {
             name: '👑 Chủ Phòng',
             value: `${host.username}`,
-            inline: true
+            inline: true,
           },
           {
             name: '👥 Số Người Chơi',
             value: `${playerCount}/18`,
-            inline: true
+            inline: true,
           },
           {
             name: '⌛ Trạng Thái',
             value: 'Đang chờ',
-            inline: true
+            inline: true,
           },
           {
             name: '📋 Danh Sách Người Chơi',
-            value: playerList.length > 0 ? playerList.join('\n') : 'Chưa có người chơi nào',
+            value:
+              playerList.length > 0
+                ? playerList.join('\n')
+                : 'Chưa có người chơi nào',
           }
         )
         .setFooter({ text: '💡 Sử dụng /masoi-join để tham gia phòng' });
@@ -76,35 +78,37 @@ module.exports = {
           {
             name: '👑 Chủ Phòng',
             value: `${host.username}`,
-            inline: true
+            inline: true,
           },
           {
             name: '👥 Tổng Số Người Chơi',
             value: `${playerCount}`,
-            inline: true
+            inline: true,
           },
           {
             name: '⌛ Trạng Thái',
             value: 'Đang chơi',
-            inline: true
+            inline: true,
           },
           {
             name: '❤️ Còn Sống',
             value: `${aliveCount}`,
-            inline: true
+            inline: true,
           },
           {
             name: '💀 Đã Chết',
             value: `${deadCount}`,
-            inline: true
+            inline: true,
           },
           {
             name: '🌙 Đêm Thứ',
             value: `${gameRoom.gameState.nightCount}`,
-            inline: true
+            inline: true,
           }
         )
-        .setFooter({ text: '🎲 Game đang diễn ra, hãy đợi ván sau để tham gia' });
+        .setFooter({
+          text: '🎲 Game đang diễn ra, hãy đợi ván sau để tham gia',
+        });
     } else if (gameRoom.status === 'ended') {
       statusEmbed
         .setDescription('```🔵 Trò chơi đã kết thúc```')
@@ -112,17 +116,17 @@ module.exports = {
           {
             name: '👑 Chủ Phòng Cũ',
             value: `${host.username}`,
-            inline: true
+            inline: true,
           },
           {
             name: '👥 Số Người Đã Chơi',
             value: `${playerCount}`,
-            inline: true
+            inline: true,
           },
           {
             name: '⌛ Trạng Thái',
             value: 'Đã kết thúc',
-            inline: true
+            inline: true,
           }
         )
         .setFooter({ text: '💡 Sử dụng /masoi-create để tạo phòng mới' });
@@ -130,4 +134,4 @@ module.exports = {
 
     await interaction.reply({ embeds: [statusEmbed], ephemeral: true });
   },
-}; 
+};

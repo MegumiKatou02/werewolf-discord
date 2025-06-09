@@ -114,8 +114,8 @@ class GameRoom extends EventEmitter {
       store.set(player.userId, this.guildId);
     }
 
-    if(this.guildId && serverSettings.get(this.guildId)) {
-      this.settings = serverSettings.get(this.guildId); 
+    if (this.guildId && serverSettings.get(this.guildId)) {
+      this.settings = serverSettings.get(this.guildId);
     }
 
     const roles = this.assignRoles(this.players.length);
@@ -395,7 +395,9 @@ class GameRoom extends EventEmitter {
       }
     }, this.settings.wolfVoteTime * 1000);
 
-    await new Promise((resolve) => setTimeout(resolve, this.settings.nightTime * 1000));
+    await new Promise((resolve) =>
+      setTimeout(resolve, this.settings.nightTime * 1000)
+    );
   }
 
   /**
@@ -777,7 +779,9 @@ class GameRoom extends EventEmitter {
 
     await Promise.allSettled(dmPromises);
 
-    await new Promise((resolve) => setTimeout(resolve, this.settings.discussTime * 1000));
+    await new Promise((resolve) =>
+      setTimeout(resolve, this.settings.discussTime * 1000)
+    );
   }
 
   async votePhase() {
@@ -815,7 +819,9 @@ class GameRoom extends EventEmitter {
 
     await Promise.allSettled(dmPromises);
 
-    await new Promise((resolve) => setTimeout(resolve, this.settings.voteTime * 1000));
+    await new Promise((resolve) =>
+      setTimeout(resolve, this.settings.voteTime * 1000)
+    );
 
     const hangedPlayer = this.processVote();
 
