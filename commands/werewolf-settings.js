@@ -13,10 +13,10 @@ const { gameRooms } = require('../core/room');
 const { serverSettings } = require('../core/store');
 
 const defaultSettings = {
-  wolfVoteTime: 40, 
+  wolfVoteTime: 40,
   nightTime: 70,
   discussTime: 90,
-  voteTime: 30, 
+  voteTime: 30,
 };
 
 module.exports = {
@@ -148,9 +148,4 @@ module.exports = {
       }
     });
   },
-
-  // Export để các file khác có thể truy cập settings
-  // getSettings(guildId) {
-  //   return serverSettings.get(guildId) || defaultSettings;
-  // }
 };
