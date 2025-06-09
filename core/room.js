@@ -165,7 +165,10 @@ class GameRoom extends EventEmitter {
             `Đồng đội của bạn: ${
               allWerewolves
                 .filter((id) => id !== player.userId)
-                .map((id) => `<@${id}>`)
+                .map((id) => {
+                  const teammate = this.players.find((p) => p.userId === id);
+                  return `**${teammate.name}**`;
+                })
                 .join(', ') || 'Không có đồng đội.'
             }`
           );
@@ -395,6 +398,23 @@ class GameRoom extends EventEmitter {
 
     await Promise.allSettled(dmPromises);
 
+    setTimeout(
+      async () => {
+        const notifyWolves = this.players
+          .filter((p) => p.role.id === WEREROLE.WEREWOLF)
+          .map(async (wolf) => {
+            try {
+              const user = await this.fetchUser(wolf.userId);
+              await user.send(`### ⚠️ Thông báo: còn **10** giây để vote!`);
+            } catch (err) {
+              console.error(`Không thể gửi tin nhắn cho ${wolf.userId}`, err);
+            }
+          });
+        await Promise.allSettled(notifyWolves);
+      },
+      this.settings.wolfVoteTime * 1000 - 10000
+    );
+
     setTimeout(async () => {
       for (const message of wolfMessages) {
         try {
@@ -428,6 +448,23 @@ class GameRoom extends EventEmitter {
         }
       }
     }, this.settings.wolfVoteTime * 1000);
+
+    setTimeout(
+      async () => {
+        const notifyPlayers = this.players.map(async (player) => {
+          try {
+            const user = await this.fetchUser(player.userId);
+            await user.send(
+              `### ⚠️ Thông báo: còn **10** giây nữa trời sẽ sáng!`
+            );
+          } catch (err) {
+            console.error(`Không thể gửi tin nhắn cho ${player.userId}`, err);
+          }
+        });
+        await Promise.allSettled(notifyPlayers);
+      },
+      this.settings.nightTime * 1000 - 10000
+    );
 
     await new Promise((resolve) =>
       setTimeout(resolve, this.settings.nightTime * 1000)
@@ -823,6 +860,21 @@ class GameRoom extends EventEmitter {
 
     await Promise.allSettled(dmPromises);
 
+    setTimeout(
+      async () => {
+        const notifyPlayers = this.players.map(async (player) => {
+          try {
+            const user = await this.fetchUser(player.userId);
+            await user.send(`### ⚠️ Thông báo: còn **10** giây để thảo luận!`);
+          } catch (err) {
+            console.error(`Không thể gửi tin nhắn cho ${player.userId}`, err);
+          }
+        });
+        await Promise.allSettled(notifyPlayers);
+      },
+      this.settings.discussTime * 1000 - 10000
+    );
+
     await new Promise((resolve) =>
       setTimeout(resolve, this.settings.discussTime * 1000)
     );
@@ -862,6 +914,21 @@ class GameRoom extends EventEmitter {
     });
 
     await Promise.allSettled(dmPromises);
+
+    setTimeout(
+      async () => {
+        const notifyPlayers = this.players.map(async (player) => {
+          try {
+            const user = await this.fetchUser(player.userId);
+            await user.send(`### ⚠️ Thông báo: còn **10** giây để vote!`);
+          } catch (err) {
+            console.error(`Không thể gửi tin nhắn cho ${player.userId}`, err);
+          }
+        });
+        await Promise.allSettled(notifyPlayers);
+      },
+      this.settings.voteTime * 1000 - 10000
+    );
 
     await new Promise((resolve) =>
       setTimeout(resolve, this.settings.voteTime * 1000)
