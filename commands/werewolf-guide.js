@@ -1,4 +1,10 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const {
+  SlashCommandBuilder,
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+} = require('discord.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -7,131 +13,146 @@ module.exports = {
 
   async execute(interaction) {
     const tipsEmbed = new EmbedBuilder()
-      .setColor(0x4CAF50)
+      .setColor(0x4caf50)
       .setTitle('💡 CÁCH CHƠI VỚI BOT')
       .addFields(
         {
           name: '⚠️ Lưu Ý Quan Trọng',
-          value: '• **Bạn cần BẬT "Cho phép tin nhắn trực tiếp từ thành viên máy chủ" trong Discord để có thể chơi!**\n' +
+          value:
+            '• **Bạn cần BẬT "Cho phép tin nhắn trực tiếp từ thành viên máy chủ" trong Discord để có thể chơi!**\n' +
             '• Cách bật: Chuột phải vào server > Cài đặt bảo mật > Bật "Cho phép tin nhắn trực tiếp từ thành viên máy chủ"\n' +
             '• Nếu không bật, bạn sẽ không nhận được thông báo vai trò và không thể tương tác trong game!',
         },
         {
           name: '📋 Cách Chơi Chính',
-          value: '• Khi bắt đầu game bot sẽ nhắn cho bạn\n' +
+          value:
+            '• Khi bắt đầu game bot sẽ nhắn cho bạn\n' +
             '• Bạn và người khác sẽ giao tiếp thông qua bot bằng cách nhắn trực tiếp vào thanh chat\n' +
             '• Bạn cũng có thể tương tác với vai trò của mình thông qua bot\n',
         },
         {
           name: '🎮 Các Lệnh Trong Game',
-          value: '`/masoi-create` - Tạo phòng mới\n' +
+          value:
+            '`/masoi-create` - Tạo phòng mới\n' +
             '`/masoi-join` - Tham gia phòng\n' +
             '`/masoi-leave` - Rời phòng\n' +
             '`/masoi-start` - Bắt đầu game (chỉ host)\n' +
             '`/huongdan` - Xem hướng dẫn này\n' +
             '...',
         }
-      )
-      // .setFooter({ text: 'Chúc bạn có những trận game vui vẻ! 🎮' });
-
-    const row = new ActionRowBuilder()
-      .addComponents(
-        new ButtonBuilder()
-          .setCustomId('guide_tips')
-          .setLabel('💡 Cách Chơi với Bot')
-          .setStyle(ButtonStyle.Primary),
-        new ButtonBuilder()
-          .setCustomId('guide_rules')
-          .setLabel('📜 Luật Chơi')
-          .setStyle(ButtonStyle.Primary),
-        new ButtonBuilder()
-          .setCustomId('guide_roles')
-          .setLabel('🎭 Vai Trò')
-          .setStyle(ButtonStyle.Primary)
       );
+    // .setFooter({ text: 'Chúc bạn có những trận game vui vẻ! 🎮' });
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('guide_tips')
+        .setLabel('💡 Cách Chơi với Bot')
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId('guide_rules')
+        .setLabel('📜 Luật Chơi')
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId('guide_roles')
+        .setLabel('🎭 Vai Trò')
+        .setStyle(ButtonStyle.Primary)
+    );
 
     const response = await interaction.reply({
       embeds: [tipsEmbed],
       components: [row],
-      ephemeral: true
+      ephemeral: true,
     });
 
     const collector = response.createMessageComponentCollector({
-      time: 300000
+      time: 300000,
     });
 
-    collector.on('collect', async i => {
+    collector.on('collect', async (i) => {
       if (i.user.id !== interaction.user.id) {
-        await i.reply({ content: 'Bạn không thể sử dụng nút này!', ephemeral: true });
+        await i.reply({
+          content: 'Bạn không thể sử dụng nút này!',
+          ephemeral: true,
+        });
         return;
       }
 
       const rulesEmbed = new EmbedBuilder()
-        .setColor(0x9C27B0)
+        .setColor(0x9c27b0)
         .setTitle('📜 LUẬT CHƠI CƠ BẢN')
         .addFields(
           {
             name: '⏰ Chu Kỳ Ngày Đêm',
-            value: '• **Ban Đêm**: Các vai trò đặc biệt thực hiện khả năng của mình\n' +
+            value:
+              '• **Ban Đêm**: Các vai trò đặc biệt thực hiện khả năng của mình\n' +
               '• **Ban Ngày**: Mọi người thảo luận và vote treo cổ người khả nghi',
           },
           {
             name: '🎯 Cách Vote',
-            value: '• **Ban Đêm**: Sói vote để cắn người\n' +
+            value:
+              '• **Ban Đêm**: Sói vote để cắn người\n' +
               '• **Ban Ngày**: Tất cả vote để treo cổ\n' +
               '• Người có số vote cao nhất và ít nhất 2 vote sẽ bị treo',
           },
           {
             name: '🏆 Điều Kiện Thắng',
-            value: '• **Phe Sói**: Thắng khi số Sói >= số Dân\n' +
+            value:
+              '• **Phe Sói**: Thắng khi số Sói >= số Dân\n' +
               '• **Phe Dân**: Thắng khi tiêu diệt hết Sói\n' +
               '• **Phe Solo**: Thắng theo điều kiện riêng',
           }
         );
 
       const rolesEmbed = new EmbedBuilder()
-        .setColor(0x2196F3)
+        .setColor(0x2196f3)
         .setTitle('🎭 CÁC VAI TRÒ TRONG GAME')
         .addFields(
           {
             name: '🐺 Sói (Phe Sói)',
-            value: '• Mỗi đêm chọn 1 người để cắn\n• Biết được đồng đội là ai\n• Có thể chat riêng với nhau vào ban đêm',
-            inline: true
+            value:
+              '• Mỗi đêm chọn 1 người để cắn\n• Biết được đồng đội là ai\n• Có thể chat riêng với nhau vào ban đêm',
+            inline: true,
           },
           {
             name: '🛡️ Bảo Vệ (Phe Dân)',
-            value: '• Mỗi đêm bảo vệ 1 người khỏi bị Sói cắn\n• Có 2 máu khi bảo vệ người bị cắn\n• Có thể tự bảo vệ mình',
-            inline: true
+            value:
+              '• Mỗi đêm bảo vệ 1 người khỏi bị Sói cắn\n• Có 2 máu khi bảo vệ người bị cắn\n• Có thể tự bảo vệ mình',
+            inline: true,
           },
           {
             name: '🔮 Tiên Tri (Phe Dân)',
-            value: '• Mỗi đêm soi vai trò của 1 người\n• Biết được người đó thuộc phe nào',
-            inline: true
+            value:
+              '• Mỗi đêm soi vai trò của 1 người\n• Biết được người đó thuộc phe nào',
+            inline: true,
           },
           {
             name: '🕵️ Thám Tử (Phe Dân)',
-            value: '• Mỗi đêm điều tra 2 người\n• Biết 2 người đó có cùng phe không',
-            inline: true
+            value:
+              '• Mỗi đêm điều tra 2 người\n• Biết 2 người đó có cùng phe không',
+            inline: true,
           },
           {
             name: '🧙‍♀️ Phù Thủy (Phe Dân)',
-            value: '• Có 1 bình cứu và 1 bình độc\n• Biết ai bị Sói cắn để cứu\n• Có thể dùng bình độc giết 1 người',
-            inline: true
+            value:
+              '• Có 1 bình cứu và 1 bình độc\n• Biết ai bị Sói cắn để cứu\n• Có thể dùng bình độc giết 1 người',
+            inline: true,
           },
           {
             name: '👻 Thầy Đồng (Phe Dân)',
-            value: '• Có thể hồi sinh 1 người dân đã chết\n• Chỉ được dùng 1 lần trong game',
-            inline: true
+            value:
+              '• Có thể hồi sinh 1 người dân đã chết\n• Chỉ được dùng 1 lần trong game',
+            inline: true,
           },
           {
             name: '🎪 Thằng Ngố (Phe Solo)',
-            value: '• Thắng nếu bị dân làng treo cổ\n• Thua nếu chết vì lý do khác',
-            inline: true
+            value:
+              '• Thắng nếu bị dân làng treo cổ\n• Thua nếu chết vì lý do khác',
+            inline: true,
           },
           {
             name: '🌙 Bán Sói (Phe Dân)',
             value: '• Ban đầu là dân thường\n• Biến thành Sói nếu bị Sói cắn',
-            inline: true
+            inline: true,
           }
         );
 
@@ -149,28 +170,29 @@ module.exports = {
     });
 
     collector.on('end', async () => {
-      const disabledRow = new ActionRowBuilder()
-        .addComponents(
-          new ButtonBuilder()
-            .setCustomId('guide_tips')
-            .setLabel('💡 Cách Chơi Với Bot')
-            .setStyle(ButtonStyle.Primary)
-            .setDisabled(true),
-          new ButtonBuilder()
-            .setCustomId('guide_rules')
-            .setLabel('📜 Luật Chơi')
-            .setStyle(ButtonStyle.Primary)
-            .setDisabled(true),
-          new ButtonBuilder()
-            .setCustomId('guide_roles')
-            .setLabel('🎭 Vai Trò')
-            .setStyle(ButtonStyle.Primary)
-            .setDisabled(true)
-        );
+      const disabledRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('guide_tips')
+          .setLabel('💡 Cách Chơi Với Bot')
+          .setStyle(ButtonStyle.Primary)
+          .setDisabled(true),
+        new ButtonBuilder()
+          .setCustomId('guide_rules')
+          .setLabel('📜 Luật Chơi')
+          .setStyle(ButtonStyle.Primary)
+          .setDisabled(true),
+        new ButtonBuilder()
+          .setCustomId('guide_roles')
+          .setLabel('🎭 Vai Trò')
+          .setStyle(ButtonStyle.Primary)
+          .setDisabled(true)
+      );
 
-      await interaction.editReply({
-        components: [disabledRow]
-      }).catch(() => {});
+      await interaction
+        .editReply({
+          components: [disabledRow],
+        })
+        .catch(() => {});
     });
   },
-}; 
+};
