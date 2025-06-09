@@ -24,9 +24,16 @@ module.exports = {
       });
     }
 
-    const isAdmin = interaction.member.permissions.has(
-      PermissionFlagsBits.Administrator
-    );
+    if (!interaction.inGuild()) {
+      return interaction.reply({
+        content: 'Lệnh này chỉ sử dụng được trong server.',
+        ephemeral: true,
+      });
+    }
+
+    const isAdmin =
+      interaction.member?.permissions.has(PermissionFlagsBits.Administrator) ??
+      false;
     const isHost = gameRoom.hostId === interaction.user.id;
 
     if (!isAdmin && !isHost) {

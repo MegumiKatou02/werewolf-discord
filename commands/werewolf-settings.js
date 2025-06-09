@@ -85,6 +85,12 @@ module.exports = {
 
     collector.on('collect', async (i) => {
       if (i.customId === 'edit_settings') {
+        if (!i.inGuild()) {
+          return i.reply({
+            content: 'Lệnh này chỉ sử dụng được trong server.',
+            ephemeral: true,
+          });
+        }
         if (!i.member.permissions.has(PermissionFlagsBits.Administrator)) {
           await i.reply({
             content: '❌ Bạn cần có quyền Admin để thay đổi cài đặt!',

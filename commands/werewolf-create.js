@@ -39,7 +39,7 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setColor(0x3498db)
       .setTitle('🎮 PHÒNG CHƠI MA SÓI MỚI')
-      .setDescription('```🟢 Phòng đã được tạo thành công!```')
+      .setDescription('```🔌 Phòng đã được tạo thành công!```')
       .addFields(
         {
           name: '👑 Chủ Phòng',
