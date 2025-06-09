@@ -99,6 +99,11 @@ module.exports = {
           embeds: [],
           components: [],
         });
+
+        const channel = interaction.channel;
+        if (channel) {
+          channel.send(`✅ Phòng chơi trong server đã bị xóa bởi <@${i.user.id}>.`);
+        }
       } else if (i.customId === 'cancel_clear_room') {
         await i.update({
           content: '❌ Đã hủy xóa phòng.',

@@ -37,6 +37,7 @@ module.exports = {
             '`/masoi-join` - Tham gia phòng\n' +
             '`/masoi-leave` - Rời phòng\n' +
             '`/masoi-start` - Bắt đầu game (chỉ host)\n' +
+            '`/status` - Xem trạng thái phòng trong server\n' +
             '`/huongdan` - Xem hướng dẫn này\n' +
             '...',
         }
