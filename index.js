@@ -478,7 +478,7 @@ client.on('interactionCreate', async (interaction) => {
   }
 
   if (interaction.isModalSubmit()) {
-    const guildId = interaction.guild.id || store.get(interaction.user.id);
+    const guildId = interaction.guild?.id || store.get(interaction.user.id);
 
     if (!guildId) {
       return interaction.reply({

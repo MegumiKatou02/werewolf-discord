@@ -119,11 +119,16 @@ class GameRoom extends EventEmitter {
     }
 
     const roles = this.assignRoles(this.players.length);
-    const fakeRoles = [0, 2, 8, 7];
+    const fakeRoles = [0, 1, 8, 7];
+
+    const allWerewolves = [];
 
     const dmPromises = this.players.map(async (player, i) => {
-      const role = assignRolesGame(fakeRoles[i]);
+      const role = assignRolesGame(roles[i]);
       player.role = role;
+      if (player.role.faction === 0) {
+        allWerewolves.push(player.userId);
+      }
 
       try {
         const user = await interaction.client.users.fetch(player.userId);
@@ -145,6 +150,30 @@ class GameRoom extends EventEmitter {
       }
     });
     await Promise.allSettled(dmPromises);
+
+    const woPromises = this.players
+      .filter((p) => p.role.faction === 0)
+      .map(async (player) => {
+        try {
+          const user = await interaction.client.users.fetch(player.userId);
+          await user.send(
+            `Đồng đội của bạn: ${
+              allWerewolves
+                .filter((id) => id !== player.userId)
+                .map((id) => `<@${id}>`)
+                .join(', ') || 'Không có đồng đội.'
+            }`
+          );
+        } catch (error) {
+          console.error(`Không thể gửi tin nhắn cho ${player.userId}`, err);
+          await interaction.reply({
+            content:
+              'Không thể gửi tin nhắn cho bạn, hãy kiểm tra cài đặt quyền',
+            ephemeral: true,
+          });
+        }
+      });
+    await Promise.allSettled(woPromises);
 
     this.status = 'starting';
 
@@ -843,6 +872,52 @@ class GameRoom extends EventEmitter {
           await user.send(
             `🎭 <@${hangedPlayer.userId}> là **Ngố** và đã bị treo cổ. \n🎉 **Ngố** thắng !!.`
           );
+          const roleRevealEmbed = new EmbedBuilder()
+            .setColor(0x2ecc71)
+            .setTitle('🎭 Tiết Lộ Vai Trò')
+            .setDescription('```Danh sách vai trò của tất cả người chơi:```')
+            .addFields(
+              this.players.map((player) => {
+                let roleEmoji = '👤';
+                switch (player.role.originalRoleId || player.role.id) {
+                  case 0:
+                    roleEmoji = '🐺';
+                    break;
+                  case 1:
+                    roleEmoji = '👥';
+                    break;
+                  case 2:
+                    roleEmoji = '🛡️';
+                    break;
+                  case 3:
+                    roleEmoji = '🌙';
+                    break;
+                  case 4:
+                    roleEmoji = '👁️';
+                    break;
+                  case 5:
+                    roleEmoji = '🔍';
+                    break;
+                  case 6:
+                    roleEmoji = '🧪';
+                    break;
+                  case 7:
+                    roleEmoji = '🃏';
+                    break;
+                  case 8:
+                    roleEmoji = '🔮';
+                    break;
+                }
+                return {
+                  name: `${roleEmoji} ${player.role.name}`,
+                  value: `<@${player.userId}>${!player.alive ? ' (💀 Đã chết)' : ''}`,
+                  inline: true,
+                };
+              })
+            )
+            .setTimestamp()
+            .setFooter({ text: 'Hẹ hẹ hẹ' });
+          await user.send({ embeds: [roleRevealEmbed] });
         });
         await Promise.allSettled(foolMessages);
         return; //
@@ -894,11 +969,63 @@ class GameRoom extends EventEmitter {
           break;
       }
 
-      for (const player of this.players) {
+      const roleRevealEmbed = new EmbedBuilder()
+        .setColor(0x2ecc71)
+        .setTitle('🎭 Tiết Lộ Vai Trò')
+        .setDescription('```Danh sách vai trò của tất cả người chơi:```')
+        .addFields(
+          this.players.map((player) => {
+            let roleEmoji = '👤';
+            switch (player.role.originalRoleId || player.role.id) {
+              case 0:
+                roleEmoji = '🐺';
+                break;
+              case 1:
+                roleEmoji = '👥';
+                break;
+              case 2:
+                roleEmoji = '🛡️';
+                break;
+              case 3:
+                roleEmoji = '🌙';
+                break;
+              case 4:
+                roleEmoji = '👁️';
+                break;
+              case 5:
+                roleEmoji = '🔍';
+                break;
+              case 6:
+                roleEmoji = '🧪';
+                break;
+              case 7:
+                roleEmoji = '🃏';
+                break;
+              case 8:
+                roleEmoji = '🔮';
+                break;
+            }
+            return {
+              name: `${roleEmoji} ${player.role.name}`,
+              value: `<@${player.userId}>${!player.alive ? ' (💀 Đã chết)' : ''}`,
+              inline: true,
+            };
+          })
+        )
+        .setTimestamp()
+        .setFooter({ text: 'Hẹ hẹ hẹ' });
+
+      const endGameMessages = this.players.map(async (player) => {
         const user = await this.fetchUser(player.userId);
-        if (!user) continue;
-        await user.send(winMessage);
-      }
+        if (!user) return;
+
+        return Promise.all([
+          user.send(winMessage),
+          user.send({ embeds: [roleRevealEmbed] }),
+        ]);
+      });
+
+      await Promise.allSettled(endGameMessages);
 
       console.log(this.gameState.log);
       return true;
