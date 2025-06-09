@@ -17,7 +17,7 @@ const EventEmitter = require('events');
 const GameState = require('./gamestate');
 const rolesData = require('../data/data.json');
 const { createAvatarCollage } = require('./canvas');
-const { store } = require('./store');
+const { store, serverSettings } = require('./store');
 const Dead = require('../types/roles/Dead');
 const Werewolf = require('../types/roles/WereWolf');
 
@@ -32,6 +32,12 @@ class GameRoom extends EventEmitter {
     this.status = 'waiting'; // waiting, starting, ended
     this.gameState = new GameState();
     this.witchMessages = new Map(); // Lưu trữ message của phù thủy
+    this.settings = {
+      wolfVoteTime: 40,
+      nightTime: 70,
+      discussTime: 90,
+      voteTime: 30,
+    };
   }
 
   async fetchUser(userId) {
@@ -106,6 +112,10 @@ class GameRoom extends EventEmitter {
     // lưu vào store
     for (const player of this.players) {
       store.set(player.userId, this.guildId);
+    }
+
+    if(this.guildId && serverSettings.get(this.guildId)) {
+      this.settings = serverSettings.get(this.guildId); 
     }
 
     const roles = this.assignRoles(this.players.length);
@@ -218,7 +228,7 @@ class GameRoom extends EventEmitter {
         const row = new ActionRowBuilder().addComponents(voteButton);
 
         await user.send(
-          '🌙 Bạn là **Sói**. Hãy vote người cần giết trong 40 giây. Bạn có thể trò chuyện với các Sói khác ngay tại đây.'
+          `🌙 Bạn là **Sói**. Hãy vote người cần giết trong ${this.settings.wolfVoteTime} giây. Bạn có thể trò chuyện với các Sói khác ngay tại đây.`
         );
         const message = await user.send({
           embeds: [embed],
@@ -247,7 +257,7 @@ class GameRoom extends EventEmitter {
         // Tiên Tri
         const viewButton = new ButtonBuilder()
           .setCustomId(`view_target_seer_${player.userId}`)
-          .setLabel('🔍 Xem vai trò người')
+          .setLabel('🔍 Xem vai trò')
           .setStyle(ButtonStyle.Primary);
 
         const row = new ActionRowBuilder().addComponents(viewButton);
@@ -383,10 +393,9 @@ class GameRoom extends EventEmitter {
           }
         }
       }
-    }, 40_000);
+    }, this.settings.wolfVoteTime * 1000);
 
-    // Đêm 70 giây
-    await new Promise((resolve) => setTimeout(resolve, 70_000));
+    await new Promise((resolve) => setTimeout(resolve, this.settings.nightTime * 1000));
   }
 
   /**
@@ -748,7 +757,7 @@ class GameRoom extends EventEmitter {
       const user = await this.fetchUser(player.userId);
       if (!user) return;
       await user.send(
-        '# ☀️ Ban ngày đã đến. \nHãy thảo luận và bỏ phiếu để loại trừ người khả nghi nhất. Bạn có 1 phút 30 giây để quyết định.'
+        `# ☀️ Ban ngày đã đến. \nHãy thảo luận và bỏ phiếu để loại trừ người khả nghi nhất. Bạn có ${this.settings.discussTime} giây để thảo luận.`
       );
 
       const buffer = await createAvatarCollage(this.players, this.client);
@@ -768,21 +777,18 @@ class GameRoom extends EventEmitter {
 
     await Promise.allSettled(dmPromises);
 
-    // Thảo luận 1p 30 giây
-    await new Promise((resolve) => setTimeout(resolve, 10_000));
+    await new Promise((resolve) => setTimeout(resolve, this.settings.discussTime * 1000));
   }
 
   async votePhase() {
     this.gameState.phase = 'voting';
     this.emit('vote', this.guildId, this.players, this.gameState);
 
-    // const alivePlayers = this.players.filter((p) => p.alive);
-
     const dmPromises = this.players.map(async (player) => {
       const user = await this.fetchUser(player.userId);
       if (!user) return;
       await user.send(
-        `🗳️ Thời gian bỏ phiếu đã đến. Người có số phiếu cao nhất và có ít nhất 2 phiếu sẽ bị treo cổ. Hãy chọn người bạn muốn loại trừ trong 30 giây tới.`
+        `🗳️ Thời gian bỏ phiếu đã đến. Người có số phiếu cao nhất và có ít nhất 2 phiếu sẽ bị treo cổ. Hãy chọn người bạn muốn loại trừ trong ${this.settings.voteTime} giây tới.`
       );
 
       const buffer = await createAvatarCollage(this.players, this.client);
@@ -809,8 +815,7 @@ class GameRoom extends EventEmitter {
 
     await Promise.allSettled(dmPromises);
 
-    // Vote 30 giây
-    await new Promise((resolve) => setTimeout(resolve, 30_000));
+    await new Promise((resolve) => setTimeout(resolve, this.settings.voteTime * 1000));
 
     const hangedPlayer = this.processVote();
 
@@ -900,9 +905,9 @@ class GameRoom extends EventEmitter {
     while (this.status === 'starting') {
       await this.nightPhase();
       await this.solvePhase2();
-      // if (await this.checkEndGame()) {
-      //   break;
-      // }
+      if (await this.checkEndGame()) {
+        break;
+      }
       await this.dayPhase();
       await this.votePhase();
     }
