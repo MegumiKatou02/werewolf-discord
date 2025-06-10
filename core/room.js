@@ -126,7 +126,7 @@ class GameRoom extends EventEmitter {
     }
 
     const roles = this.assignRoles(this.players.length);
-    const fakeRoles = [0, WEREROLE.WITCH, WEREROLE.MEDIUM, WEREROLE.VILLAGER];
+    const fakeRoles = [0, WEREROLE.WITCH, WEREROLE.FOOL, WEREROLE.VILLAGER];
 
     const allWerewolves = [];
 
@@ -456,9 +456,11 @@ class GameRoom extends EventEmitter {
                 row.components[1].setDisabled(false);
                 await witchMessage.edit({ components: [row] });
               }
-              await user.send(
-                `🌙 Sói đã chọn giết người chơi **${this.players.find((p) => p.userId === mostVotedUserId).name}**.`
-              );
+                const victim = this.players.find((p) => p.userId === mostVotedUserId);
+                const victimIndex = this.players.findIndex((p) => p.userId === mostVotedUserId) + 1;
+                await user.send(
+                `🌙 Sói đã chọn giết người chơi **${victim.name}** (${victimIndex}).`
+                );
             }
           }
         }
