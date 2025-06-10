@@ -154,6 +154,11 @@ module.exports = {
             name: '🌙 Bán Sói (Phe Dân)',
             value: '• Ban đầu là dân thường\n• Biến thành Sói nếu bị Sói cắn',
             inline: true,
+          },
+          {
+            name: '👑 Hầu Gái (Phe Dân)',
+            value: '• Ban đầu là Hầu Gái và được chọn chủ trong đêm đầu tiên\n• Biến thành vai trò của chủ nếu chủ chết',
+            inline: true,
           }
         );
 
