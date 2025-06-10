@@ -7,8 +7,7 @@ class Maid extends Role {
     this.master = null;
   }
 
-  resetDay() {
-  }
+  resetDay() {}
 }
 
-module.exports = Maid; 
+module.exports = Maid;

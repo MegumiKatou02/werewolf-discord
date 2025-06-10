@@ -127,7 +127,12 @@ class GameRoom extends EventEmitter {
     }
 
     const roles = this.assignRoles(this.players.length);
-    const fakeRoles = [WEREROLE.MAID, WEREROLE.WITCH, WEREROLE.FOOL, WEREROLE.WEREWOLF];
+    const fakeRoles = [
+      WEREROLE.LYCAN,
+      WEREROLE.SEER,
+      WEREROLE.DETECTIVE,
+      WEREROLE.WEREWOLF,
+    ];
 
     const allWerewolves = [];
 
@@ -431,6 +436,13 @@ class GameRoom extends EventEmitter {
           components: [row],
         });
         this.nightMessages.set(player.userId, message);
+      } else if (player.role.id === WEREROLE.LYCAN) {
+        await user.send(
+          '🤷 Bạn là **Lycan**. Hãy chấp nhận số phận của mình đi!!!'
+        );
+
+        message = await user.send({ embeds: [embed], files: [attachment] });
+        this.nightMessages.set(player.userId, message);
       } else {
         await user.send('🌙 Một đêm yên tĩnh trôi qua. Bạn hãy chờ đến sáng.');
 
@@ -483,11 +495,14 @@ class GameRoom extends EventEmitter {
                 row.components[1].setDisabled(false);
                 await witchMessage.edit({ components: [row] });
               }
-                const victim = this.players.find((p) => p.userId === mostVotedUserId);
-                const victimIndex = this.players.findIndex((p) => p.userId === mostVotedUserId) + 1;
-                await user.send(
+              const victim = this.players.find(
+                (p) => p.userId === mostVotedUserId
+              );
+              const victimIndex =
+                this.players.findIndex((p) => p.userId === mostVotedUserId) + 1;
+              await user.send(
                 `🌙 Sói đã chọn giết người chơi **${victim.name}** (${victimIndex}).`
-                );
+              );
             }
           }
         }
@@ -673,22 +688,30 @@ class GameRoom extends EventEmitter {
     const allDeadTonight = new Set([...killedPlayers, ...sureDieInTheNight]);
 
     for (const killedId of Array.from(allDeadTonight)) {
-      const maid = this.players.find(p => p.role.id === WEREROLE.MAID && p.role.master === killedId);
+      const maid = this.players.find(
+        (p) => p.role.id === WEREROLE.MAID && p.role.master === killedId
+      );
       if (maid) {
-        const deadMaster = this.players.find(p => p.userId === killedId);
+        const deadMaster = this.players.find((p) => p.userId === killedId);
         const oldRole = maid.role.name;
- 
-        maid.role = assignRolesGame(deadMaster.role?.originalRoleId ?? deadMaster.role.id);
+
+        maid.role = assignRolesGame(
+          deadMaster.role?.originalRoleId ?? deadMaster.role.id
+        );
         maidNewRole = {
           maidName: maid.name,
           oldRole: oldRole,
-          newRole: maid.role.name
+          newRole: maid.role.name,
         };
-        
+
         const user = await this.fetchUser(maid.userId);
         if (user) {
-          await user.send(`### 👑 Chủ của bạn đã chết, bạn đã trở thành **${maid.role.name}**`);
-          this.gameState.log.push(`### 👒 Hầu gái đã lên thay vai trò **${maidNewRole.newRole}** của chủ vì chủ đã chết.`);
+          await user.send(
+            `### 👑 Chủ của bạn đã chết, bạn đã trở thành **${maid.role.name}**`
+          );
+          this.gameState.log.push(
+            `### 👒 Hầu gái đã lên thay vai trò **${maidNewRole.newRole}** của chủ vì chủ đã chết.`
+          );
         }
       }
     }
@@ -925,18 +948,27 @@ class GameRoom extends EventEmitter {
         return;
       }
 
-      const maid = this.players.find(p => p.role.id === WEREROLE.MAID && p.role.master === hangedPlayer.userId);
+      const maid = this.players.find(
+        (p) =>
+          p.role.id === WEREROLE.MAID && p.role.master === hangedPlayer.userId
+      );
       let maidNewRole = null;
       if (maid) {
-        maid.role = assignRolesGame(hangedPlayer.role?.originalRoleId ?? hangedPlayer.role.id);
+        maid.role = assignRolesGame(
+          hangedPlayer.role?.originalRoleId ?? hangedPlayer.role.id
+        );
         maidNewRole = maid.role.name;
-        
+
         const maidUser = await this.fetchUser(maid.userId);
         if (maidUser) {
-          await maidUser.send(`### 👑 Chủ của bạn đã bị treo cổ, bạn đã trở thành **${maid.role.name}**`);
+          await maidUser.send(
+            `### 👑 Chủ của bạn đã bị treo cổ, bạn đã trở thành **${maid.role.name}**`
+          );
         }
-        
-        this.gameState.log.push(`### 👒 Hầu gái đã lên thay vai trò **${maid.role.name}** của chủ vì chủ đã bị treo cổ.`);
+
+        this.gameState.log.push(
+          `### 👒 Hầu gái đã lên thay vai trò **${maid.role.name}** của chủ vì chủ đã bị treo cổ.`
+        );
       }
 
       hangedPlayer.alive = false;
@@ -1019,7 +1051,9 @@ class GameRoom extends EventEmitter {
             case 8:
               roleEmoji = '🔮';
             case 10:
-              roleEmoji = '👒'
+              roleEmoji = '👒';
+            case 11:
+              roleEmoji = '🤷';
               break;
           }
           return {
