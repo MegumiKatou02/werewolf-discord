@@ -90,7 +90,7 @@ client.on('messageCreate', async (message) => {
     3,
     FactionRole['Vi-Wolf']
   );
-  await RoleResponse(message, ['!tientri'], 'seer.png', 4, FactionRole.Village);
+  await RoleResponse(message, ['!tientri', '!seer'], 'seer.png', 4, FactionRole.Village);
   await RoleResponse(
     message,
     ['!thamtu', '!detective'],
