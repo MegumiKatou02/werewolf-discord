@@ -20,6 +20,7 @@ const { createAvatarCollage } = require('./canvas');
 const { store, serverSettings } = require('./store');
 const Dead = require('../types/roles/Dead');
 const Werewolf = require('../types/roles/WereWolf');
+const Maid = require('../types/roles/Maid');
 
 class GameRoom extends EventEmitter {
   constructor(client, guildId, hostId) {
@@ -126,7 +127,7 @@ class GameRoom extends EventEmitter {
     }
 
     const roles = this.assignRoles(this.players.length);
-    const fakeRoles = [0, WEREROLE.WITCH, WEREROLE.FOOL, WEREROLE.VILLAGER];
+    const fakeRoles = [WEREROLE.MAID, WEREROLE.WITCH, WEREROLE.FOOL, WEREROLE.WEREWOLF];
 
     const allWerewolves = [];
 
@@ -404,6 +405,32 @@ class GameRoom extends EventEmitter {
 
         message = await user.send({ embeds: [embed], files: [attachment] });
         this.nightMessages.set(player.userId, message);
+      } else if (player.role.id === WEREROLE.MAID) {
+        let chooseMasterButton = null;
+        if (this.gameState.nightCount === 1) {
+          chooseMasterButton = new ButtonBuilder()
+            .setCustomId(`choose_master_maid_${player.userId}`)
+            .setLabel('👑 Chọn chủ')
+            .setStyle(ButtonStyle.Primary);
+        } else {
+          chooseMasterButton = new ButtonBuilder()
+            .setCustomId(`choose_master_maid_${player.userId}`)
+            .setLabel('👑 Đã chọn chủ')
+            .setStyle(ButtonStyle.Primary)
+            .setDisabled(true);
+        }
+
+        const row = new ActionRowBuilder().addComponents(chooseMasterButton);
+
+        await user.send(
+          '🌙 Bạn là **Hầu Gái**. Hãy chọn một người làm chủ của bạn.'
+        );
+        message = await user.send({
+          embeds: [embed],
+          files: [attachment],
+          components: [row],
+        });
+        this.nightMessages.set(player.userId, message);
       } else {
         await user.send('🌙 Một đêm yên tĩnh trôi qua. Bạn hãy chờ đến sáng.');
 
@@ -525,6 +552,7 @@ class GameRoom extends EventEmitter {
     let sureDieInTheNight = new Set(); // 100% chết ngay trong đêm đó (không thể cứu hay bảo vệ)
     // let savedPlayers = new Set();
     let revivedPlayers = new Set();
+    let maidNewRole = null; // Lưu thông tin về vai trò mới của hầu gái
 
     const witch = this.players.find((p) => p.role.id === WEREROLE.WITCH);
     if (mostVotedUserId) {
@@ -614,6 +642,7 @@ class GameRoom extends EventEmitter {
       }
     }
 
+    // chỗ này không có chỗ nạn nhân của phù thuỷ :v
     for (const killedId of killedPlayers) {
       const killed = this.players.find((p) => p.userId === killedId);
       if (
@@ -642,6 +671,27 @@ class GameRoom extends EventEmitter {
     }
 
     const allDeadTonight = new Set([...killedPlayers, ...sureDieInTheNight]);
+
+    for (const killedId of Array.from(allDeadTonight)) {
+      const maid = this.players.find(p => p.role.id === WEREROLE.MAID && p.role.master === killedId);
+      if (maid) {
+        const deadMaster = this.players.find(p => p.userId === killedId);
+        const oldRole = maid.role.name;
+ 
+        maid.role = assignRolesGame(deadMaster.role?.originalRoleId ?? deadMaster.role.id);
+        maidNewRole = {
+          maidName: maid.name,
+          oldRole: oldRole,
+          newRole: maid.role.name
+        };
+        
+        const user = await this.fetchUser(maid.userId);
+        if (user) {
+          await user.send(`### 👑 Chủ của bạn đã chết, bạn đã trở thành **${maid.role.name}**`);
+          this.gameState.log.push(`### 👒 Hầu gái đã lên thay vai trò **${maidNewRole.newRole}** của chủ vì chủ đã chết.`);
+        }
+      }
+    }
 
     if (allDeadTonight.length !== 0) {
       this.gameState.log.push(
@@ -679,6 +729,12 @@ class GameRoom extends EventEmitter {
             await user.send('💀 Bạn đã bị giết trong đêm nay.');
             player.alive = false;
           }
+        }
+
+        if (maidNewRole) {
+          await user.send(
+            `### 👒 Hầu gái đã lên thay vai trò **${maidNewRole.newRole}** của chủ vì chủ đã chết.\n`
+          );
         }
 
         if (revivedPlayers.size > 0) {
@@ -869,6 +925,20 @@ class GameRoom extends EventEmitter {
         return;
       }
 
+      const maid = this.players.find(p => p.role.id === WEREROLE.MAID && p.role.master === hangedPlayer.userId);
+      let maidNewRole = null;
+      if (maid) {
+        maid.role = assignRolesGame(hangedPlayer.role?.originalRoleId ?? hangedPlayer.role.id);
+        maidNewRole = maid.role.name;
+        
+        const maidUser = await this.fetchUser(maid.userId);
+        if (maidUser) {
+          await maidUser.send(`### 👑 Chủ của bạn đã bị treo cổ, bạn đã trở thành **${maid.role.name}**`);
+        }
+        
+        this.gameState.log.push(`### 👒 Hầu gái đã lên thay vai trò **${maid.role.name}** của chủ vì chủ đã bị treo cổ.`);
+      }
+
       hangedPlayer.alive = false;
       hangedPlayer.role = new Dead(
         hangedPlayer.role.faction,
@@ -883,6 +953,11 @@ class GameRoom extends EventEmitter {
         );
         if (hangedPlayer.userId === player.userId) {
           await user.send('💀 Bạn đã bị dân làng treo cổ.');
+        }
+        if (maidNewRole) {
+          await user.send(
+            `### 👒 Hầu gái đã lên thay vai trò **${maidNewRole}** của chủ vì chủ đã bị treo cổ.\n`
+          );
         }
       });
 
@@ -943,6 +1018,8 @@ class GameRoom extends EventEmitter {
               break;
             case 8:
               roleEmoji = '🔮';
+            case 10:
+              roleEmoji = '👒'
               break;
           }
           return {
@@ -1039,6 +1116,7 @@ class GameRoom extends EventEmitter {
       await this.nightPhase();
       await this.solvePhase2();
       if (await this.checkEndGame()) {
+        console.log('END GAME');
         break;
       }
       await this.dayPhase();
