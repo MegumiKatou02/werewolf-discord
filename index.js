@@ -965,7 +965,13 @@ client.on('interactionCreate', async (interaction) => {
         interaction.fields.getTextInputValue('vote_index_hanged');
       const voteIndex = parseInt(voteIndexStr, 10);
 
-      if (voteIndex !== 0 && voteIndex !== 36 && (isNaN(voteIndex) || voteIndex < 1 || voteIndex > gameRoom.players.length)) {
+      if (
+        voteIndex !== 0 &&
+        voteIndex !== 36 &&
+        (isNaN(voteIndex) ||
+          voteIndex < 1 ||
+          voteIndex > gameRoom.players.length)
+      ) {
         return interaction.reply({
           content: 'Số thứ tự không hợp lệ. Nhập 0 hoặc 36 để bỏ qua vote.',
           ephemeral: true,
@@ -1022,13 +1028,15 @@ client.on('interactionCreate', async (interaction) => {
 
         await Promise.allSettled(notifyPromises);
 
-        const alivePlayers = gameRoom.players.filter(p => p.alive);
-        const allVoted = alivePlayers.every(p => p.role.voteHanged !== null);
+        const alivePlayers = gameRoom.players.filter((p) => p.alive);
+        const allVoted = alivePlayers.every((p) => p.role.voteHanged !== null);
 
         if (allVoted) {
           const notifyEndVote = gameRoom.players.map(async (player) => {
             const user = await client.users.fetch(player.userId);
-            return user.send(`### ⚡ Tất cả mọi người đã vote xong! Kết quả sẽ được công bố ngay lập tức.`);
+            return user.send(
+              `### ⚡ Tất cả mọi người đã vote xong! Kết quả sẽ được công bố ngay lập tức.`
+            );
           });
           await Promise.allSettled(notifyEndVote);
 

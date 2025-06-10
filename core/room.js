@@ -31,7 +31,7 @@ class GameRoom extends EventEmitter {
     this.players = [];
     this.status = 'waiting'; // waiting, starting, ended
     this.gameState = new GameState();
-    this.witchMessages = new Map(); // Lưu trữ message của phù thủy
+    this.witchMessages = new Map();
     this.settings = {
       wolfVoteTime: 40,
       nightTime: 70,
@@ -940,22 +940,25 @@ class GameRoom extends EventEmitter {
     });
 
     const notificationPromise = new Promise((resolve) => {
-      setTimeout(async () => {
-        const notifyPlayers = this.players.map(async (player) => {
-          try {
-            const user = await this.fetchUser(player.userId);
-            await user.send(`### ⚠️ Thông báo: còn **10** giây để vote!`);
-          } catch (err) {
-            console.error(`Không thể gửi tin nhắn cho ${player.userId}`, err);
-          }
-        });
-        await Promise.allSettled(notifyPlayers);
-        resolve();
-      }, this.settings.voteTime * 1000 - 10000);
+      setTimeout(
+        async () => {
+          const notifyPlayers = this.players.map(async (player) => {
+            try {
+              const user = await this.fetchUser(player.userId);
+              await user.send(`### ⚠️ Thông báo: còn **10** giây để vote!`);
+            } catch (err) {
+              console.error(`Không thể gửi tin nhắn cho ${player.userId}`, err);
+            }
+          });
+          await Promise.allSettled(notifyPlayers);
+          resolve();
+        },
+        this.settings.voteTime * 1000 - 10000
+      );
     });
 
     await Promise.race([timeoutPromise, voteCompletePromise]);
-    
+
     const hangedPlayer = this.processVote();
 
     if (!hangedPlayer) {
@@ -983,58 +986,7 @@ class GameRoom extends EventEmitter {
           await user.send(
             `🎭 **${hangedPlayer.name}** là **Ngố** và đã bị treo cổ. \n🎉 **Ngố** thắng !!.`
           );
-          const roleRevealEmbed = new EmbedBuilder()
-            .setColor(0x2ecc71)
-            .setTitle('🎭 Tiết Lộ Vai Trò')
-            .setDescription('```Danh sách vai trò của tất cả người chơi:```')
-            .addFields(
-              this.players.map((player) => {
-                let nameRole = player.role.name;
-                if (player.role.id === WEREROLE.DEAD) {
-                  nameRole = rolesData[player.role.originalRoleId].title;
-                  if (player.role.originalRoleId === WEREROLE.CURSED) {
-                    nameRole = `${nameRole} (Bán Sói)`;
-                  }
-                }
-                let roleEmoji = '👤';
-                switch (player.role.originalRoleId || player.role.id) {
-                  case 0:
-                    roleEmoji = '🐺';
-                    break;
-                  case 1:
-                    roleEmoji = '👥';
-                    break;
-                  case 2:
-                    roleEmoji = '🛡️';
-                    break;
-                  case 3:
-                    roleEmoji = '🌙';
-                    break;
-                  case 4:
-                    roleEmoji = '👁️';
-                    break;
-                  case 5:
-                    roleEmoji = '🔍';
-                    break;
-                  case 6:
-                    roleEmoji = '🧪';
-                    break;
-                  case 7:
-                    roleEmoji = '🃏';
-                    break;
-                  case 8:
-                    roleEmoji = '🔮';
-                    break;
-                }
-                return {
-                  name: `${roleEmoji} ${nameRole}`,
-                  value: `**${player.name}**${!player.alive ? ' (💀 Đã chết)' : ''}`,
-                  inline: true,
-                };
-              })
-            )
-            .setTimestamp()
-            .setFooter({ text: 'Hẹ hẹ hẹ' });
+          const roleRevealEmbed = this.revealRoles();
           await user.send({ embeds: [roleRevealEmbed] });
         });
         await Promise.allSettled(foolMessages);
@@ -1069,9 +1021,73 @@ class GameRoom extends EventEmitter {
     await this.checkEndGame();
   }
 
+  /**
+   *
+   * @returns {EmbedBuilder}
+   */
+  revealRoles() {
+    const roleRevealEmbed = new EmbedBuilder()
+      .setColor(0x2ecc71)
+      .setTitle('🎭 Tiết Lộ Vai Trò')
+      .setDescription('```Danh sách vai trò của tất cả người chơi:```')
+      .addFields(
+        this.players.map((player) => {
+          let nameRole = player.role.name;
+          if (player.role.id === WEREROLE.DEAD) {
+            nameRole = rolesData[player.role.originalRoleId].title;
+            if (player.role.originalRoleId === WEREROLE.CURSED) {
+              nameRole = `${nameRole} (Bán Sói)`;
+            }
+          }
+          let roleEmoji = '👤';
+          switch (player.role.originalRoleId || player.role.id) {
+            case 0:
+              roleEmoji = '🐺';
+              break;
+            case 1:
+              roleEmoji = '👥';
+              break;
+            case 2:
+              roleEmoji = '🛡️';
+              break;
+            case 3:
+              roleEmoji = '🌙';
+              break;
+            case 4:
+              roleEmoji = '👁️';
+              break;
+            case 5:
+              roleEmoji = '🔍';
+              break;
+            case 6:
+              roleEmoji = '🧪';
+              break;
+            case 7:
+              roleEmoji = '🃏';
+              break;
+            case 8:
+              roleEmoji = '🔮';
+              break;
+          }
+          return {
+            name: `${roleEmoji} ${nameRole}`,
+            value: `**${player.name}**${!player.alive ? ' (💀 Đã chết)' : ''}`,
+            inline: true,
+          };
+        })
+      )
+      .setTimestamp()
+      .setFooter({ text: 'Hẹ hẹ hẹ' });
+    return roleRevealEmbed;
+  }
+
   processVote() {
     const totalVotes = this.players.reduce((acc, player) => {
-      if (player.alive && player.role.voteHanged && player.role.voteHanged !== 'skip') {
+      if (
+        player.alive &&
+        player.role.voteHanged &&
+        player.role.voteHanged !== 'skip'
+      ) {
         acc[player.role.voteHanged] = (acc[player.role.voteHanged] || 0) + 1;
       }
       return acc;
@@ -1122,59 +1138,7 @@ class GameRoom extends EventEmitter {
           break;
       }
 
-      const roleRevealEmbed = new EmbedBuilder()
-        .setColor(0x2ecc71)
-        .setTitle('🎭 Tiết Lộ Vai Trò')
-        .setDescription('```Danh sách vai trò của tất cả người chơi:```')
-        .addFields(
-          this.players.map((player) => {
-            let nameRole = player.role.name;
-            if (player.role.id === WEREROLE.DEAD) {
-              nameRole = rolesData[player.role.originalRoleId].title;
-              if (player.role.originalRoleId === WEREROLE.CURSED) {
-                nameRole = `${nameRole} (Bán Sói)`;
-              }
-            }
-            let roleEmoji = '👤';
-            switch (player.role.originalRoleId || player.role.id) {
-              case 0:
-                roleEmoji = '🐺';
-                break;
-              case 1:
-                roleEmoji = '👥';
-                break;
-              case 2:
-                roleEmoji = '🛡️';
-                break;
-              case 3:
-                roleEmoji = '🌙';
-                break;
-              case 4:
-                roleEmoji = '👁️';
-                break;
-              case 5:
-                roleEmoji = '🔍';
-                break;
-              case 6:
-                roleEmoji = '🧪';
-                break;
-              case 7:
-                roleEmoji = '🃏';
-                break;
-              case 8:
-                roleEmoji = '🔮';
-                break;
-            }
-            return {
-              name: `${roleEmoji} ${nameRole}`,
-              value: `**${player.name}**${!player.alive ? ' (💀 Đã chết)' : ''}`,
-              inline: true,
-            };
-          })
-        )
-        .setTimestamp()
-        .setFooter({ text: 'Hẹ hẹ hẹ' });
-
+      const roleRevealEmbed = this.revealRoles();
       const endGameMessages = this.players.map(async (player) => {
         const user = await this.fetchUser(player.userId);
         if (!user) return;
