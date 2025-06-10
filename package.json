@@ -6,7 +6,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "node deploy-commands.js && node index.js",
     "dev:run": "node index.js",
-    "format": "npx prettier --write ."
+    "format": "npx prettier --write .",
+    "format:file": "npx prettier --write"
   },
   "keywords": [
     "werewwolf"
