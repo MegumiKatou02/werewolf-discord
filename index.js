@@ -126,6 +126,7 @@ client.on('messageCreate', async (message) => {
     10,
     FactionRole.Village
   );
+  await RoleResponse(message, ['!lycan'], 'lycan.png', 11, FactionRole.Village);
 
   if (message.channel.type === ChannelType.DM) {
     console.log(`Tin nhắn DM từ ${message.author.tag}: ${message.content}`);
@@ -739,9 +740,15 @@ client.on('interactionCreate', async (interaction) => {
 
         try {
           const user = await client.users.fetch(playerId);
-          await user.send(
-            `👁️ Vai trò của **${targetPlayer.name}** là: **${targetPlayer.role.name}**.`
-          );
+          if (targetPlayer.role.id === WEREROLE.LYCAN) {
+            await user.send(
+              `👁️ Vai trò của **${targetPlayer.name}** là: **Ma Sói**.`
+            );
+          } else {
+            await user.send(
+              `👁️ Vai trò của **${targetPlayer.name}** là: **${targetPlayer.role.name}**.`
+            );
+          }
         } catch (err) {
           console.error(`Không thể gửi DM cho ${playerId}:`, err);
         }
@@ -813,19 +820,38 @@ client.on('interactionCreate', async (interaction) => {
         sender.role.investigatedCount -= 1; // soi rồi không chọn lại được nữa
 
         const checkFaction = () => {
-          if (targetPlayer1.role.faction === targetPlayer2.role.faction)
+          if (targetPlayer1.role.faction === targetPlayer2.role.faction) {
+            if (
+              targetPlayer1.role.id === WEREROLE.LYCAN ||
+              targetPlayer2.role.id === WEREROLE.LYCAN
+            ) {
+              return false;
+            }
             return true;
+          }
           if (
             targetPlayer1.role.faction === 3 &&
-            targetPlayer2.role.faction === 1
+            targetPlayer2.role.faction === 1 &&
+            targetPlayer1.role.id !== WEREROLE.LYCAN &&
+            targetPlayer2.role.id !== WEREROLE.LYCAN
           )
             return true;
           if (
             targetPlayer1.role.faction === 1 &&
-            targetPlayer2.role.faction === 3
+            targetPlayer2.role.faction === 3 &&
+            targetPlayer1.role.id !== WEREROLE.LYCAN &&
+            targetPlayer2.role.id !== WEREROLE.LYCAN
           )
             return true;
 
+          if (
+            targetPlayer1.role.id === WEREROLE.LYCAN ||
+            (targetPlayer2.role.id === WEREROLE.LYCAN &&
+              (targetPlayer1.role.faction === 0 ||
+                targetPlayer2.role.faction === 0))
+          ) {
+            return true;
+          }
           return false;
         };
 
@@ -1250,7 +1276,8 @@ client.on('interactionCreate', async (interaction) => {
         });
       }
 
-      const masterIndexStr = interaction.fields.getTextInputValue('master_index_maid');
+      const masterIndexStr =
+        interaction.fields.getTextInputValue('master_index_maid');
       const masterIndex = parseInt(masterIndexStr, 10);
 
       if (

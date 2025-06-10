@@ -156,8 +156,15 @@ module.exports = {
             inline: true,
           },
           {
-            name: '👑 Hầu Gái (Phe Dân)',
-            value: '• Ban đầu là Hầu Gái và được chọn chủ trong đêm đầu tiên\n• Biến thành vai trò của chủ nếu chủ chết',
+            name: '👒 Hầu Gái (Phe Dân)',
+            value:
+              '• Ban đầu là Hầu Gái và được chọn chủ trong đêm đầu tiên\n• Biến thành vai trò của chủ nếu chủ chết',
+            inline: true,
+          },
+          {
+            name: '🤷 Lycan (Phe Dân)',
+            value:
+              '• Không có gì cả ngoài việc bị cho là phe sói khi bị soi\n• LYCAN LÀ DÂN',
             inline: true,
           }
         );

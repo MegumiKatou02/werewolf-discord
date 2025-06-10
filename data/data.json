@@ -64,5 +64,11 @@
     "eName": "Maid",
     "faction": 1,
     "description": "Bạn được chọn 1 người làm chủ, chủ chết thì người đó lên thay và quản trò báo cho cả làng là hầu gái lên vai gì."
+  },
+  "11": {
+    "title": "Lycan",
+    "eName": "Lycan",
+    "faction": 1,
+    "description": "Là dân, bị soi thì quản trò bảo tiên tri là sói; bị thám tử soi với dân thì khác phe, soi với sói thì cùng phe; Nhưng bạn vẫn là dân, mãi mãi là dân..."
   }
 }
