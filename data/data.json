@@ -58,5 +58,11 @@
     "eName": "Dead",
     "faction": -1,
     "description": "Bạn đã chết rồi, đừng hỏi gì cả..."
+  },
+  "10": {
+    "title": "Hầu Gái",
+    "eName": "Maid",
+    "faction": 1,
+    "description": "Bạn được chọn 1 người làm chủ, chủ chết thì người đó lên thay và quản trò báo cho cả làng là hầu gái lên vai gì."
   }
 }

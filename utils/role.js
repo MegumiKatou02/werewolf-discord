@@ -7,6 +7,7 @@ const Fool = require('../types/roles/Fool');
 const Medium = require('../types/roles/Medium');
 const Seer = require('../types/roles/Seer');
 const Witch = require('../types/roles/Witch');
+const Maid = require('../types/roles/Maid');
 const Role = require('../types/roles/role');
 
 const { FactionRole } = require('../types/faction');
@@ -43,6 +44,8 @@ const assignRolesGame = (roleId) => {
       return new Fool();
     case 8:
       return new Medium();
+    case 10:
+      return new Maid();
     default:
       throw new Error(`Role id không hợp lệ`);
   }
@@ -74,6 +77,7 @@ const WEREROLE = Object.freeze({
   FOOL: 7,
   MEDIUM: 8,
   DEAD: 9,
+  MAID: 10,
 });
 
 const getRoleName = (roleId) => {

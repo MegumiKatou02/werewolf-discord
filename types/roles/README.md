@@ -7,5 +7,7 @@
 6. Witch (Phù Thuỷ)
 7. Fool (Thằng Ngố)
 8. Medium (Thầy Đồng)
+9. Dead (Đã Chết)
+10. Hầu gái (Maid)
 
 - 0: sói, 1: dân, 2: solo, 3: dân làng hoặc ma sói
