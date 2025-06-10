@@ -31,7 +31,9 @@ class GameRoom extends EventEmitter {
     this.players = [];
     this.status = 'waiting'; // waiting, starting, ended
     this.gameState = new GameState();
-    this.witchMessages = new Map();
+    this.witchMessages = new Map(); // message phù thuỷ
+    this.nightMessages = new Map(); // message ban đêm
+    this.voteMessages = new Map(); // message vote treo cổ
     this.settings = {
       wolfVoteTime: 40,
       nightTime: 70,
@@ -124,7 +126,7 @@ class GameRoom extends EventEmitter {
     }
 
     const roles = this.assignRoles(this.players.length);
-    const fakeRoles = [0, WEREROLE.CURSED, 8, 7];
+    const fakeRoles = [0, WEREROLE.WITCH, WEREROLE.MEDIUM, WEREROLE.VILLAGER];
 
     const allWerewolves = [];
 
@@ -255,6 +257,8 @@ class GameRoom extends EventEmitter {
         .setImage('attachment://avatars.png')
         .setTimestamp();
 
+      let message;
+
       if (player.role.id === WEREROLE.WEREWOLF) {
         // Sói
         const voteButton = new ButtonBuilder()
@@ -267,12 +271,13 @@ class GameRoom extends EventEmitter {
         await user.send(
           `🌙 Bạn là **Sói**. Hãy vote người cần giết trong ${this.settings.wolfVoteTime} giây. Bạn có thể trò chuyện với các Sói khác ngay tại đây.`
         );
-        const message = await user.send({
+        message = await user.send({
           embeds: [embed],
           files: [attachment],
           components: [row],
         });
         wolfMessages.push(message);
+        this.nightMessages.set(player.userId, message);
       } else if (player.role.id === WEREROLE.BODYGUARD) {
         // Bảo Vệ
         const protectButton = new ButtonBuilder()
@@ -285,11 +290,12 @@ class GameRoom extends EventEmitter {
         await user.send(
           '🌙 Bạn là **Bảo Vệ**. Hãy chọn người bạn muốn bảo vệ trong đêm nay. Bạn có thể tự bảo vệ mình.'
         );
-        await user.send({
+        message = await user.send({
           embeds: [embed],
           files: [attachment],
           components: [row],
         });
+        this.nightMessages.set(player.userId, message);
       } else if (player.role.id === WEREROLE.SEER) {
         // Tiên Tri
         const viewButton = new ButtonBuilder()
@@ -302,11 +308,12 @@ class GameRoom extends EventEmitter {
         await user.send(
           '🌙 Bạn là **Tiên Tri**. Bạn có thể xem vai trò của một người chơi khác trong đêm nay.'
         );
-        await user.send({
+        message = await user.send({
           embeds: [embed],
           files: [attachment],
           components: [row],
         });
+        this.nightMessages.set(player.userId, message);
       } else if (player.role.id === WEREROLE.DETECTIVE) {
         // Thám Tử
         const investigateButton = new ButtonBuilder()
@@ -319,11 +326,12 @@ class GameRoom extends EventEmitter {
         await user.send(
           '🌙 Bạn là **Thám Tử**. Bạn có thể điều tra hai người chơi để biết họ ở cùng phe hay khác phe.'
         );
-        await user.send({
+        message = await user.send({
           embeds: [embed],
           files: [attachment],
           components: [row],
         });
+        this.nightMessages.set(player.userId, message);
       } else if (player.role.id === WEREROLE.WITCH) {
         // Phù Thuỷ
         const poisonButton = new ButtonBuilder()
@@ -345,13 +353,14 @@ class GameRoom extends EventEmitter {
         await user.send(
           `🌙 Bạn là **Phù Thuỷ**. Bạn có hai bình thuốc: một để đầu độc và một để cứu người. Bình cứu chỉ có tác dụng nếu người đó bị tấn công.\n (Bình độc: ${player.role.poisonCount}, Bình cứu: ${player.role.healCount}).`
         );
-        const message = await user.send({
+        message = await user.send({
           embeds: [embed],
           files: [attachment],
           components: [row],
         });
 
         this.witchMessages.set(player.userId, message);
+        this.nightMessages.set(player.userId, message);
       } else if (player.role.id === WEREROLE.MEDIUM) {
         // Thầy Đồng
         const reviveButton = new ButtonBuilder()
@@ -375,24 +384,31 @@ class GameRoom extends EventEmitter {
             `${villagerDead} là những người thuộc phe dân làng đã bị chết, bạn có thể hồi sinh trong số họ.`
           );
         }
-        await user.send({
+        message = await user.send({
           embeds: [embed],
           files: [attachment],
           components: [row],
         });
+        this.nightMessages.set(player.userId, message);
       } else if (player.role.id === WEREROLE.DEAD) {
         await user.send(
           '💀 Bạn đã bị chết, hãy trò chuyện với hội người âm của bạn.'
         );
-        await user.send({ embeds: [embed], files: [attachment] });
+
+        message = await user.send({ embeds: [embed], files: [attachment] });
+        this.nightMessages.set(player.userId, message);
       } else if (player.role.id === WEREROLE.FOOL) {
         await user.send(
           '⚜️ Bạn là thằng ngố, nhiệm vụ của bạn là lừa những người khác vote bạn để chiến thắng.'
         );
-        await user.send({ embeds: [embed], files: [attachment] });
+
+        message = await user.send({ embeds: [embed], files: [attachment] });
+        this.nightMessages.set(player.userId, message);
       } else {
         await user.send('🌙 Một đêm yên tĩnh trôi qua. Bạn hãy chờ đến sáng.');
-        await user.send({ embeds: [embed], files: [attachment] });
+
+        message = await user.send({ embeds: [embed], files: [attachment] });
+        this.nightMessages.set(player.userId, message);
       }
     });
 
@@ -465,6 +481,29 @@ class GameRoom extends EventEmitter {
       },
       this.settings.nightTime * 1000 - 10000
     );
+
+    setTimeout(async () => {
+      for (const [playerId, message] of this.nightMessages) {
+        try {
+          if (message.components && message.components.length > 0) {
+            const rows = message.components.map((row) => {
+              const newRow = ActionRowBuilder.from(row);
+              newRow.components.forEach((component) => {
+                component.setDisabled(true);
+                if (component.data.label) {
+                  component.setLabel(`${component.data.label} (Hết hạn)`);
+                }
+              });
+              return newRow;
+            });
+            await message.edit({ components: rows });
+          }
+        } catch (err) {
+          console.error(`Không thể disable button cho ${playerId}:`, err);
+        }
+      }
+      this.nightMessages.clear();
+    }, this.settings.nightTime * 1000);
 
     await new Promise((resolve) =>
       setTimeout(resolve, this.settings.nightTime * 1000)
@@ -922,11 +961,12 @@ class GameRoom extends EventEmitter {
         .setStyle(ButtonStyle.Primary);
 
       const row = new ActionRowBuilder().addComponents(voteButton);
-      await user.send({
+      const message = await user.send({
         embeds: [embed],
         files: [attachment],
         components: [row],
       });
+      this.voteMessages.set(player.userId, message);
     });
 
     await Promise.allSettled(dmPromises);
@@ -958,6 +998,19 @@ class GameRoom extends EventEmitter {
     });
 
     await Promise.race([timeoutPromise, voteCompletePromise]);
+
+    for (const [playerId, message] of this.voteMessages) {
+      try {
+        if (message.components && message.components.length > 0) {
+          const row = ActionRowBuilder.from(message.components[0]);
+          row.components[0].setDisabled(true).setLabel('🗳️ Vote (Hết hạn)');
+          await message.edit({ components: [row] });
+        }
+      } catch (err) {
+        console.error(`Không thể disable button cho ${playerId}:`, err);
+      }
+    }
+    this.voteMessages.clear();
 
     const hangedPlayer = this.processVote();
 
