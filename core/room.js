@@ -158,7 +158,7 @@ class GameRoom extends EventEmitter {
         );
         await RoleResponseDMs(
           user,
-          `${rolesData[role.id].eName.toLowerCase()}.png`,
+          `${rolesData[role.id].eName.toLowerCase().replace(/\s+/g, '_')}.png`,
           role.id,
           convertFactionRoles(rolesData[role.id].faction)
         );
@@ -292,6 +292,24 @@ class GameRoom extends EventEmitter {
         });
         wolfMessages.push(message);
         this.nightMessages.set(player.userId, message);
+      } else if (player.role.id === WEREROLE.WOLFSEER) {
+        // Sói Tiên Tri
+        const viewButton = new ButtonBuilder()
+          .setCustomId(`view_target_wolfseer_${player.userId}`)
+          .setLabel('🔍 Xem vai trò')
+          .setStyle(ButtonStyle.Primary);
+
+        const row = new ActionRowBuilder().addComponents(viewButton);
+
+        await user.send(
+          '🌙 Bạn là **Sói Tiên Tri**. Bạn có thể xem vai trò của một người chơi có phải là tiên tri hay không.'
+        );
+        message = await user.send({
+          embeds: [embed],
+          files: [attachment],
+          components: [row],
+        });
+        this.nightMessages.set(player.userId, message);
       } else if (player.role.id === WEREROLE.BODYGUARD) {
         // Bảo Vệ
         const protectButton = new ButtonBuilder()
@@ -314,13 +332,13 @@ class GameRoom extends EventEmitter {
         // Tiên Tri
         const viewButton = new ButtonBuilder()
           .setCustomId(`view_target_seer_${player.userId}`)
-          .setLabel('🔍 Xem vai trò')
+          .setLabel('🔍 Xem phe')
           .setStyle(ButtonStyle.Primary);
 
         const row = new ActionRowBuilder().addComponents(viewButton);
 
         await user.send(
-          '🌙 Bạn là **Tiên Tri**. Bạn có thể xem vai trò của một người chơi khác trong đêm nay.'
+          '🌙 Bạn là **Tiên Tri**. Bạn có thể xem phe của một người chơi khác trong đêm nay.'
         );
         message = await user.send({
           embeds: [embed],
@@ -726,7 +744,7 @@ class GameRoom extends EventEmitter {
       }
     }
 
-    if (allDeadTonight.length !== 0) {
+    if (allDeadTonight.size !== 0) {
       this.gameState.log.push(
         `${Array.from(allDeadTonight)
           .map((id) => {
@@ -1006,6 +1024,26 @@ class GameRoom extends EventEmitter {
       await Promise.allSettled(hangMessages);
     }
 
+    const wolvesAlive = this.players.filter(
+      (p) => p.alive && p.role.faction === 0
+    );
+    if (
+      wolvesAlive.length === 1 &&
+      wolvesAlive[0].role.id === WEREROLE.WOLFSEER
+    ) {
+      wolvesAlive[0].role = new Werewolf();
+      const user = await this.fetchUser(wolvesAlive[0].userId);
+      if (user) {
+        await user.send(
+          '### 🐺 Vì là Sói cuối cùng còn sống, bạn đã biến thành Sói thường!'
+        );
+      }
+
+      this.gameState.log.push(
+        `🐺 **Sói Tiên Tri** đã biến thành **Sói thường** vì là Sói cuối cùng còn sống.`
+      );
+    }
+
     // Reset vote
     for (const player of this.players) {
       player.role.voteHanged = null;
@@ -1064,6 +1102,8 @@ class GameRoom extends EventEmitter {
               roleEmoji = '👒';
             case 11:
               roleEmoji = '🤷';
+            case 12:
+              roleEmoji = '🔍';
               break;
           }
           return {
@@ -1159,10 +1199,10 @@ class GameRoom extends EventEmitter {
     while (this.status === 'starting') {
       await this.nightPhase();
       await this.solvePhase2();
-      if (await this.checkEndGame()) {
-        console.log('END GAME');
-        break;
-      }
+      // if (await this.checkEndGame()) {
+      //   console.log('END GAME');
+      //   break;
+      // }
       await this.dayPhase();
       await this.votePhase();
     }

@@ -90,7 +90,13 @@ client.on('messageCreate', async (message) => {
     3,
     FactionRole['Vi-Wolf']
   );
-  await RoleResponse(message, ['!tientri', '!seer'], 'seer.png', 4, FactionRole.Village);
+  await RoleResponse(
+    message,
+    ['!tientri', '!seer'],
+    'seer.png',
+    4,
+    FactionRole.Village
+  );
   await RoleResponse(
     message,
     ['!thamtu', '!detective'],
@@ -127,7 +133,20 @@ client.on('messageCreate', async (message) => {
     FactionRole.Village
   );
   await RoleResponse(message, ['!lycan'], 'lycan.png', 11, FactionRole.Village);
-  await RoleResponse(message, ['!stalker', '!hori'], 'stalker.png', 100, FactionRole.Solo);
+  await RoleResponse(
+    message,
+    ['!stalker', '!hori'],
+    'stalker.png',
+    100,
+    FactionRole.Solo
+  );
+  await RoleResponse(
+    message,
+    ['!wolfseer', '!soitientri'],
+    'wolf_seer.png',
+    12,
+    FactionRole.Werewolf
+  );
 
   if (message.channel.type === ChannelType.DM) {
     console.log(`Tin nhắn DM từ ${message.author.tag}: ${message.content}`);
@@ -145,9 +164,20 @@ client.on('messageCreate', async (message) => {
 
     if (gameRoom.gameState.phase === 'night') {
       // Gửi tin nhắn cho các sói khác
+      if (sender.role.id === WEREROLE.WOLFSEER) {
+        try {
+          const user = await client.users.fetch(sender.userId);
+          await user.send(`_⚠️ Những sói khác sẽ không thấy bạn nhắn gì_`);
+        } catch (err) {
+          console.error('Không gửi được tin nhắn cho Sói khác', err);
+        }
+      }
       if (sender.role.id === WEREROLE.WEREWOLF) {
         const wolves = gameRoom.players.filter(
-          (p) => p.role.id === WEREROLE.WEREWOLF && p.userId !== sender.userId
+          (p) =>
+            (p.role.id === WEREROLE.WEREWOLF ||
+              p.role.id === WEREROLE.WOLFSEER) &&
+            p.userId !== sender.userId
         );
         const notifyPromises = wolves.map(async (wolf) => {
           try {
@@ -173,7 +203,7 @@ client.on('messageCreate', async (message) => {
           try {
             const user = await client.users.fetch(player.userId);
             if (sender.role.id === WEREROLE.MEDIUM && sender.alive) {
-              await user.send(`_🔮 **${sender.name}**: ${message.content}_`);
+              await user.send(`_🔮 **Thầy Đồng**: ${message.content}_`);
             } else {
               await user.send(`_💀 **${sender.name}**: ${message.content}_`);
             }
@@ -295,6 +325,43 @@ client.on('interactionCreate', async (interaction) => {
         }
       }
     }
+    if (interaction.customId.startsWith('view_target_wolfseer_')) {
+      const playerId = interaction.customId.split('_')[3];
+
+      if (interaction.user.id !== playerId) {
+        return interaction.reply({
+          content: 'Bạn không được nhấn nút này.',
+          ephemeral: true,
+        });
+      }
+
+      const modal = new ModalBuilder()
+        .setCustomId(`submit_view_wolfseer_${playerId}`)
+        .setTitle('Xem vai trò');
+
+      const input = new TextInputBuilder()
+        .setCustomId('view_index_wolfseer')
+        .setLabel('Nhập số thứ tự người chơi (bắt đầu từ 1)')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('VD: 3')
+        .setRequired(true);
+
+      const row = new ActionRowBuilder().addComponents(input);
+      modal.addComponents(row);
+
+      try {
+        await interaction.showModal(modal);
+      } catch (err) {
+        console.error('❌ Lỗi khi showModal:', err);
+
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({
+            content: 'Tương tác đã hết hạn hoặc xảy ra lỗi. Vui lòng thử lại.',
+            ephemeral: true,
+          });
+        }
+      }
+    }
     if (interaction.customId.startsWith('protect_target_bodyguard_')) {
       const playerId = interaction.customId.split('_')[3];
 
@@ -333,7 +400,7 @@ client.on('interactionCreate', async (interaction) => {
 
       const modal = new ModalBuilder()
         .setCustomId(`submit_view_seer_${playerId}`)
-        .setTitle('Xem vai trò người chơi');
+        .setTitle('Xem phe người chơi');
 
       const input = new TextInputBuilder()
         .setCustomId('view_index_seer')
@@ -664,6 +731,97 @@ client.on('interactionCreate', async (interaction) => {
         ephemeral: true,
       });
     }
+
+    if (interaction.customId.startsWith('submit_view_wolfseer_')) {
+      if (!gameRoom || gameRoom.gameState.phase !== 'night') return;
+
+      const playerId = interaction.customId.split('_')[3];
+
+      if (interaction.user.id !== playerId) {
+        return interaction.reply({
+          content: 'Bạn không được gửi form này.',
+          ephemeral: true,
+        });
+      }
+
+      const viewIndexStr = interaction.fields.getTextInputValue(
+        'view_index_wolfseer'
+      );
+      const viewIndex = parseInt(viewIndexStr, 10);
+
+      if (
+        isNaN(viewIndex) ||
+        viewIndex < 1 ||
+        viewIndex > gameRoom.players.length
+      ) {
+        return interaction.reply({
+          content: 'Số thứ tự không hợp lệ.',
+          ephemeral: true,
+        });
+      }
+
+      const targetPlayer = gameRoom.players[viewIndex - 1];
+
+      await interaction.deferReply({ ephemeral: true });
+
+      if (sender.role.id === WEREROLE.WOLFSEER) {
+        if (!targetPlayer.alive) {
+          return interaction.editReply({
+            content: 'Không có tác dụng lên người chết',
+            ephemeral: true,
+          });
+        }
+
+        if (sender.role.seerCount <= 0) {
+          return interaction.editReply({
+            content: 'Bạn đã hết lượt dùng chức năng',
+            ephemeral: true,
+          });
+        }
+
+        try {
+          const checkSeer = () => {
+            return targetPlayer.role.id === WEREROLE.SEER;
+          };
+
+          const user = await client.users.fetch(playerId);
+          await user.send(
+            `🔍 Vai trò của: **${targetPlayer.name}** là ${checkSeer() ? 'Tiên Tri' : 'Không phải Tiên Tri'}.`
+          );
+
+          const notifyMessage = gameRoom.players.map(async (player) => {
+            try {
+              sender.role.seerCount -= 1;
+              if (
+                player.role.id === WEREROLE.WEREWOLF &&
+                player.userId !== sender.userId
+              ) {
+                const wolfUser = await client.users.fetch(player.userId);
+                await wolfUser.send(
+                  `🐺🔍 **Sói Tiên Tri** đã soi **${targetPlayer.name}** và phát hiện người này **${checkSeer() ? 'LÀ' : 'KHÔNG PHẢI'}** Tiên Tri.`
+                );
+              } else {
+                // Những người còn lại (dân làng/solo/...)
+                const user = await client.users.fetch(player.userId);
+                await user.send(
+                  `🐺🔍 **Sói Tiên Tri** đã soi **${targetPlayer.name}**.`
+                );
+              }
+            } catch (err) {
+              console.error('Không gửi được tin nhắn', err);
+            }
+          });
+          await Promise.allSettled(notifyMessage);
+        } catch (err) {
+          console.error(`Không thể gửi DM cho ${playerId}:`, err);
+        }
+      }
+
+      await interaction.editReply({
+        content: '✅ Xem vai trò thành công.',
+        ephemeral: true,
+      });
+    }
     if (interaction.customId.startsWith('submit_protect_bodyguard_')) {
       if (!gameRoom || gameRoom.gameState.phase !== 'night') return;
 
@@ -774,9 +932,9 @@ client.on('interactionCreate', async (interaction) => {
           });
         }
 
-        if (sender.role.id === targetPlayer.role.id) {
+        if (sender.userId === targetPlayer.userId) {
           return interaction.reply({
-            content: 'Bạn không thể xem vai trò của đồng minh.',
+            content: 'Bạn không thể xem phe của chính mình.',
             ephemeral: true,
           });
         }
@@ -787,11 +945,20 @@ client.on('interactionCreate', async (interaction) => {
           const user = await client.users.fetch(playerId);
           if (targetPlayer.role.id === WEREROLE.LYCAN) {
             await user.send(
-              `👁️ Vai trò của **${targetPlayer.name}** là: **Ma Sói**.`
+              `👁️ Phe của **${targetPlayer.name}** là: **Ma Sói**.`
             );
           } else {
+            const seerFaction = () => {
+              if (targetPlayer.role.faction === 0) return 'Ma Sói';
+              if (
+                targetPlayer.role.faction === 1 ||
+                targetPlayer.role.faction === 3
+              )
+                return 'Dân Làng';
+              return 'Không xác định';
+            };
             await user.send(
-              `👁️ Vai trò của **${targetPlayer.name}** là: **${targetPlayer.role.name}**.`
+              `👁️ Phe của **${targetPlayer.name}** là: **${seerFaction()}**.`
             );
           }
         } catch (err) {
@@ -1374,7 +1541,7 @@ client.on('interactionCreate', async (interaction) => {
       const room = gameRooms.get(guildId);
 
       await interaction.deferReply({ ephemeral: true });
-      
+
       if (!room) {
         return interaction.editReply({
           content: 'Không tìm thấy phòng chơi.',
