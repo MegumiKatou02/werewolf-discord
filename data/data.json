@@ -77,6 +77,12 @@
     "faction": 0,
     "description": "Soi xem ai là tiên tri. Không được tham gia cùng sói, biết sói là ai và ngược lại, sói pháp sư soi xong thì quản trò sẽ báo cho sói biết là sói pháp sư soi ai."
   },
+  "13": {
+    "title": "Sói Trùm",
+    "eName": "Alpha Werewolf",
+    "faction": 0,
+    "description": "Che các sói khỏi tiên tri, mỗi đêm 1 sói, được phép che liên tục một sói."
+  },
   "100": {
     "title": "Stalker",
     "eName": "Stalker",
