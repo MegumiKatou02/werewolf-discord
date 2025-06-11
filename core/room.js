@@ -310,6 +310,24 @@ class GameRoom extends EventEmitter {
           components: [row],
         });
         this.nightMessages.set(player.userId, message);
+      } else if (player.role.id === WEREROLE.ALPHAWEREWOLF) {
+        // Sói Trùm
+        const maskButton = new ButtonBuilder()
+          .setCustomId(`mask_target_alphawerewolf_${player.userId}`)
+          .setLabel('👤 Che sói')
+          .setStyle(ButtonStyle.Primary);
+
+        const row = new ActionRowBuilder().addComponents(maskButton);
+
+        await user.send(
+          '🌙 Bạn là **Sói Trùm**. Bạn có thể che sói khỏi tiên tri, mỗi đêm 1 sói, được phép che liên tục một sói.'
+        );
+        message = await user.send({
+          embeds: [embed],
+          files: [attachment],
+          components: [row],
+        });
+        this.nightMessages.set(player.userId, message);
       } else if (player.role.id === WEREROLE.BODYGUARD) {
         // Bảo Vệ
         const protectButton = new ButtonBuilder()
@@ -1024,23 +1042,26 @@ class GameRoom extends EventEmitter {
       await Promise.allSettled(hangMessages);
     }
 
-    const wolvesAlive = this.players.filter(
-      (p) => p.alive && p.role.faction === 0
+    const normalWolvesAlive = this.players.filter(
+      (p) => p.alive && p.role.faction === 0 && p.role.id === WEREROLE.WEREWOLF
     );
-    if (
-      wolvesAlive.length === 1 &&
-      wolvesAlive[0].role.id === WEREROLE.WOLFSEER
-    ) {
-      wolvesAlive[0].role = new Werewolf();
-      const user = await this.fetchUser(wolvesAlive[0].userId);
-      if (user) {
-        await user.send(
-          '### 🐺 Vì là Sói cuối cùng còn sống, bạn đã biến thành Sói thường!'
-        );
-      }
+    const otherWolvesAlive = this.players.filter(
+      (p) => p.alive && p.role.faction === 0 && p.role.id !== WEREROLE.WEREWOLF
+    );
+
+    if (normalWolvesAlive.length === 0 && otherWolvesAlive.length > 0) {
+      const wolfTransformPromises = otherWolvesAlive.map(async wolf => {
+        wolf.role = new Werewolf();
+        const user = await this.fetchUser(wolf.userId);
+        if (user) {
+          return user.send('### 🐺 Vì không còn Sói thường nào sống sót, bạn đã biến thành Sói thường!');
+        }
+      });
+
+      await Promise.allSettled(wolfTransformPromises);
 
       this.gameState.log.push(
-        `🐺 **Sói Tiên Tri** đã biến thành **Sói thường** vì là Sói cuối cùng còn sống.`
+        `🐺 **${otherWolvesAlive.length}** Sói chức năng đã biến thành **Sói thường** vì không còn Sói thường nào sống sót.`
       );
     }
 
@@ -1098,12 +1119,17 @@ class GameRoom extends EventEmitter {
               break;
             case 8:
               roleEmoji = '🔮';
+              break;
             case 10:
               roleEmoji = '👒';
+              break;
             case 11:
               roleEmoji = '🤷';
             case 12:
-              roleEmoji = '🔍';
+              roleEmoji = '🐺';
+              break;
+            case 13:
+              roleEmoji = '🐺';
               break;
           }
           return {

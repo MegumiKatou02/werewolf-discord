@@ -11,5 +11,6 @@
 10. Hầu gái (Maid)
 11. Lycan (Lycan)
 12. Wolf Seer (Sói Tiên Tri)
+13. Alpha Werewolf (Sói Trùm)
 
 - 0: sói, 1: dân, 2: solo, 3: dân làng hoặc ma sói
