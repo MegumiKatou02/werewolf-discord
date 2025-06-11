@@ -127,6 +127,7 @@ client.on('messageCreate', async (message) => {
     FactionRole.Village
   );
   await RoleResponse(message, ['!lycan'], 'lycan.png', 11, FactionRole.Village);
+  await RoleResponse(message, ['!stalker', '!hori'], 'stalker.png', 100, FactionRole.Solo);
 
   if (message.channel.type === ChannelType.DM) {
     console.log(`Tin nhắn DM từ ${message.author.tag}: ${message.content}`);

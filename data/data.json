@@ -70,5 +70,12 @@
     "eName": "Lycan",
     "faction": 1,
     "description": "Là dân, bị soi thì quản trò bảo tiên tri là sói; bị thám tử soi với dân thì khác phe, soi với sói thì cùng phe; Nhưng bạn vẫn là dân, mãi mãi là dân..."
+  },
+  "100": {
+    "title": "Stalker",
+    "eName": "Stalker",
+    "faction": 2,
+    "description": "Mỗi đêm bạn có thể đọc được chat của tất cả mọi người trong làng. Không thể bị chết bởi sói. Thắng khi đêm đó bị sói cắn và sáng hôm sau bị treo cổ, bạn cũng có thể chết khi số tin nhắn mọi người nhắn trong đêm nhỏ hơn 7"
+
   }
 }
