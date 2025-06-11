@@ -4,6 +4,7 @@
 
 ### Added
 
+- Thêm role **Sói Trùm**
 - Thêm role **Sói Tiên Tri**
 
 ### Changed
