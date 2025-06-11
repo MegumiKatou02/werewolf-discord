@@ -71,11 +71,16 @@
     "faction": 1,
     "description": "Là dân, bị soi thì quản trò bảo tiên tri là phe sói; bị thám tử soi với dân thì khác phe, soi với sói thì cùng phe; Nhưng bạn vẫn là dân, mãi mãi là dân..."
   },
+  "12": {
+    "title": "Sói Tiên Tri",
+    "eName": "Wolf Seer",
+    "faction": 0,
+    "description": "Soi xem ai là tiên tri. Không được tham gia cùng sói, biết sói là ai và ngược lại, sói pháp sư soi xong thì quản trò sẽ báo cho sói biết là sói pháp sư soi ai."
+  },
   "100": {
     "title": "Stalker",
     "eName": "Stalker",
     "faction": 2,
     "description": "Mỗi đêm bạn có thể theo dõi 1 người chơi và biết đêm đó họ có hành động hay không. Bạn còn có thể chọn người để ám sát, nếu ám sát trúng người không làm gì đêm đó thì người đó chết. Thắng khi là người duy nhất sống sót."
-
   }
 }

@@ -123,9 +123,9 @@ module.exports = {
     });
 
     const footerText = {
-      waiting: '💡 Sử dụng /join để tham gia phòng',
+      waiting: '💡 Sử dụng /masoi-join để tham gia phòng',
       starting: '🎲 Game đang diễn ra, hãy đợi ván sau để tham gia',
-      ended: '🔄 Sử dụng /create để tạo phòng mới',
+      ended: '🔄 Sử dụng /masoi-create để tạo phòng mới',
     };
 
     statusEmbed.setFooter({
