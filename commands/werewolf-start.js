@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { gameRooms } = require('../core/room');
 
 module.exports = {
@@ -44,13 +44,20 @@ module.exports = {
       });
     }
 
-    try {
-      await room.startGame(interaction);
-      return interaction.followUp({
-        content: `✅ ${interaction.user.globalName || interaction.user.username} đã bắt đầu trò chơi! Vai trò đã được chia.`,
-      });
-    } catch (err) {
-      return interaction.editReply(`Lỗi: ${err.message}`);
-    }
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('use_default_roles')
+        .setLabel('Dùng vai trò mặc định')
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId('customize_roles_json')
+        .setLabel('Tuỳ chỉnh vai trò (JSON)')
+        .setStyle(ButtonStyle.Secondary)
+    );
+
+    return interaction.editReply({
+      content: '🎮 Chọn cách phân vai trò:',
+      components: [row],
+    });
   },
 };

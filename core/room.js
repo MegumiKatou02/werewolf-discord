@@ -75,34 +75,42 @@ class GameRoom extends EventEmitter {
     return this.players.length === 0;
   }
 
-  assignRoles(playerCount) {
+  assignRoles(playerCount, customRoles = null) {
     const roles = [];
 
     if (playerCount < 4) {
       throw new Error('Cần ít nhất 4 người chơi.');
     }
 
-    const table = roleTable[playerCount];
-
-    if (table) {
-      for (const [role, count] of Object.entries(table)) {
+    if (customRoles) {
+      for (const [roleId, count] of Object.entries(customRoles)) {
         for (let i = 0; i < count; i++) {
-          roles.push(Number(role));
+          roles.push(Number(roleId));
         }
       }
     } else {
-      const werewolves = Math.floor(playerCount / 4);
-      for (let i = 0; i < werewolves; i++) roles.push(0);
-      roles.push(2);
-      roles.push(6);
-      roles.push(8);
-      if (playerCount >= 7) roles.push(4);
-      if (playerCount >= 7) roles.push(5);
-      if (playerCount >= 8) roles.push(3);
-      if (playerCount >= 10) roles.push(7);
+      const table = roleTable[playerCount];
 
-      const remaining = playerCount - roles.length;
-      for (let i = 0; i < remaining; i++) roles.push(1);
+      if (table) {
+        for (const [role, count] of Object.entries(table)) {
+          for (let i = 0; i < count; i++) {
+            roles.push(Number(role));
+          }
+        }
+      } else {
+        const werewolves = Math.floor(playerCount / 4);
+        for (let i = 0; i < werewolves; i++) roles.push(0);
+        roles.push(2);
+        roles.push(6);
+        roles.push(8);
+        if (playerCount >= 7) roles.push(4);
+        if (playerCount >= 7) roles.push(5);
+        if (playerCount >= 8) roles.push(3);
+        if (playerCount >= 10) roles.push(7);
+
+        const remaining = playerCount - roles.length;
+        for (let i = 0; i < remaining; i++) roles.push(1);
+      }
     }
 
     for (let i = roles.length - 1; i > 0; i--) {
@@ -113,7 +121,7 @@ class GameRoom extends EventEmitter {
     return roles;
   }
 
-  async startGame(interaction) {
+  async startGame(interaction, customRoles = null) {
     if (this.status !== 'waiting')
       throw new Error('Game đã bắt đầu hoặc kết thúc.');
 
@@ -126,7 +134,7 @@ class GameRoom extends EventEmitter {
       this.settings = serverSettings.get(this.guildId);
     }
 
-    const roles = this.assignRoles(this.players.length);
+    const roles = this.assignRoles(this.players.length, customRoles);
     const fakeRoles = [
       WEREROLE.LYCAN,
       WEREROLE.SEER,
@@ -137,7 +145,7 @@ class GameRoom extends EventEmitter {
     const allWerewolves = [];
 
     const dmPromises = this.players.map(async (player, i) => {
-      const role = assignRolesGame(fakeRoles[i]);
+      const role = assignRolesGame(roles[i]);
       player.role = role;
       if (player.role.faction === 0) {
         allWerewolves.push(player.userId);
@@ -614,11 +622,13 @@ class GameRoom extends EventEmitter {
         this.gameState.log.push(
           `Bảo vệ đã bảo vệ **${this.players.find((p) => p.userId === killedId).name}**, anh ấy còn ${hp} máu`
         );
+        // được bảo vệ đỡ đạn
+        killedPlayers.delete(killedId);
         if (hp <= 0) {
-          sureDieInTheNight.add(guard.userId);
+          // sureDieInTheNight.add(guard.userId);
+          killedPlayers.add(guard.userId);
           this.gameState.log.push(`Bảo vệ đã chết do chịu 2 lần cắn của sói`);
         }
-        killedPlayers.delete(killedId);
       }
     }
     if (witch && witch.role.healedPerson) {
