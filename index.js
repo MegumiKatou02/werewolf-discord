@@ -798,13 +798,13 @@ client.on('interactionCreate', async (interaction) => {
               ) {
                 const wolfUser = await client.users.fetch(player.userId);
                 await wolfUser.send(
-                  `🐺🔍 **Sói Tiên Tri** đã soi **${targetPlayer.name}** và phát hiện người này **${checkSeer() ? 'LÀ' : 'KHÔNG PHẢI'}** Tiên Tri.`
+                  `**Thông báo:** 🐺🔍 **Sói Tiên Tri** đã soi **${targetPlayer.name}** và phát hiện người này **${checkSeer() ? 'LÀ' : 'KHÔNG PHẢI'}** Tiên Tri.`
                 );
               } else {
                 // Những người còn lại (dân làng/solo/...)
                 const user = await client.users.fetch(player.userId);
                 await user.send(
-                  `🐺🔍 **Sói Tiên Tri** đã soi **${targetPlayer.name}**.`
+                  `**Thông báo:** 🐺🔍 **Sói Tiên Tri** đã soi **${targetPlayer.name}**.`
                 );
               }
             } catch (err) {
