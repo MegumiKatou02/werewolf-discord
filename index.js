@@ -333,7 +333,7 @@ client.on('interactionCreate', async (interaction) => {
 
       const modal = new ModalBuilder()
         .setCustomId(`submit_view_seer_${playerId}`)
-        .setTitle('Xem vai trò người chơi');
+        .setTitle('Xem phe người chơi');
 
       const input = new TextInputBuilder()
         .setCustomId('view_index_seer')
@@ -774,9 +774,9 @@ client.on('interactionCreate', async (interaction) => {
           });
         }
 
-        if (sender.role.id === targetPlayer.role.id) {
+        if (sender.userId === targetPlayer.userId) {
           return interaction.reply({
-            content: 'Bạn không thể xem vai trò của đồng minh.',
+            content: 'Bạn không thể xem phe của chính mình.',
             ephemeral: true,
           });
         }
@@ -787,11 +787,16 @@ client.on('interactionCreate', async (interaction) => {
           const user = await client.users.fetch(playerId);
           if (targetPlayer.role.id === WEREROLE.LYCAN) {
             await user.send(
-              `👁️ Vai trò của **${targetPlayer.name}** là: **Ma Sói**.`
+              `👁️ Phe của **${targetPlayer.name}** là: **Ma Sói**.`
             );
           } else {
+            const seerFaction = () => {
+              if (targetPlayer.role.faction === 0) return "Ma Sói";
+              if (targetPlayer.role.faction === 1 || targetPlayer.role.faction === 3) return "Dân Làng";
+              return "Không xác định";
+            }
             await user.send(
-              `👁️ Vai trò của **${targetPlayer.name}** là: **${targetPlayer.role.name}**.`
+              `👁️ Phe của **${targetPlayer.name}** là: **${seerFaction()}**.`
             );
           }
         } catch (err) {

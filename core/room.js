@@ -314,13 +314,13 @@ class GameRoom extends EventEmitter {
         // Tiên Tri
         const viewButton = new ButtonBuilder()
           .setCustomId(`view_target_seer_${player.userId}`)
-          .setLabel('🔍 Xem vai trò')
+          .setLabel('🔍 Xem phe')
           .setStyle(ButtonStyle.Primary);
 
         const row = new ActionRowBuilder().addComponents(viewButton);
 
         await user.send(
-          '🌙 Bạn là **Tiên Tri**. Bạn có thể xem vai trò của một người chơi khác trong đêm nay.'
+          '🌙 Bạn là **Tiên Tri**. Bạn có thể xem phe của một người chơi khác trong đêm nay.'
         );
         message = await user.send({
           embeds: [embed],

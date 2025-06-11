@@ -27,7 +27,7 @@
     "title": "Tiên Tri",
     "eName": "Seer",
     "faction": 1,
-    "description": "Mỗi đêm bạn có thể xem vai trò của người chơi khác."
+    "description": "Mỗi đêm bạn có thể xem phe của người chơi khác."
   },
   "5": {
     "title": "Thám Tử",
@@ -69,7 +69,7 @@
     "title": "Lycan",
     "eName": "Lycan",
     "faction": 1,
-    "description": "Là dân, bị soi thì quản trò bảo tiên tri là sói; bị thám tử soi với dân thì khác phe, soi với sói thì cùng phe; Nhưng bạn vẫn là dân, mãi mãi là dân..."
+    "description": "Là dân, bị soi thì quản trò bảo tiên tri là phe sói; bị thám tử soi với dân thì khác phe, soi với sói thì cùng phe; Nhưng bạn vẫn là dân, mãi mãi là dân..."
   },
   "100": {
     "title": "Stalker",
