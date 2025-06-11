@@ -166,6 +166,18 @@ module.exports = {
             value:
               '• Không có gì cả ngoài việc bị cho là phe sói khi bị soi\n• LYCAN LÀ DÂN',
             inline: true,
+          },
+          {
+            name: '🐺 Sói Trùm (Phe Sói)',
+            value:
+              '• Che các sói khỏi tiên tri\n• Được phép che liên tục một người',
+            inline: true,
+          },
+          {
+            name: '🐺 Sói Tiên Tri (Phe Sói)',
+            value:
+              '• Soi xem ai là tiên tri\n• Được quản trò báo cho cả làng soi ai và báo cho sói có phải tiên tri hay không',
+            inline: true,
           }
         );
 

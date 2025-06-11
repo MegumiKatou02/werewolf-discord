@@ -1225,10 +1225,10 @@ class GameRoom extends EventEmitter {
     while (this.status === 'starting') {
       await this.nightPhase();
       await this.solvePhase2();
-      // if (await this.checkEndGame()) {
-      //   console.log('END GAME');
-      //   break;
-      // }
+      if (await this.checkEndGame()) {
+        console.log('END GAME');
+        break;
+      }
       await this.dayPhase();
       await this.votePhase();
     }
