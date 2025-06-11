@@ -173,7 +173,7 @@ client.on('messageCreate', async (message) => {
           try {
             const user = await client.users.fetch(player.userId);
             if (sender.role.id === WEREROLE.MEDIUM && sender.alive) {
-              await user.send(`_🔮 **${sender.name}**: ${message.content}_`);
+              await user.send(`_🔮 **Thầy Đồng**: ${message.content}_`);
             } else {
               await user.send(`_💀 **${sender.name}**: ${message.content}_`);
             }
