@@ -178,6 +178,12 @@ module.exports = {
             value:
               '• Soi xem ai là tiên tri\n• Được quản trò báo cho cả làng soi ai và báo cho sói có phải tiên tri hay không',
             inline: true,
+          },
+          {
+            name: '🦊 Cáo (Phe Dân)',
+            value:
+              '• Mỗi đêm dậy soi 3 người tự chọn trong danh sách, nếu 1 trong 3 người đó là sói thì được báo "Có sói", nếu đoán hụt thì mất chức năng.',
+            inline: true,
           }
         );
 

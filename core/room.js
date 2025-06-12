@@ -454,6 +454,25 @@ class GameRoom extends EventEmitter {
 
         message = await user.send({ embeds: [embed], files: [attachment] });
         this.nightMessages.set(player.userId, message);
+      } else if (player.role.id === WEREROLE.FOXSPIRIT) {
+        // Cáo
+        await user.send(
+          '🦊 Bạn là **Cáo**. Mỗi đêm dậy soi 3 người tự chọn trong danh sách, nếu 1 trong 3 người đó là sói thì được báo \"Có sói\", nếu đoán hụt thì mất chức năng.'
+        );
+
+        const viewButton = new ButtonBuilder()
+          .setCustomId(`view_target_foxspirit_${player.userId}`)
+          .setLabel('🔍 Tìm sói')
+          .setStyle(ButtonStyle.Primary);
+
+        const row = new ActionRowBuilder().addComponents(viewButton);
+
+        message = await user.send({
+          embeds: [embed],
+          files: [attachment],
+          components: [row],
+        });
+        this.nightMessages.set(player.userId, message);
       } else if (player.role.id === WEREROLE.MAID) {
         let chooseMasterButton = null;
         if (this.gameState.nightCount === 1) {
@@ -1127,11 +1146,15 @@ class GameRoom extends EventEmitter {
               break;
             case 11:
               roleEmoji = '🤷';
+              break;
             case 12:
               roleEmoji = '🐺';
               break;
             case 13:
               roleEmoji = '🐺';
+              break;
+            case 14:
+              roleEmoji = '🦊';
               break;
           }
           return {
