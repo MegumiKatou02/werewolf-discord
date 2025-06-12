@@ -1050,11 +1050,13 @@ class GameRoom extends EventEmitter {
     );
 
     if (normalWolvesAlive.length === 0 && otherWolvesAlive.length > 0) {
-      const wolfTransformPromises = otherWolvesAlive.map(async wolf => {
+      const wolfTransformPromises = otherWolvesAlive.map(async (wolf) => {
         wolf.role = new Werewolf();
         const user = await this.fetchUser(wolf.userId);
         if (user) {
-          return user.send('### 🐺 Vì không còn Sói thường nào sống sót, bạn đã biến thành Sói thường!');
+          return user.send(
+            '### 🐺 Vì không còn Sói thường nào sống sót, bạn đã biến thành Sói thường!'
+          );
         }
       });
 

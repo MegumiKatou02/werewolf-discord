@@ -1052,7 +1052,11 @@ client.on('interactionCreate', async (interaction) => {
           const AlphaWerewolf = gameRoom.players.find(
             (player) => player.role.id === WEREROLE.ALPHAWEREWOLF
           );
-          if (AlphaWerewolf && AlphaWerewolf.role.maskWolf && AlphaWerewolf.role.maskWolf === targetPlayer.userId) {
+          if (
+            AlphaWerewolf &&
+            AlphaWerewolf.role.maskWolf &&
+            AlphaWerewolf.role.maskWolf === targetPlayer.userId
+          ) {
             await user.send(
               `👁️ Phe của **${targetPlayer.name}** là: **Dân Làng**.`
             );
