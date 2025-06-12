@@ -83,6 +83,12 @@
     "faction": 0,
     "description": "Che các sói khỏi tiên tri, mỗi đêm 1 sói, được phép che liên tục một sói."
   },
+  "14": {
+    "title": "Cáo",
+    "eName": "Fox Spirit",
+    "faction": 1,
+    "description": "Mỗi đêm dậy soi 3 người tự chọn trong danh sách, nếu 1 trong 3 người đó là sói thì được báo \"Có sói\", nếu đoán hụt thì mất chức năng."
+  },
   "100": {
     "title": "Stalker",
     "eName": "Stalker",

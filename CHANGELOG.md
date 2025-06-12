@@ -2,6 +2,10 @@
 
 ## [1.0.1] - 2025-06-12
 
+### Added
+
+- Thêm role **Cáo**
+
 ### Changed
 
 - **Phù Thuỷ**: chỉ được dùng 1 bình trong 1 đêm
