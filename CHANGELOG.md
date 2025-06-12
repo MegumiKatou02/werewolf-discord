@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.1] - 2025-06-12
+
+### Changed
+
+- **Phù Thuỷ**: chỉ được dùng 1 bình trong 1 đêm
+
 ## [1.0.1] - 2025-06-11
 
 ### Added

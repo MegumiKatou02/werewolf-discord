@@ -251,6 +251,17 @@ client.on('messageCreate', async (message) => {
 
 client.on('interactionCreate', async (interaction) => {
   if (interaction.isButton()) {
+    const guildId = interaction.guild?.id || store.get(interaction.user.id);
+
+    if (!guildId) {
+      return interaction.reply({
+        content: 'Không tìm thấy guild liên kết với người dùng này.',
+        ephemeral: true,
+      });
+    }
+
+    const gameRoom = gameRooms.get(guildId);
+
     if (interaction.customId === 'use_default_roles') {
       const guildId = interaction.guildId;
       const room = gameRooms.get(guildId);
@@ -501,6 +512,24 @@ client.on('interactionCreate', async (interaction) => {
           ephemeral: true,
         });
       }
+      try {
+        const witch = gameRoom.players.find(
+          (p) => p.role.id === WEREROLE.WITCH
+        );
+
+        if (witch && witch.role.healedPerson) {
+          return interaction.reply({
+            content: 'Bạn không thể dùng 2 bình trong 1 đêm.',
+            ephemeral: true,
+          });
+        }
+      } catch (err) {
+        console.error('❌ Lỗi khi fetch user:', err);
+        return interaction.reply({
+          content: 'Không tìm thấy người chơi.',
+          ephemeral: true,
+        });
+      }
 
       const modal = new ModalBuilder()
         .setCustomId(`submit_poison_witch_${playerId}`)
@@ -535,6 +564,25 @@ client.on('interactionCreate', async (interaction) => {
       if (interaction.user.id !== playerId) {
         return interaction.reply({
           content: 'Bạn không được nhấn nút này.',
+          ephemeral: true,
+        });
+      }
+
+      try {
+        const witch = gameRoom.players.find(
+          (p) => p.role.id === WEREROLE.WITCH
+        );
+
+        if (witch && witch.role.poisonedPerson) {
+          return interaction.reply({
+            content: 'Bạn không thể dùng 2 bình trong 1 đêm.',
+            ephemeral: true,
+          });
+        }
+      } catch (err) {
+        console.error('❌ Lỗi khi fetch user:', err);
+        return interaction.reply({
+          content: 'Không tìm thấy người chơi.',
           ephemeral: true,
         });
       }
