@@ -21,6 +21,7 @@ const { store, serverSettings } = require('./store');
 const Dead = require('../types/roles/Dead');
 const Werewolf = require('../types/roles/WereWolf');
 const Maid = require('../types/roles/Maid');
+const Villager = require('../types/roles/Villager');
 
 class GameRoom extends EventEmitter {
   constructor(client, guildId, hostId) {
@@ -506,6 +507,13 @@ class GameRoom extends EventEmitter {
 
         message = await user.send({ embeds: [embed], files: [attachment] });
         this.nightMessages.set(player.userId, message);
+      } else if (player.role.id === WEREROLE.ELDER) {
+        await user.send(
+          '👴 Bạn là **Già Làng**. Sói phải cắn 2 lần thì Già làng mới chết.'
+        );
+
+        message = await user.send({ embeds: [embed], files: [attachment] });
+        this.nightMessages.set(player.userId, message);
       } else {
         await user.send('🌙 Một đêm yên tĩnh trôi qua. Bạn hãy chờ đến sáng.');
 
@@ -631,6 +639,7 @@ class GameRoom extends EventEmitter {
     // let savedPlayers = new Set();
     let revivedPlayers = new Set();
     let maidNewRole = null; // Lưu thông tin về vai trò mới của hầu gái
+    let giaLangBiTanCong = false;
 
     const witch = this.players.find((p) => p.role.id === WEREROLE.WITCH);
     if (mostVotedUserId) {
@@ -649,6 +658,12 @@ class GameRoom extends EventEmitter {
         this.gameState.log.push(
           `Vì là đêm đầu tiên nên phù thuỷ không bị sao cả`
         );
+      } else if (nguoiBiChoCan.role.id === WEREROLE.ELDER) {
+        nguoiBiChoCan.role.hp -= 1;
+        giaLangBiTanCong = true;
+        if (nguoiBiChoCan.role.hp <= 0) {
+          killedPlayers.add(nguoiBiChoCan.userId);
+        }
       } else {
         killedPlayers.add(nguoiBiChoCan.userId);
       }
@@ -665,6 +680,7 @@ class GameRoom extends EventEmitter {
     }
 
     const guard = this.players.find((p) => p.role.id === WEREROLE.BODYGUARD);
+    const giaLang = this.players.find((p) => p.role.id === WEREROLE.ELDER);
     for (const killedId of killedPlayers) {
       // người bị chó cắn
       if (!guard || !guard.alive) break;
@@ -683,6 +699,11 @@ class GameRoom extends EventEmitter {
           // sureDieInTheNight.add(guard.userId);
           killedPlayers.add(guard.userId);
           this.gameState.log.push(`Bảo vệ đã chết do chịu 2 lần cắn của sói`);
+        }
+
+        if (giaLangBiTanCong && giaLang && giaLang.userId === killedId) {
+          giaLang.role.hp += 1;
+          giaLangBiTanCong = false;
         }
       }
     }
@@ -779,6 +800,27 @@ class GameRoom extends EventEmitter {
           );
         }
       }
+    }
+
+    // cần fix role id ELder vì Elder đã chết (new Dead())
+    if (giaLang && !giaLang.alive) {
+      const dmVillagerPromise = this.players
+        .filter(
+          (p) =>
+            (p.alive && p.role.faction === 1) || p.role.id === WEREROLE.ELDER
+        )
+        .map(async (player) => {
+          const user = await this.fetchUser(player.userId);
+          if (!user) return;
+          await user.send(
+            `### 👴 Già làng đã chết, tất cả những người thuộc phe dân làng đều sẽ bị mất chức năng.`
+          );
+          this.gameState.log.push(
+            `👴 Già làng đã chết, tất cả những người thuộc phe dân làng đều sẽ bị mất chức năng.`
+          );
+          player.role = new Villager();
+        });
+      await Promise.allSettled(dmVillagerPromise);
     }
 
     if (allDeadTonight.size !== 0) {
@@ -1086,6 +1128,33 @@ class GameRoom extends EventEmitter {
       );
     }
 
+    // Tìm già làng bị chết (bị gắn role dead nên dùng originalRoleId)
+    const giaLang = this.players.find(
+      (p) =>
+        !p.alive &&
+        p.role.id === WEREROLE.DEAD &&
+        p.role.originalRoleId === WEREROLE.ELDER
+    );
+    if (giaLang && !giaLang.alive) {
+      const dmVillagerPromise = this.players
+        .filter(
+          (p) =>
+            (p.alive && p.role.faction === 1) || p.role.id === WEREROLE.ELDER
+        )
+        .map(async (player) => {
+          const user = await this.fetchUser(player.userId);
+          if (!user) return;
+          await user.send(
+            `### 👴 Già làng đã chết, tất cả những người thuộc phe dân làng đều sẽ bị mất chức năng.`
+          );
+          this.gameState.log.push(
+            `👴 Già làng đã chết, tất cả những người thuộc phe dân làng đều sẽ bị mất chức năng.`
+          );
+          player.role = new Villager();
+        });
+      await Promise.allSettled(dmVillagerPromise);
+    }
+
     // Reset vote
     for (const player of this.players) {
       player.role.voteHanged = null;
@@ -1155,6 +1224,9 @@ class GameRoom extends EventEmitter {
               break;
             case 14:
               roleEmoji = '🦊';
+              break;
+            case 15:
+              roleEmoji = '👴';
               break;
           }
           return {
