@@ -5,6 +5,7 @@
 ### Added
 
 - Thêm role **Già Làng**
+- **Sói Trùm** giờ có thể che được khỏi **Cáo**
 
 ### Fixed
 

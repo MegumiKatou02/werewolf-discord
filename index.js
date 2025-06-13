@@ -1921,18 +1921,19 @@ client.on('interactionCreate', async (interaction) => {
       ];
 
       if (sender.role.id === WEREROLE.FOXSPIRIT) {
+        await interaction.deferReply({ ephemeral: true });
         if (
           !targetPlayers[0].alive ||
           !targetPlayers[1].alive ||
           !targetPlayers[2].alive
         ) {
-          return interaction.reply({
+          return interaction.editReply({
             content: 'Không có tác dụng lên người chết.',
             ephemeral: true,
           });
         }
         if (sender.role.viewCount <= 0) {
-          return interaction.reply({
+          return interaction.editReply({
             content: 'Bạn đã hết lượt dùng chức năng.',
             ephemeral: true,
           });
@@ -1945,9 +1946,15 @@ client.on('interactionCreate', async (interaction) => {
         );
         sender.role.viewCount -= 1;
         const isHaveWolf = () => {
+          const AlphaWerewolf = gameRoom.players.find(
+            (p) => p.role.id === WEREROLE.ALPHAWEREWOLF
+          );
           for (const player of targetPlayers) {
             if (
-              player.role.faction === 0 ||
+              (player.role.faction === 0 && !AlphaWerewolf) ||
+              (player.role.faction === 0 &&
+                AlphaWerewolf &&
+                AlphaWerewolf.role.maskWolf !== player.userId) ||
               player.role.id === WEREROLE.LYCAN
             ) {
               return true;
@@ -1971,7 +1978,7 @@ client.on('interactionCreate', async (interaction) => {
           console.error(`Không thể gửi DM cho ${playerId}:`, err);
         }
       }
-      await interaction.reply({
+      await interaction.editReply({
         content: '✅ Đã xem xét.',
         ephemeral: true,
       });
