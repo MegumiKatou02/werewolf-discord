@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.2] - 2025-06-13
+
+### Added
+
+- Thêm role **Già Làng**
+
+### Fixed
+
+- **Sói** nói chuyện được với nhau -> **Sói** còn sống nói chuyện được với nhau
+- **Sói Trùm** được nói chuyện với các **Sói** khác
+
 ## [1.0.1] - 2025-06-12
 
 ### Added

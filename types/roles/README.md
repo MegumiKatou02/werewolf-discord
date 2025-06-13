@@ -13,5 +13,6 @@
 12. Seer Werewolf (Sói Tiên Tri)
 13. Alpha Werewolf (Sói Trùm)
 14. Fox Spirit (Cáo/Hồ ly)
+15. Elder (Già Làng)
 
 - 0: sói, 1: dân, 2: solo, 3: dân làng hoặc ma sói

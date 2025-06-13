@@ -1668,12 +1668,14 @@ client.on('interactionCreate', async (interaction) => {
         voteTime: parseInt(interaction.fields.getTextInputValue('voteTime')),
       };
 
+      await interaction.deferUpdate();
+
       if (
         Object.values(newSettings).some(
           (value) => isNaN(value) || value < 10 || value > 300
         )
       ) {
-        await interaction.reply({
+        await interaction.editReply({
           content: '❌ Vui lòng nhập số từ 10 đến 300 giây!',
           ephemeral: true,
         });
@@ -1681,7 +1683,7 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       if (newSettings.wolfVoteTime >= newSettings.nightTime) {
-        return interaction.reply({
+        return interaction.editReply({
           content:
             'Thời gian sói vote không thể lớn hơn hoặc bằng thời gian trong đêm.',
           ephemeral: true,
@@ -1721,7 +1723,7 @@ client.on('interactionCreate', async (interaction) => {
           text: '💡 Cài đặt sẽ được áp dụng cho các game tiếp theo',
         });
 
-      await interaction.update({
+      await interaction.editReply({
         embeds: [updatedEmbed],
         components: [
           new ActionRowBuilder().addComponents(
