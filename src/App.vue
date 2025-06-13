@@ -1,47 +1,30 @@
 <script setup>
-import HelloWorld from './components/HelloWorld.vue'
-import TheWelcome from './components/TheWelcome.vue'
+import { ref } from 'vue'
+import DocsLayout from './components/DocsLayout.vue'
+import DocsIntro from './components/DocsIntro.vue'
+import DocsRules from './components/DocsRules.vue'
+import DocsRoles from './components/DocsRoles.vue'
+import DocsFAQ from './components/DocsFAQ.vue'
+import DocsContact from './components/DocsContact.vue'
+
+const current = ref('intro')
 </script>
 
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
-
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-    </div>
-  </header>
-
-  <main>
-    <TheWelcome />
-  </main>
+  <DocsLayout :current="current" @change="val => current = val">
+    <DocsIntro v-if="current==='intro'" />
+    <DocsRules v-else-if="current==='rules'" />
+    <DocsRoles v-else-if="current==='roles'" />
+    <DocsFAQ v-else-if="current==='faq'" />
+    <DocsContact v-else-if="current==='contact'" />
+  </DocsLayout>
 </template>
 
 <style scoped>
-header {
-  line-height: 1.5;
-}
-
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
-}
-
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+body {
+  background: #f8f8fc;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  color: #222;
 }
 </style>
