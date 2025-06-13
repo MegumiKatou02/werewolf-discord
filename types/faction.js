@@ -5,4 +5,10 @@ const FactionRole = Object.freeze({
   Solo: 'Solo',
 });
 
-module.exports = { FactionRole };
+const Faction = Object.freeze({
+  WEREWOLF: 0,
+  VILLAGER: 1,
+  SOLO: 2,
+});
+
+module.exports = { FactionRole, Faction };

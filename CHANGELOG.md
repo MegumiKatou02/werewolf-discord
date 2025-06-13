@@ -4,8 +4,13 @@
 
 ### Added
 
+- Thêm role **Stalker**
 - Thêm role **Già Làng**
 - **Sói Trùm** giờ có thể che được khỏi **Cáo**
+
+### Changed
+
+- **Phù Thuỷ**: chỉ được nhận thông báo ai đã bị sói cắn nếu còn bình cứu (Nerf)
 
 ### Fixed
 
