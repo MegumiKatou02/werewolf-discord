@@ -514,6 +514,32 @@ class GameRoom extends EventEmitter {
 
         message = await user.send({ embeds: [embed], files: [attachment] });
         this.nightMessages.set(player.userId, message);
+      } else if (player.role.id === WEREROLE.STALKER) {
+        await user.send(
+          `👀 Bạn là **Stalker**. Bạn có thể theo dõi 1 người chơi và biết đêm đó họ có hành động hay không. Bạn còn có thể chọn người để ám sát, nếu ám sát trúng người không làm gì đêm đó thì người đó chết. Thắng khi là người duy nhất sống sót. (Theo dõi: ${player.role.stalkCount}, Ám sát: ${player.role.killCount})`
+        );
+
+        const stalkButton = new ButtonBuilder()
+          .setCustomId(`stalk_target_stalker_${player.userId}`)
+          .setLabel('👀 Theo dõi')
+          .setStyle(ButtonStyle.Primary);
+
+        const killButton = new ButtonBuilder()
+          .setCustomId(`kill_target_stalker_${player.userId}`)
+          .setLabel('🔪 Ám sát')
+          .setStyle(ButtonStyle.Primary);
+
+        const row = new ActionRowBuilder().addComponents(
+          stalkButton,
+          killButton
+        );
+
+        message = await user.send({
+          embeds: [embed],
+          files: [attachment],
+          components: [row],
+        });
+        this.nightMessages.set(player.userId, message);
       } else {
         await user.send('🌙 Một đêm yên tĩnh trôi qua. Bạn hãy chờ đến sáng.');
 
@@ -555,7 +581,8 @@ class GameRoom extends EventEmitter {
       const mostVotedUserId = this.totalVotedWolvesSolve();
       if (mostVotedUserId) {
         for (const player of this.players) {
-          if (player.role.id === WEREROLE.WITCH) {
+          // nếu phù thuỷ còn bình mới được gửi
+          if (player.role.id === WEREROLE.WITCH && player.role.healCount > 0) {
             const user = await this.fetchUser(player.userId);
             if (user) {
               player.role.needHelpPerson = mostVotedUserId;
@@ -678,7 +705,71 @@ class GameRoom extends EventEmitter {
 
       witch.role.poisonCount -= 1;
     }
-
+    // Stalker giết
+    const stalker = this.players.find((p) => p.role.id === WEREROLE.STALKER);
+    let stalkerPerson = null;
+    let stalkerKillPersion = null;
+    for (const player of this.players) {
+      // Trường hợp stalker theo dõi và người này có hành động
+      if (
+        stalker &&
+        stalker.role.stalkedPerson &&
+        stalker.role.stalkedPerson === player.userId &&
+        this.isActivity(player.role.id)
+      ) {
+        const user = await this.fetchUser(stalker.userId);
+        if (user) {
+          await user.send(
+            `**Thông báo:** 🔍 bạn đã theo dõi **${player.name}** và người này đã hành động.`
+          );
+        }
+      }
+      // Trường hợp stalker theo dõi và người này không có hành động
+      if (
+        stalker &&
+        stalker.role.stalkedPerson &&
+        stalker.role.stalkedPerson === player.userId &&
+        !this.isActivity(player.role.id)
+      ) {
+        const user = await this.fetchUser(stalker.userId);
+        if (user) {
+          await user.send(
+            `**Thông báo:** 🔍 bạn đã theo dõi **${player.name}** và người này không hành động.`
+          );
+        }
+      }
+      // Trường hợp stalker chọn giết người này và người này hành động
+      if (
+        stalker &&
+        stalker.role.killedPerson &&
+        stalker.role.killedPerson === player.userId &&
+        this.isActivity(player.role.id)
+      ) {
+        const user = await this.fetchUser(stalker.userId);
+        if (user) {
+          await user.send(
+            `**Thông báo:** Vì **${player.name}** đã hành động nên bạn không thể giết được người này.`
+          );
+        }
+      }
+      // Trường hợp stalker chọn giết người này và người này không hành động
+      if (
+        stalker &&
+        stalker.role.killedPerson &&
+        stalker.role.killedPerson === player.userId &&
+        !this.isActivity(player.role.id)
+      ) {
+        const user = await this.fetchUser(stalker.userId);
+        if (user) {
+          await user.send(
+            `**Thông báo:** Vì **${player.name}** không hành động nên bạn đã giết được người này.`
+          );
+          this.gameState.log.push(`Stalker đã giết **${player.name}**`);
+          sureDieInTheNight.add(player.userId);
+          killedPlayers.delete(player.userId);
+        }
+      }
+    }
     const guard = this.players.find((p) => p.role.id === WEREROLE.BODYGUARD);
     const giaLang = this.players.find((p) => p.role.id === WEREROLE.ELDER);
     for (const killedId of killedPlayers) {
@@ -1228,6 +1319,9 @@ class GameRoom extends EventEmitter {
             case 15:
               roleEmoji = '👴';
               break;
+            case 16:
+              roleEmoji = '👀';
+              break;
           }
           return {
             name: `${roleEmoji} ${nameRole}`,
@@ -1357,6 +1451,38 @@ class GameRoom extends EventEmitter {
     }
 
     return null;
+  }
+  isActivity(role) {
+    const player = this.players.find((p) => p.role.id === role);
+    if (!player) return false;
+    if (player.role.id === WEREROLE.WEREWOLF && player.role.voteBite)
+      return true;
+    if (player.role.id === WEREROLE.BODYGUARD && player.role.protectedPerson)
+      return true;
+    if (player.role.id === WEREROLE.SEER && player.role.viewCount <= 0)
+      return true;
+    if (
+      player.role.id === WEREROLE.DETECTIVE &&
+      player.role.investigatedPairs.length > 0
+    )
+      return true;
+    if (player.role.id === WEREROLE.WITCH && player.role.poisonedPerson)
+      return true;
+    if (player.role.id === WEREROLE.WITCH && player.role.healedPerson)
+      return true;
+    if (player.role.id === WEREROLE.MEDIUM && player.role.revivedPerson)
+      return true;
+    if (player.role.id === WEREROLE.WOLFSEER && player.role.seerCount <= 0)
+      return true;
+    if (player.role.id === WEREROLE.ALPHA_WEREWOLF && player.role.maskWolf)
+      return true;
+    if (
+      player.role.id === WEREROLE.FOX_SPIRIT &&
+      player.role.threeViewed.length > 0
+    )
+      return true;
+
+    return false;
   }
 }
 
