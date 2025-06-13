@@ -161,6 +161,13 @@ client.on('messageCreate', async (message) => {
     14,
     FactionRole.Village
   );
+  await RoleResponse(
+    message,
+    ['!gialang', '!elder'],
+    'elder.png',
+    15,
+    FactionRole.Village
+  );
   if (message.channel.type === ChannelType.DM) {
     console.log(`Tin nhắn DM từ ${message.author.tag}: ${message.content}`);
 
@@ -185,11 +192,14 @@ client.on('messageCreate', async (message) => {
           console.error('Không gửi được tin nhắn cho Sói khác', err);
         }
       }
-      if (sender.role.id === WEREROLE.WEREWOLF) {
+      // Nếu là sói và không phải sói tiên tri thì có thể gửi tin nhắn cho các sói khác
+      if (sender.role.faction === 0 && sender.role.id !== WEREROLE.WOLFSEER) {
+        // lọc ra những sói khác
         const wolves = gameRoom.players.filter(
           (p) =>
             (p.role.id === WEREROLE.WEREWOLF ||
-              p.role.id === WEREROLE.WOLFSEER) &&
+              p.role.id === WEREROLE.WOLFSEER ||
+              p.role.id === WEREROLE.ALPHAWEREWOLF) &&
             p.userId !== sender.userId
         );
         const notifyPromises = wolves.map(async (wolf) => {
@@ -825,10 +835,12 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('submit_vote_wolf_')) {
       if (!gameRoom || gameRoom.gameState.phase !== 'night') return;
 
+      await interaction.deferReply({ ephemeral: true });
+
       const playerId = interaction.customId.split('_')[3];
 
       if (interaction.user.id !== playerId) {
-        return interaction.reply({
+        return interaction.editReply({
           content: 'Bạn không được gửi form này.',
           ephemeral: true,
         });
@@ -843,7 +855,7 @@ client.on('interactionCreate', async (interaction) => {
         voteIndex < 1 ||
         voteIndex > gameRoom.players.length
       ) {
-        return interaction.reply({
+        return interaction.editReply({
           content: 'Số thứ tự không hợp lệ.',
           ephemeral: true,
         });
@@ -853,14 +865,14 @@ client.on('interactionCreate', async (interaction) => {
 
       if (sender.role.id === WEREROLE.WEREWOLF) {
         if (!targetPlayer.alive) {
-          return interaction.reply({
+          return interaction.editReply({
             content: 'Không có tác dụng lên người chết',
             ephemeral: true,
           });
         }
 
         if (sender.role.biteCount <= 0) {
-          return interaction.reply({
+          return interaction.editReply({
             content: 'Bạn đã hết lượt dùng chức năng',
             ephemeral: true,
           });
@@ -868,7 +880,7 @@ client.on('interactionCreate', async (interaction) => {
 
         if (targetPlayer.role.faction === 0) {
           // FactionRole.Werewolf
-          return interaction.reply({
+          return interaction.editReply({
             content: 'Bạn không thể vote giết đồng minh của mình.',
             ephemeral: true,
           });
@@ -896,7 +908,7 @@ client.on('interactionCreate', async (interaction) => {
         console.error(`Không thể gửi DM cho ${playerId}:`, err);
       }
 
-      await interaction.reply({
+      await interaction.editReply({
         content: '✅ Vote của bạn đã được ghi nhận.',
         ephemeral: true,
       });
@@ -1933,7 +1945,7 @@ client.on('interactionCreate', async (interaction) => {
         const isHaveWolf = () => {
           for (const player of targetPlayers) {
             if (
-              player.role.id === WEREROLE.WEREWOLF ||
+              player.role.faction === 0 ||
               player.role.id === WEREROLE.LYCAN
             ) {
               return true;
@@ -1943,6 +1955,7 @@ client.on('interactionCreate', async (interaction) => {
         };
         try {
           const user = await client.users.fetch(playerId);
+
           await user.send(
             `🔎 Trong 3 người bạn chọn: **${targetPlayers[0].name}**, **${targetPlayers[1].name}** và **${targetPlayers[2].name}** ${isHaveWolf() ? 'có Sói' : 'không có Sói'}.`
           );

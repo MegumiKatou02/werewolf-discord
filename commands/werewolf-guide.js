@@ -187,15 +187,17 @@ module.exports = {
           }
         );
 
+      await i.deferUpdate();
+
       switch (i.customId) {
         case 'guide_tips':
-          await i.update({ embeds: [tipsEmbed], components: [row] });
+          await i.editReply({ embeds: [tipsEmbed], components: [row] });
           break;
         case 'guide_rules':
-          await i.update({ embeds: [rulesEmbed], components: [row] });
+          await i.editReply({ embeds: [rulesEmbed], components: [row] });
           break;
         case 'guide_roles':
-          await i.update({ embeds: [rolesEmbed], components: [row] });
+          await i.editReply({ embeds: [rolesEmbed], components: [row] });
           break;
       }
     });
