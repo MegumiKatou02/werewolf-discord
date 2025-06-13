@@ -75,7 +75,7 @@
     "title": "Sói Tiên Tri",
     "eName": "Wolf Seer",
     "faction": 0,
-    "description": "Soi xem ai là tiên tri. Không được tham gia cùng sói, biết sói là ai và ngược lại, sói pháp sư soi xong thì quản trò sẽ báo cho sói biết là sói pháp sư soi ai."
+    "description": "Soi xem ai là tiên tri. Không được tham gia cùng sói, biết sói là ai và ngược lại, sói tiên tri soi xong thì quản trò sẽ báo cho sói biết là sói tiên tri soi ai."
   },
   "13": {
     "title": "Sói Trùm",
@@ -88,6 +88,12 @@
     "eName": "Fox Spirit",
     "faction": 1,
     "description": "Mỗi đêm dậy soi 3 người tự chọn trong danh sách, nếu 1 trong 3 người đó là sói thì được báo \"Có sói\", nếu đoán hụt thì mất chức năng."
+  },
+  "15": {
+    "title": "Già Làng",
+    "eName": "Elder",
+    "faction": 1,
+    "description": "Sói phải cắn 2 lần thì Già làng mới chết. Già Làng chỉ chết ngay lập tức nếu bị cả làng treo cổ, Phù Thủy bỏ độc... Khi Già làng chết thì tất cả những người phe dân làng đều mất khả năng đặc biệt cho đến hết ván."
   },
   "100": {
     "title": "Stalker",
