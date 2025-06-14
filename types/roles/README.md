@@ -8,11 +8,13 @@
 7. Fool (Thằng Ngố)
 8. Medium (Thầy Đồng)
 9. Dead (Đã Chết)
-10. Hầu gái (Maid)
+10. Maid (Hầu Gái)
 11. Lycan (Lycan)
 12. Seer Werewolf (Sói Tiên Tri)
 13. Alpha Werewolf (Sói Trùm)
 14. Fox Spirit (Cáo/Hồ ly)
 15. Elder (Già Làng)
+16. Stalker (Stalker)
+17. Gunner (Xạ Thủ)
 
 - 0: sói, 1: dân, 2: solo, 3: dân làng hoặc ma sói
