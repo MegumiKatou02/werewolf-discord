@@ -542,7 +542,7 @@ class GameRoom extends EventEmitter {
         this.nightMessages.set(player.userId, message);
       } else if (player.role.id === WEREROLE.GUNNER) {
         await user.send(
-          `🔫 Bạn là **Xạ thủ**. Bạn có hai viên đạn, bạn có thể sử dụng đạn để bắn người chơi khác. Bạn chỉ có thể bắn một viên đạn mỗi đêm (Đạn: ${player.role.bullets}).`
+          `🔫 Bạn là **Xạ thủ**. Bạn có hai viên đạn, bạn có thể sử dụng đạn để bắn người chơi khác. Bạn chỉ có thể bắn một viên đạn mỗi ngày (Đạn: ${player.role.bullets}).`
         );
 
         message = await user.send({ embeds: [embed], files: [attachment] });
@@ -872,32 +872,8 @@ class GameRoom extends EventEmitter {
     const allDeadTonight = new Set([...killedPlayers, ...sureDieInTheNight]);
 
     for (const killedId of Array.from(allDeadTonight)) {
-      const maid = this.players.find(
-        (p) => p.role.id === WEREROLE.MAID && p.role.master === killedId
-      );
-      if (maid) {
-        const deadMaster = this.players.find((p) => p.userId === killedId);
-        const oldRole = maid.role.name;
-
-        maid.role = assignRolesGame(
-          deadMaster.role?.originalRoleId ?? deadMaster.role.id
-        );
-        maidNewRole = {
-          maidName: maid.name,
-          oldRole: oldRole,
-          newRole: maid.role.name,
-        };
-
-        const user = await this.fetchUser(maid.userId);
-        if (user) {
-          await user.send(
-            `### 👑 Chủ của bạn đã chết, bạn đã trở thành **${maid.role.name}**`
-          );
-          this.gameState.log.push(
-            `### 👒 Hầu gái đã lên thay vai trò **${maidNewRole.newRole}** của chủ vì chủ đã chết.`
-          );
-        }
-      }
+      const killed = this.players.find((p) => p.userId === killedId);
+      maidNewRole = await this.checkIfMasterIsDead(killed);
     }
 
     // cần fix role id ELder vì Elder đã chết (new Dead())
@@ -961,7 +937,7 @@ class GameRoom extends EventEmitter {
 
         if (maidNewRole) {
           await user.send(
-            `### 👒 Hầu gái đã lên thay vai trò **${maidNewRole.newRole}** của chủ vì chủ đã chết.\n`
+            `### 👒 Hầu gái đã lên thay vai trò **${maidNewRole}** của chủ vì chủ đã chết.\n`
           );
         }
 
@@ -1175,34 +1151,13 @@ class GameRoom extends EventEmitter {
         return;
       }
 
-      const maid = this.players.find(
-        (p) =>
-          p.role.id === WEREROLE.MAID && p.role.master === hangedPlayer.userId
-      );
-      let maidNewRole = null;
-      if (maid) {
-        maid.role = assignRolesGame(
-          hangedPlayer.role?.originalRoleId ?? hangedPlayer.role.id
-        );
-        maidNewRole = maid.role.name;
-
-        const maidUser = await this.fetchUser(maid.userId);
-        if (maidUser) {
-          await maidUser.send(
-            `### 👑 Chủ của bạn đã bị treo cổ, bạn đã trở thành **${maid.role.name}**`
-          );
-        }
-
-        this.gameState.log.push(
-          `### 👒 Hầu gái đã lên thay vai trò **${maid.role.name}** của chủ vì chủ đã bị treo cổ.`
-        );
-      }
-
       hangedPlayer.alive = false;
       hangedPlayer.role = new Dead(
         hangedPlayer.role.faction,
         hangedPlayer.role.id
       );
+
+      const maidNewRole = await this.checkIfMasterIsDead(hangedPlayer);
 
       const hangMessages = this.players.map(async (player) => {
         const user = await this.fetchUser(player.userId);
@@ -1520,6 +1475,38 @@ class GameRoom extends EventEmitter {
       return true;
 
     return false;
+  }
+
+  /**
+   *
+   * @param {Player} deadPlayer
+   */
+  async checkIfMasterIsDead(deadPlayer) {
+    const maid = this.players.find(
+      (p) =>
+        p.role.id === WEREROLE.MAID && p.role.master === deadPlayer.userId
+    );
+    let maidNewRole = null;
+    if (maid) {
+      maid.role = assignRolesGame(
+        deadPlayer.role?.originalRoleId ?? deadPlayer.role.id
+      );
+      maidNewRole = maid.role.name;
+
+      const maidUser = await this.fetchUser(maid.userId);
+      // phần thông báo cho maid
+      if (maidUser) {
+        await maidUser.send(
+          `### 👑 Chủ của bạn đã bị chết, bạn đã trở thành **${maid.role.name}**`
+        );
+      }
+
+      // phần log
+      this.gameState.log.push(
+        `### 👒 Hầu gái đã lên thay vai trò **${maid.role.name}** của chủ vì chủ đã bị chết.`
+      );
+    }
+    return maidNewRole;
   }
 
   async updateAllPlayerList() {
