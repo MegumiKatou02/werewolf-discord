@@ -100,5 +100,11 @@
     "eName": "Stalker",
     "faction": 2,
     "description": "Mỗi đêm bạn có thể theo dõi 1 người chơi và biết đêm đó họ có hành động hay không. Bạn còn có thể chọn người để ám sát, nếu ám sát trúng người không làm gì đêm đó thì người đó chết. Thắng khi là người duy nhất sống sót."
+  },
+  "17": {
+    "title": "Xạ Thủ",
+    "eName": "Gunner",
+    "faction": 1,
+    "description": "Bạn có hai viên đạn mà bạn có thể sử dụng để bắn ai đó. Bạn chỉ bắn được một viên đạn mỗi ngày. Vì âm thanh tiếng súng khi bắn rất lớn nên vai trò của bạn sẽ được tiết lộ sau lần bắn đầu tiên. Bạn không thể bắn trong giai đoạn thảo luận vào ngày đầu tiên."
   }
 }

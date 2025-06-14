@@ -540,6 +540,13 @@ class GameRoom extends EventEmitter {
           components: [row],
         });
         this.nightMessages.set(player.userId, message);
+      } else if (player.role.id === WEREROLE.GUNNER) {
+        await user.send(
+          `🔫 Bạn là **Xạ thủ**. Bạn có hai viên đạn, bạn có thể sử dụng đạn để bắn người chơi khác. Bạn chỉ có thể bắn một viên đạn mỗi đêm (Đạn: ${player.role.bullets}).`
+        );
+
+        message = await user.send({ embeds: [embed], files: [attachment] });
+        this.nightMessages.set(player.userId, message);
       } else {
         await user.send('🌙 Một đêm yên tĩnh trôi qua. Bạn hãy chờ đến sáng.');
 
@@ -988,9 +995,11 @@ class GameRoom extends EventEmitter {
   }
 
   async dayPhase() {
+    if (this.status === 'ended') return;
     this.gameState.phase = 'day';
     this.emit('day', this.guildId, this.players, this.gameState);
 
+    const isFirstDay = this.gameState.nightCount === 1;
     const dmPromises = this.players.map(async (player) => {
       const user = await this.fetchUser(player.userId);
       if (!user) return;
@@ -1007,10 +1016,29 @@ class GameRoom extends EventEmitter {
         .setImage('attachment://avatars.png')
         .setTimestamp();
 
-      await user.send({
-        embeds: [embed],
-        files: [attachment],
-      });
+      if (
+        player.role.id === WEREROLE.GUNNER &&
+        !isFirstDay &&
+        player.role.bullets > 0
+      ) {
+        const shootButton = new ButtonBuilder()
+          .setCustomId(`gunner_shoot_${player.userId}`)
+          .setLabel('🔫 Bắn người')
+          .setStyle(ButtonStyle.Danger);
+
+        const row = new ActionRowBuilder().addComponents(shootButton);
+
+        await user.send({
+          embeds: [embed],
+          files: [attachment],
+          components: [row],
+        });
+      } else {
+        await user.send({
+          embeds: [embed],
+          files: [attachment],
+        });
+      }
     });
 
     await Promise.allSettled(dmPromises);
@@ -1036,6 +1064,7 @@ class GameRoom extends EventEmitter {
   }
 
   async votePhase() {
+    if (this.status === 'ended') return;
     this.gameState.phase = 'voting';
     this.emit('vote', this.guildId, this.players, this.gameState);
 
@@ -1322,6 +1351,9 @@ class GameRoom extends EventEmitter {
             case 16:
               roleEmoji = '👀';
               break;
+            case 17:
+              roleEmoji = '🔫';
+              break;
           }
           return {
             name: `${roleEmoji} ${nameRole}`,
@@ -1406,6 +1438,7 @@ class GameRoom extends EventEmitter {
       await Promise.allSettled(endGameMessages);
 
       console.log(this.gameState.log);
+      this.status = 'ended';
       return true;
     }
 
@@ -1452,6 +1485,10 @@ class GameRoom extends EventEmitter {
 
     return null;
   }
+  /**
+   *
+   * @description Dùng hàm này trước resetday
+   */
   isActivity(role) {
     const player = this.players.find((p) => p.role.id === role);
     if (!player) return false;
@@ -1483,6 +1520,29 @@ class GameRoom extends EventEmitter {
       return true;
 
     return false;
+  }
+
+  async updateAllPlayerList() {
+    const dmPromises = this.players.map(async (player) => {
+      const user = await this.fetchUser(player.userId);
+      if (!user) return;
+
+      const buffer = await createAvatarCollage(this.players, this.client);
+      const attachment = new AttachmentBuilder(buffer, { name: 'avatars.png' });
+
+      const embed = new EmbedBuilder()
+        .setTitle('📋 Danh sách người chơi đã cập nhật')
+        .setColor(0x00ae86)
+        .setImage('attachment://avatars.png')
+        .setTimestamp();
+
+      await user.send({
+        embeds: [embed],
+        files: [attachment],
+      });
+    });
+
+    await Promise.allSettled(dmPromises);
   }
 }
 
