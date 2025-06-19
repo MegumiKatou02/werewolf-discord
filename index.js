@@ -21,8 +21,12 @@ const { store, serverSettings } = require('./core/store');
 const { gameRooms } = require('./core/room');
 const { WEREROLE } = require('./utils/role');
 const Dead = require('./types/roles/Dead');
+const ServerSettings = require('./models/ServerSettings');
+const connectDB = require('./config/database');
 
 require('dotenv').config();
+
+connectDB();
 
 const client = new Client({
   intents: [
@@ -176,6 +180,13 @@ client.on('messageCreate', async (message) => {
     17,
     FactionRole.Village
   );
+  await RoleResponse(
+    message,
+    ['!soimeocon', '!kittenwolf'],
+    'kitten_wolf.png',
+    18,
+    FactionRole.Werewolf
+  );
   if (message.channel.type === ChannelType.DM) {
     console.log(`Tin nhắn DM từ ${message.author.tag}: ${message.content}`);
 
@@ -200,15 +211,18 @@ client.on('messageCreate', async (message) => {
           console.error('Không gửi được tin nhắn cho Sói khác', err);
         }
       }
-      // Nếu là sói và không phải sói tiên tri thì có thể gửi tin nhắn cho các sói khác
-      if (sender.role.faction === 0 && sender.role.id !== WEREROLE.WOLFSEER) {
-        // lọc ra những sói khác
+      /**
+       * Nếu là sói và không phải sói tiên tri thì có thể gửi tin nhắn cho các sói khác
+       * (Sói còn sống mới gửi tin nhắn được)
+       */
+      if (
+        sender.role.faction === 0 &&
+        sender.role.id !== WEREROLE.WOLFSEER &&
+        sender.alive
+      ) {
+        // lọc ra những sói khác (còn sống)
         const wolves = gameRoom.players.filter(
-          (p) =>
-            (p.role.id === WEREROLE.WEREWOLF ||
-              p.role.id === WEREROLE.WOLFSEER ||
-              p.role.id === WEREROLE.ALPHAWEREWOLF) &&
-            p.userId !== sender.userId
+          (p) => p.role.faction === 0 && p.alive && p.userId !== sender.userId
         );
         const notifyPromises = wolves.map(async (wolf) => {
           try {
@@ -1848,7 +1862,12 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       const guildId = interaction.guild.id;
-      serverSettings.set(guildId, newSettings);
+      // serverSettings.set(guildId, newSettings);
+
+      await ServerSettings.findOneAndUpdate({ guildId }, newSettings, {
+        new: true,
+        upsert: true,
+      });
 
       const updatedEmbed = new EmbedBuilder()
         .setColor(0x2ecc71)
@@ -1908,12 +1927,14 @@ client.on('interactionCreate', async (interaction) => {
         interaction.fields.getTextInputValue('master_index_maid');
       const masterIndex = parseInt(masterIndexStr, 10);
 
+      await interaction.deferReply({ ephemeral: true });
+
       if (
         isNaN(masterIndex) ||
         masterIndex < 1 ||
         masterIndex > gameRoom.players.length
       ) {
-        return interaction.reply({
+        return interaction.editReply({
           content: 'Số thứ tự không hợp lệ.',
           ephemeral: true,
         });
@@ -1922,14 +1943,14 @@ client.on('interactionCreate', async (interaction) => {
       const targetPlayer = gameRoom.players[masterIndex - 1];
       if (sender.role.id === WEREROLE.MAID) {
         if (!targetPlayer.alive) {
-          return interaction.reply({
+          return interaction.editReply({
             content: 'Không thể chọn người chết làm chủ',
             ephemeral: true,
           });
         }
 
         if (targetPlayer.userId === sender.userId) {
-          return interaction.reply({
+          return interaction.editReply({
             content: 'Bạn không thể chọn chính mình làm chủ.',
             ephemeral: true,
           });
@@ -1947,7 +1968,7 @@ client.on('interactionCreate', async (interaction) => {
         console.error(`Không thể gửi DM cho ${playerId}:`, err);
       }
 
-      await interaction.reply({
+      await interaction.editReply({
         content: '✅ Chọn chủ thành công.',
         ephemeral: true,
       });
@@ -2152,6 +2173,8 @@ client.on('interactionCreate', async (interaction) => {
         });
       }
 
+      await interaction.deferReply({ ephemeral: true });
+
       const stalkIndexStr = interaction.fields.getTextInputValue(
         'stalk_index_stalker'
       );
@@ -2162,7 +2185,7 @@ client.on('interactionCreate', async (interaction) => {
         stalkIndex < 1 ||
         stalkIndex > gameRoom.players.length
       ) {
-        return interaction.reply({
+        return interaction.editReply({
           content: 'Số thứ tự không hợp lệ.',
           ephemeral: true,
         });
@@ -2171,28 +2194,28 @@ client.on('interactionCreate', async (interaction) => {
       const targetPlayer = gameRoom.players[stalkIndex - 1];
       if (sender.role.id === WEREROLE.STALKER) {
         if (!targetPlayer.alive) {
-          return interaction.reply({
+          return interaction.editReply({
             content: 'Không có tác dụng lên người chết',
             ephemeral: true,
           });
         }
 
         if (sender.role.stalkCount <= 0) {
-          return interaction.reply({
+          return interaction.editReply({
             content: 'Bạn đã hết lượt dùng chức năng',
             ephemeral: true,
           });
         }
 
         if (sender.role.stalkedPerson) {
-          return interaction.reply({
+          return interaction.editReply({
             content: 'Bạn đã theo dõi người chơi khác rồi.',
             ephemeral: true,
           });
         }
 
         if (targetPlayer.userId === sender.userId) {
-          return interaction.reply({
+          return interaction.editReply({
             content: 'Bạn không thể chọn chính bản thân bạn.',
             ephemeral: true,
           });
@@ -2211,7 +2234,7 @@ client.on('interactionCreate', async (interaction) => {
         console.error(`Không thể gửi DM cho ${playerId}:`, err);
       }
 
-      await interaction.reply({
+      await interaction.editReply({
         content: '✅ Chọn người chơi thành công.',
         ephemeral: true,
       });
@@ -2228,6 +2251,8 @@ client.on('interactionCreate', async (interaction) => {
         });
       }
 
+      await interaction.deferReply({ ephemeral: true });
+
       const killIndexStr =
         interaction.fields.getTextInputValue('kill_index_stalker');
       const killIndex = parseInt(killIndexStr, 10);
@@ -2237,7 +2262,7 @@ client.on('interactionCreate', async (interaction) => {
         killIndex < 1 ||
         killIndex > gameRoom.players.length
       ) {
-        return interaction.reply({
+        return interaction.editReply({
           content: 'Số thứ tự không hợp lệ.',
           ephemeral: true,
         });
@@ -2246,26 +2271,26 @@ client.on('interactionCreate', async (interaction) => {
       const targetPlayer = gameRoom.players[killIndex - 1];
       if (sender.role.id === WEREROLE.STALKER) {
         if (!targetPlayer.alive) {
-          return interaction.reply({
+          return interaction.editReply({
             content: 'Không có tác dụng lên người chết',
             ephemeral: true,
           });
         }
 
         if (sender.role.killCount <= 0) {
-          return interaction.reply({
+          return interaction.editReply({
             content: 'Bạn đã hết lượt dùng chức năng',
             ephemeral: true,
           });
         }
         if (sender.role.killedPerson) {
-          return interaction.reply({
+          return interaction.editReply({
             content: 'Bạn đã ám sát người chơi khác rồi.',
             ephemeral: true,
           });
         }
         if (targetPlayer.userId === sender.userId) {
-          return interaction.reply({
+          return interaction.editReply({
             content: 'Bạn không thể ám sát chính bản thân bạn.',
             ephemeral: true,
           });
@@ -2284,7 +2309,7 @@ client.on('interactionCreate', async (interaction) => {
         console.error(`Không thể gửi DM cho ${playerId}:`, err);
       }
 
-      await interaction.reply({
+      await interaction.editReply({
         content: '✅ Chọn người chơi thành công.',
         ephemeral: true,
       });
@@ -2370,6 +2395,20 @@ client.on('interactionCreate', async (interaction) => {
 
         await gameRoom.updateAllPlayerList();
 
+        // Kiểm tra master của hầu gái
+        const maidNewRole = await gameRoom.checkIfMasterIsDead(targetPlayer);
+
+        if (maidNewRole) {
+          const notifyPromises = gameRoom.players.map(async (player) => {
+            const user = await client.users.fetch(player.userId);
+            if (!user) return;
+
+            await user.send(
+              `### 👒 Hầu gái đã lên thay vai trò **${maidNewRole}** của chủ vì chủ đã bị bắn.\n`
+            );
+          });
+          await Promise.allSettled(notifyPromises);
+        }
         await gameRoom.checkEndGame();
       }
 

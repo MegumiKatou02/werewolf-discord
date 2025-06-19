@@ -15,6 +15,7 @@ const FoxSpirit = require('../types/roles/FoxSpirit');
 const Elder = require('../types/roles/Elder');
 const Stalker = require('../types/roles/Stalker');
 const Gunner = require('../types/roles/Gunner');
+const KittenWolf = require('../types/roles/KittenWolf');
 const { FactionRole } = require('../types/faction');
 
 const roleTable = {
@@ -65,6 +66,8 @@ const assignRolesGame = (roleId) => {
       return new Stalker();
     case 17:
       return new Gunner();
+    case 18:
+      return new KittenWolf();
     default:
       throw new Error(`Role id không hợp lệ`);
   }
@@ -104,6 +107,7 @@ const WEREROLE = Object.freeze({
   ELDER: 15,
   STALKER: 16,
   GUNNER: 17,
+  KITTENWOLF: 18,
 });
 
 const getRoleName = (roleId) => {

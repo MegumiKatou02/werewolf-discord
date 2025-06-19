@@ -106,5 +106,11 @@
     "eName": "Gunner",
     "faction": 1,
     "description": "Bạn có hai viên đạn mà bạn có thể sử dụng để bắn ai đó. Bạn chỉ bắn được một viên đạn mỗi ngày. Vì âm thanh tiếng súng khi bắn rất lớn nên vai trò của bạn sẽ được tiết lộ sau lần bắn đầu tiên. Bạn không thể bắn trong giai đoạn thảo luận vào ngày đầu tiên."
+  },
+  "18": {
+    "title": "Sói Mèo Con",
+    "eName": "Kitten Wolf",
+    "faction": 0,
+    "description": "Bạn là một ma sói. Khi bạn bị giết, cuộc bỏ phiếu của sói tiếp theo sẽ biến đổi một dân làng thành ma sói thay vì giết chết họ."
   }
 }
