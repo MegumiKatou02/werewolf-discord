@@ -17,11 +17,12 @@ const EventEmitter = require('events');
 const GameState = require('./gamestate');
 const rolesData = require('../data/data.json');
 const { createAvatarCollage } = require('./canvas');
-const { store, serverSettings } = require('./store');
+const { store } = require('./store');
 const Dead = require('../types/roles/Dead');
 const Werewolf = require('../types/roles/WereWolf');
 const Maid = require('../types/roles/Maid');
 const Villager = require('../types/roles/Villager');
+const ServerSettings = require('../models/ServerSettings');
 
 class GameRoom extends EventEmitter {
   constructor(client, guildId, hostId) {
@@ -36,6 +37,7 @@ class GameRoom extends EventEmitter {
     this.witchMessages = new Map(); // message phù thuỷ
     this.nightMessages = new Map(); // message ban đêm
     this.voteMessages = new Map(); // message vote treo cổ
+    this.kittenWolfDeathNight = 0;
     this.settings = {
       wolfVoteTime: 40,
       nightTime: 70,
@@ -131,8 +133,22 @@ class GameRoom extends EventEmitter {
       store.set(player.userId, this.guildId);
     }
 
-    if (this.guildId && serverSettings.get(this.guildId)) {
-      this.settings = serverSettings.get(this.guildId);
+    if (this.guildId) {
+      try {
+        const dbSettings = await ServerSettings.findOne({
+          guildId: this.guildId,
+        });
+        if (dbSettings) {
+          this.settings = {
+            wolfVoteTime: dbSettings.wolfVoteTime,
+            nightTime: dbSettings.nightTime,
+            discussTime: dbSettings.discussTime,
+            voteTime: dbSettings.voteTime,
+          };
+        }
+      } catch (error) {
+        console.error('Lỗi khi lấy cài đặt từ database:', error);
+      }
     }
 
     const roles = this.assignRoles(this.players.length, customRoles);
@@ -547,6 +563,13 @@ class GameRoom extends EventEmitter {
 
         message = await user.send({ embeds: [embed], files: [attachment] });
         this.nightMessages.set(player.userId, message);
+      } else if (player.role.id === WEREROLE.KITTENWOLF) {
+        await user.send(
+          `🐺 Bạn là **Sói Mèo Con**. Khi bạn bị giết, cuộc bỏ phiếu của sói tiếp theo sẽ biến đổi một dân làng thành ma sói thay vì giết chết họ.`
+        );
+
+        message = await user.send({ embeds: [embed], files: [attachment] });
+        this.nightMessages.set(player.userId, message);
       } else {
         await user.send('🌙 Một đêm yên tĩnh trôi qua. Bạn hãy chờ đến sáng.');
 
@@ -714,8 +737,6 @@ class GameRoom extends EventEmitter {
     }
     // Stalker giết
     const stalker = this.players.find((p) => p.role.id === WEREROLE.STALKER);
-    let stalkerPerson = null;
-    let stalkerKillPersion = null;
     for (const player of this.players) {
       // Trường hợp stalker theo dõi và người này có hành động
       if (
@@ -1309,6 +1330,9 @@ class GameRoom extends EventEmitter {
             case 17:
               roleEmoji = '🔫';
               break;
+            case 18:
+              roleEmoji = '🐺';
+              break;
           }
           return {
             name: `${roleEmoji} ${nameRole}`,
@@ -1483,8 +1507,7 @@ class GameRoom extends EventEmitter {
    */
   async checkIfMasterIsDead(deadPlayer) {
     const maid = this.players.find(
-      (p) =>
-        p.role.id === WEREROLE.MAID && p.role.master === deadPlayer.userId
+      (p) => p.role.id === WEREROLE.MAID && p.role.master === deadPlayer.userId
     );
     let maidNewRole = null;
     if (maid) {

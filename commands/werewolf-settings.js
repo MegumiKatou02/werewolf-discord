@@ -10,7 +10,7 @@ const {
   PermissionFlagsBits,
 } = require('discord.js');
 const { gameRooms } = require('../core/room');
-const { serverSettings } = require('../core/store');
+const ServerSettings = require('../models/ServerSettings');
 
 const defaultSettings = {
   wolfVoteTime: 40,
@@ -36,7 +36,14 @@ module.exports = {
       });
     }
 
-    const settings = serverSettings.get(guildId) || defaultSettings;
+    let settings = await ServerSettings.findOne({ guildId });
+    if (!settings) {
+      settings = new ServerSettings({
+        guildId,
+        ...defaultSettings,
+      });
+      await settings.save();
+    }
 
     const settingsEmbed = new EmbedBuilder()
       .setColor(0x9c27b0)
@@ -76,7 +83,6 @@ module.exports = {
     const response = await interaction.reply({
       embeds: [settingsEmbed],
       components: [row],
-      // ephemeral: true,
     });
 
     const collector = response.createMessageComponentCollector({

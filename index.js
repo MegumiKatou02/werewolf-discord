@@ -21,8 +21,12 @@ const { store, serverSettings } = require('./core/store');
 const { gameRooms } = require('./core/room');
 const { WEREROLE } = require('./utils/role');
 const Dead = require('./types/roles/Dead');
+const ServerSettings = require('./models/ServerSettings');
+const connectDB = require('./config/database');
 
 require('dotenv').config();
+
+connectDB();
 
 const client = new Client({
   intents: [
@@ -176,6 +180,13 @@ client.on('messageCreate', async (message) => {
     17,
     FactionRole.Village
   );
+  await RoleResponse(
+    message,
+    ['!soimeocon', '!kittenwolf'],
+    'kitten_wolf.png',
+    18,
+    FactionRole.Werewolf
+  );
   if (message.channel.type === ChannelType.DM) {
     console.log(`Tin nhắn DM từ ${message.author.tag}: ${message.content}`);
 
@@ -204,12 +215,14 @@ client.on('messageCreate', async (message) => {
        * Nếu là sói và không phải sói tiên tri thì có thể gửi tin nhắn cho các sói khác
        * (Sói còn sống mới gửi tin nhắn được)
        */
-      if (sender.role.faction === 0 && sender.role.id !== WEREROLE.WOLFSEER && sender.alive) {
+      if (
+        sender.role.faction === 0 &&
+        sender.role.id !== WEREROLE.WOLFSEER &&
+        sender.alive
+      ) {
         // lọc ra những sói khác (còn sống)
         const wolves = gameRoom.players.filter(
-          (p) =>
-            (p.role.faction === 0 && p.alive) &&
-            p.userId !== sender.userId
+          (p) => p.role.faction === 0 && p.alive && p.userId !== sender.userId
         );
         const notifyPromises = wolves.map(async (wolf) => {
           try {
@@ -1849,7 +1862,12 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       const guildId = interaction.guild.id;
-      serverSettings.set(guildId, newSettings);
+      // serverSettings.set(guildId, newSettings);
+
+      await ServerSettings.findOneAndUpdate({ guildId }, newSettings, {
+        new: true,
+        upsert: true,
+      });
 
       const updatedEmbed = new EmbedBuilder()
         .setColor(0x2ecc71)
@@ -2384,7 +2402,7 @@ client.on('interactionCreate', async (interaction) => {
           const notifyPromises = gameRoom.players.map(async (player) => {
             const user = await client.users.fetch(player.userId);
             if (!user) return;
-            
+
             await user.send(
               `### 👒 Hầu gái đã lên thay vai trò **${maidNewRole}** của chủ vì chủ đã bị bắn.\n`
             );
