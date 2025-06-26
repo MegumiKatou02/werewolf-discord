@@ -193,7 +193,7 @@ client.on('interactionCreate', async (interaction) => {
     await customizeRolesJson.isButton(interaction);
 
     await wolfInteraction.isButton(interaction);
-    
+
     await wolfSeerInteraction.isButton(interaction);
 
     await alphawerewolfInteraction.isButton(interaction);
@@ -698,10 +698,25 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     await wolfInteraction.isModalSubmit(interaction, gameRoom, sender, client);
-    await wolfSeerInteraction.isModalSubmit(interaction, gameRoom, sender, client);
-    await alphawerewolfInteraction.isModalSubmit(interaction, gameRoom, sender, client);
-    
-    await bodyguardInteraction.isModalSubmit(interaction, gameRoom, sender, client);
+    await wolfSeerInteraction.isModalSubmit(
+      interaction,
+      gameRoom,
+      sender,
+      client
+    );
+    await alphawerewolfInteraction.isModalSubmit(
+      interaction,
+      gameRoom,
+      sender,
+      client
+    );
+
+    await bodyguardInteraction.isModalSubmit(
+      interaction,
+      gameRoom,
+      sender,
+      client
+    );
 
     await seerInteraction.isModalSubmit(interaction, gameRoom, sender, client);
     if (interaction.customId.startsWith('submit_investigate_detective_')) {
