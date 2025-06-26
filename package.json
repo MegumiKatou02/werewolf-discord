@@ -7,7 +7,8 @@
     "dev": "node deploy-commands.js && node index.js",
     "dev:run": "node index.js",
     "format": "npx prettier --write .",
-    "format:file": "npx prettier --write"
+    "format:file": "npx prettier --write",
+    "prepare": "husky"
   },
   "keywords": [
     "werewwolf"
@@ -23,6 +24,13 @@
     "mongoose": "^8.16.0"
   },
   "devDependencies": {
-    "prettier": "^3.5.3"
+    "prettier": "^3.5.3",
+    "husky": "^9.1.8",
+    "lint-staged": "^15.3.0"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,css,md}": [
+      "prettier --write"
+    ]
   }
 }
