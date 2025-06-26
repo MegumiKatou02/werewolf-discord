@@ -115,8 +115,7 @@ const commandHandler = async (message) => {
     17,
     FactionRole.Village
   );
-  await RoleResponse
-  (
+  await RoleResponse(
     message,
     ['!soimeocon', '!kittenwolf'],
     'kitten_wolf.png',
