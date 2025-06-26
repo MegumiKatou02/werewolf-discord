@@ -83,10 +83,10 @@ class Settings {
       embeds: [updatedEmbed],
       components: [
         new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId('edit_settings')
-                .setLabel('🔧 Điều Chỉnh Cài Đặt')
-                .setStyle(ButtonStyle.Primary)
+          new ButtonBuilder()
+            .setCustomId('edit_settings')
+            .setLabel('🔧 Điều Chỉnh Cài Đặt')
+            .setStyle(ButtonStyle.Primary)
         ),
       ],
     });
