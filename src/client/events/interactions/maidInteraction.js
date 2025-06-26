@@ -1,12 +1,12 @@
+const { WEREROLE } = require('../../../../utils/role');
 const {
   ModalBuilder,
   TextInputBuilder,
-  TextInputStyle,
   ActionRowBuilder,
+  TextInputStyle,
 } = require('discord.js');
-const { WEREROLE } = require('../../../../utils/role');
 
-class WolfInteraction {
+class maidInteraction {
   isButton = async (interaction) => {
     const playerId = interaction.customId.split('_')[3];
 
@@ -18,11 +18,11 @@ class WolfInteraction {
     }
 
     const modal = new ModalBuilder()
-      .setCustomId(`submit_vote_wolf_${playerId}`)
-      .setTitle('Vote người chơi cần giết');
+      .setCustomId(`submit_choose_master_maid_${playerId}`)
+      .setTitle('Chọn chủ');
 
     const input = new TextInputBuilder()
-      .setCustomId('vote_index_wolf')
+      .setCustomId('master_index_maid')
       .setLabel('Nhập số thứ tự người chơi (bắt đầu từ 1)')
       .setStyle(TextInputStyle.Short)
       .setPlaceholder('VD: 3')
@@ -44,28 +44,29 @@ class WolfInteraction {
       }
     }
   };
+
   isModalSubmit = async (interaction, gameRoom, sender, client) => {
     if (!gameRoom || gameRoom.gameState.phase !== 'night') return;
 
-    await interaction.deferReply({ ephemeral: true });
-
-    const playerId = interaction.customId.split('_')[3];
+    const playerId = interaction.customId.split('_')[4];
 
     if (interaction.user.id !== playerId) {
-      return interaction.editReply({
+      return interaction.reply({
         content: 'Bạn không được gửi form này.',
         ephemeral: true,
       });
     }
 
-    const voteIndexStr =
-      interaction.fields.getTextInputValue('vote_index_wolf');
-    const voteIndex = parseInt(voteIndexStr, 10);
+    const masterIndexStr =
+      interaction.fields.getTextInputValue('master_index_maid');
+    const masterIndex = parseInt(masterIndexStr, 10);
+
+    await interaction.deferReply({ ephemeral: true });
 
     if (
-      isNaN(voteIndex) ||
-      voteIndex < 1 ||
-      voteIndex > gameRoom.players.length
+      isNaN(masterIndex) ||
+      masterIndex < 1 ||
+      masterIndex > gameRoom.players.length
     ) {
       return interaction.editReply({
         content: 'Số thứ tự không hợp lệ.',
@@ -73,58 +74,39 @@ class WolfInteraction {
       });
     }
 
-    const targetPlayer = gameRoom.players[voteIndex - 1];
-
-    if (sender.role.id === WEREROLE.WEREWOLF) {
+    const targetPlayer = gameRoom.players[masterIndex - 1];
+    if (sender.role.id === WEREROLE.MAID) {
       if (!targetPlayer.alive) {
         return interaction.editReply({
-          content: 'Không có tác dụng lên người chết',
+          content: 'Không thể chọn người chết làm chủ',
           ephemeral: true,
         });
       }
 
-      if (sender.role.biteCount <= 0) {
+      if (targetPlayer.userId === sender.userId) {
         return interaction.editReply({
-          content: 'Bạn đã hết lượt dùng chức năng',
+          content: 'Bạn không thể chọn chính mình làm chủ.',
           ephemeral: true,
         });
       }
 
-      if (targetPlayer.role.faction === 0) {
-        // FactionRole.Werewolf
-        return interaction.editReply({
-          content: 'Bạn không thể vote giết đồng minh của mình.',
-          ephemeral: true,
-        });
-      }
-
-      // sender.role.biteCount -= 1; lỡ chọn lại
-      sender.role.voteBite = targetPlayer.userId;
+      sender.role.master = targetPlayer.userId;
     }
 
     try {
       const user = await client.users.fetch(playerId);
-      for (const player of gameRoom.players) {
-        if (player.role.id === 0) {
-          if (player.userId !== playerId) {
-            const targetUser = await client.users.fetch(player.userId);
-            await targetUser.send(
-              `🐺 **${sender.name}** đã vote giết **${targetPlayer.name}**.`
-            );
-          } else {
-            await user.send(`🔪 Bạn đã vote giết: **${targetPlayer.name}**.`);
-          }
-        }
-      }
+      await user.send(
+        `👑 Bạn đã chọn **${targetPlayer.name}** làm chủ của mình.`
+      );
     } catch (err) {
       console.error(`Không thể gửi DM cho ${playerId}:`, err);
     }
 
     await interaction.editReply({
-      content: '✅ Vote của bạn đã được ghi nhận.',
+      content: '✅ Chọn chủ thành công.',
       ephemeral: true,
     });
   };
 }
 
-module.exports = new WolfInteraction();
+module.exports = new maidInteraction();

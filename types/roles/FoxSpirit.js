@@ -10,7 +10,7 @@ class FoxSpirit extends Role {
   }
 
   getDescription() {
-    return `Mỗi đêm dậy soi 3 người tự chọn trong danh sách, nếu 1 trong 3 người đó là sói thì được báo \"Có sói\", nếu đoán hụt thì mất chức năng.`;
+    return `Mỗi đêm dậy soi 3 người tự chọn trong danh sách, nếu 1 trong 3 người đó là sói thì được báo \\"Có sói\\", nếu đoán hụt thì mất chức năng.`;
   }
   resetDay() {
     this.threeViewed = [];
