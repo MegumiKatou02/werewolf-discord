@@ -17,10 +17,15 @@
   "license": "ISC",
   "type": "commonjs",
   "description": "",
+  "_moduleAliases": {
+    "@": "src",
+    "@/interactions": "src/client/events/interactions"
+  },
   "dependencies": {
     "canvas": "^3.1.0",
     "discord.js": "^14.19.3",
     "dotenv": "^16.5.0",
+    "module-alias": "^2.2.3",
     "mongoose": "^8.16.0"
   },
   "devDependencies": {
