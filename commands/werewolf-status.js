@@ -141,8 +141,9 @@ module.exports = {
         PermissionFlagsBits.Administrator
       );
       const isHost = gameRoom.hostId === interaction.user.id;
+      const isDev = interaction.user.id === process.env.DEVELOPER;
 
-      if (isAdmin || isHost) {
+      if (isAdmin || isHost || isDev) {
         const viewLogButton = new ButtonBuilder()
           .setCustomId('view_game_log')
           .setLabel('📜 Xem Log Game')

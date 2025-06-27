@@ -18,6 +18,7 @@
   "type": "commonjs",
   "description": "",
   "_moduleAliases": {
+    "~": ".",
     "@": "src",
     "@/interactions": "src/client/events/interactions"
   },

@@ -11,7 +11,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { store } = require('./core/store');
 const { gameRooms } = require('./core/room');
-const { WEREROLE } = require('./utils/role');
+const { WEREROLE, convertFactionRoles } = require('./utils/role');
 const connectDB = require('./config/database');
 const commandHandler = require('./src/client/handlers/commandHandler');
 const defaultRoles = require('@/interactions/defaultRoles');
@@ -30,7 +30,9 @@ const gunnerInteraction = require('@/interactions/gunnerInteraction');
 const votingInteraction = require('@/interactions/votingInteraction');
 const settingsModel = require('@/interactions/settings');
 const detectiveInteraction = require('@/interactions/detectiveInteraction');
-
+const { RoleResponseDMs } = require('./utils/response');
+const rolesData = require('./data/data.json');
+const { MAX_FILE_SIZE } = require('./src/constants/constants');
 require('dotenv').config();
 
 connectDB();
@@ -72,6 +74,7 @@ client.once('ready', () => {
 });
 
 client.on('messageCreate', async (message) => {
+  // Bất kể DM hay server đều dùng được
   commandHandler(message);
 
   if (message.channel.type === ChannelType.DM) {
@@ -87,6 +90,21 @@ client.on('messageCreate', async (message) => {
 
     const sender = gameRoom.players.find((p) => p.userId === message.author.id);
     if (!sender) return;
+
+    if (message.content === '!role' && sender.alive) {
+      const roleId = sender.role?.id;
+
+      if (roleId === null || roleId === undefined) return;
+
+      const user = await client.users.fetch(sender.userId);
+
+      await RoleResponseDMs(
+        user,
+        `${rolesData[roleId].eName.toLowerCase().replace(/\s+/g, '_')}.png`,
+        roleId,
+        convertFactionRoles(rolesData[roleId].faction)
+      );
+    }
 
     if (gameRoom.gameState.phase === 'night') {
       // Gửi tin nhắn cho các sói khác
@@ -163,7 +181,13 @@ client.on('messageCreate', async (message) => {
               await user.send(`_💀 **${sender.name}**: ${message.content}_`);
             }
           } else {
-            await user.send(`🗣️ **${sender.name}**: ${message.content}`);
+            const validAttachments = Array.from(message.attachments.values()).filter(
+              attachment => attachment.size <= MAX_FILE_SIZE
+            );
+            await user.send({
+              content: `🗣️ **${sender.name}**: ${message.content}`,
+              files: validAttachments,
+            });
           }
         } catch (err) {
           console.error('Không gửi được tin nhắn cho người chơi', err);
