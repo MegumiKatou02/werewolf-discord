@@ -35,10 +35,18 @@ module.exports = {
       interaction.member?.permissions.has(PermissionFlagsBits.Administrator) ??
       false;
     const isHost = gameRoom.hostId === interaction.user.id;
+    const isDev = interaction.user.id === process.env.DEVELOPER;
 
-    if (!isAdmin && !isHost) {
+    if (!isAdmin && !isHost && !isDev) {
       return interaction.reply({
-        content: '❌ Chỉ Admin hoặc Host mới có thể xóa phòng.',
+        content: '❌ Chỉ Admin/Host/Dev mới có thể xóa phòng.',
+        ephemeral: true,
+      });
+    }
+
+    if (gameRoom.status === 'starting') {
+      return interaction.reply({
+        content: '❌ Không thể xóa phòng chơi khi trò chơi đã bắt đầu!',
         ephemeral: true,
       });
     }

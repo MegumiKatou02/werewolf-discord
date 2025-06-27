@@ -42,10 +42,11 @@ module.exports = {
       interaction.member?.permissions.has(PermissionFlagsBits.Administrator) ??
       false;
     const isHost = interaction.user.id === room.hostId;
+    const isDev = interaction.user.id === process.env.DEVELOPER;
 
-    if (!isAdmin && !isHost) {
+    if (!isAdmin && !isHost && !isDev) {
       return interaction.editReply({
-        content: '❌ Chỉ host hoặc admin mới được phép bắt đầu trò chơi.',
+        content: '❌ Chỉ host/admin/dev mới được phép bắt đầu trò chơi.',
         ephemeral: true,
       });
     }

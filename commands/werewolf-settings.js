@@ -22,10 +22,28 @@ const defaultSettings = {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('settings')
-    .setDescription('Xem và điều chỉnh cài đặt game Ma Sói')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    .setDescription('Xem và điều chỉnh cài đặt game Ma Sói'),
 
   async execute(interaction) {
+    if (!interaction.inGuild()) {
+      return interaction.reply({
+        content: 'Lệnh này chỉ sử dụng được trong server.',
+        ephemeral: true,
+      });
+    }
+
+    const isAdmin =
+      interaction.member?.permissions.has(PermissionFlagsBits.Administrator) ??
+      false;
+    const isDev = interaction.user.id === process.env.DEVELOPER;
+
+    if (!isAdmin && !isDev) {
+      return interaction.reply({
+        content: '❌ Bạn không có quyền sử dụng lệnh này!',
+        ephemeral: true,
+      });
+    }
+
     const guildId = interaction.guildId;
 
     const gameRoom = gameRooms.get(guildId);
@@ -97,7 +115,10 @@ module.exports = {
             ephemeral: true,
           });
         }
-        if (!i.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        if (
+          !i.member.permissions.has(PermissionFlagsBits.Administrator) &&
+          !isDev
+        ) {
           await i.reply({
             content: '❌ Bạn cần có quyền Admin để thay đổi cài đặt!',
             ephemeral: true,
