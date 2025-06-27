@@ -5,6 +5,7 @@ const {
   ButtonBuilder,
   ButtonStyle,
 } = require('discord.js');
+const tips = require('../data/tips.json');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -12,6 +13,12 @@ module.exports = {
     .setDescription('Xem hướng dẫn chi tiết về cách chơi Ma Sói'),
 
   async execute(interaction) {
+    const getRandomTip = () => {
+      const tipsArray = Object.values(tips);
+      const randomIndex = Math.floor(Math.random() * tipsArray.length);
+      return tipsArray[randomIndex];
+    };
+
     const tipsEmbed = new EmbedBuilder()
       .setColor(0x4caf50)
       .setTitle('💡 CÁCH CHƠI VỚI BOT')
@@ -37,12 +44,13 @@ module.exports = {
             '`/masoi-join` - Tham gia phòng\n' +
             '`/masoi-leave` - Rời phòng\n' +
             '`/masoi-start` - Bắt đầu game (chỉ host)\n' +
+            '`/role` - Xem thông tin chi tiết của các vai trò trong game Ma Sói\n' +
             '`/status` - Xem trạng thái phòng trong server\n' +
             '`/huongdan` - Xem hướng dẫn này\n' +
             '...',
         }
-      );
-    // .setFooter({ text: 'Chúc bạn có những trận game vui vẻ! 🎮' });
+      )
+      .setFooter({ text: `💡 Mẹo: ${getRandomTip()}` });
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -102,7 +110,8 @@ module.exports = {
               '• **Phe Dân**: Thắng khi tiêu diệt hết Sói\n' +
               '• **Phe Solo**: Thắng theo điều kiện riêng',
           }
-        );
+        )
+        .setFooter({ text: `💡 Mẹo: ${getRandomTip()}` });
 
       const rolesEmbed = new EmbedBuilder()
         .setColor(0x2196f3)
@@ -185,7 +194,8 @@ module.exports = {
               '• Mỗi đêm dậy soi 3 người tự chọn trong danh sách, nếu 1 trong 3 người đó là sói thì được báo "Có sói", nếu đoán hụt thì mất chức năng.',
             inline: true,
           }
-        );
+        )
+        .setFooter({ text: `💡 Mẹo: ${getRandomTip()}` });
 
       await i.deferUpdate();
 
