@@ -59,6 +59,10 @@ module.exports = {
       new ButtonBuilder()
         .setCustomId('customize_roles_json')
         .setLabel('Tuỳ chỉnh vai trò (JSON)')
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId('customize_roles_name')
+        .setLabel('Tuỳ chỉnh vai trò (Tên)')
         .setStyle(ButtonStyle.Secondary)
     );
 

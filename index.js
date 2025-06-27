@@ -16,6 +16,7 @@ const connectDB = require('./config/database');
 const commandHandler = require('./src/client/handlers/commandHandler');
 const defaultRoles = require('@/interactions/defaultRoles');
 const customizeRolesJson = require('@/interactions/customizeRolesJson');
+const customizeRolesName = require('@/interactions/customizeRolesName');
 const wolfInteraction = require('@/interactions/wolfInteraction');
 const wolfSeerInteraction = require('@/interactions/wolfSeerInteraction');
 const alphawerewolfInteraction = require('@/interactions/alphawerewolfInteraction');
@@ -218,6 +219,9 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId === 'customize_roles_json') {
       await customizeRolesJson.isButton(interaction);
     }
+    if (interaction.customId === 'customize_roles_name') {
+      await customizeRolesName.isButton(interaction);
+    }
     if (interaction.customId.startsWith('vote_target_wolf_')) {
       await wolfInteraction.isButton(interaction);
     }
@@ -376,6 +380,9 @@ client.on('interactionCreate', async (interaction) => {
     }
     if (interaction.customId === 'customize_roles_json_modal') {
       await customizeRolesJson.isModalSubmit(interaction, gameRooms);
+    }
+    if (interaction.customId === 'customize_roles_name_modal') {
+      await customizeRolesName.isModalSubmit(interaction, gameRooms);
     }
     if (interaction.customId.startsWith('submit_view_foxspirit_')) {
       await foxSpiritInteraction.isModalSubmit(
