@@ -41,11 +41,7 @@ module.exports = {
     const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
     const isDev = interaction.user.id === process.env.DEVELOPER;
 
-    if (
-      interaction.user.id !== room.hostId &&
-      !isAdmin &&
-      !isDev
-    ) {
+    if (interaction.user.id !== room.hostId && !isAdmin && !isDev) {
       return await interaction.reply({
         content: '❌ Chỉ host/admin/dev mới có thể kick người chơi.',
         ephemeral: true,

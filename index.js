@@ -181,9 +181,9 @@ client.on('messageCreate', async (message) => {
               await user.send(`_💀 **${sender.name}**: ${message.content}_`);
             }
           } else {
-            const validAttachments = Array.from(message.attachments.values()).filter(
-              attachment => attachment.size <= MAX_FILE_SIZE
-            );
+            const validAttachments = Array.from(
+              message.attachments.values()
+            ).filter((attachment) => attachment.size <= MAX_FILE_SIZE);
             await user.send({
               content: `🗣️ **${sender.name}**: ${message.content}`,
               files: validAttachments,
