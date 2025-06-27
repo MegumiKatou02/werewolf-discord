@@ -20,7 +20,6 @@ const { createAvatarCollage } = require('./canvas');
 const { store } = require('./store');
 const Dead = require('../types/roles/Dead');
 const Werewolf = require('../types/roles/WereWolf');
-const Maid = require('../types/roles/Maid');
 const Villager = require('../types/roles/Villager');
 const ServerSettings = require('../models/ServerSettings');
 
@@ -152,12 +151,12 @@ class GameRoom extends EventEmitter {
     }
 
     const roles = this.assignRoles(this.players.length, customRoles);
-    const fakeRoles = [
-      WEREROLE.LYCAN,
-      WEREROLE.SEER,
-      WEREROLE.DETECTIVE,
-      WEREROLE.WEREWOLF,
-    ];
+    // const fakeRoles = [
+    //   WEREROLE.LYCAN,
+    //   WEREROLE.SEER,
+    //   WEREROLE.DETECTIVE,
+    //   WEREROLE.WEREWOLF,
+    // ];
 
     const allWerewolves = [];
 
@@ -206,7 +205,7 @@ class GameRoom extends EventEmitter {
             }`
           );
         } catch (error) {
-          console.error(`Không thể gửi tin nhắn cho ${player.userId}`, err);
+          console.error(`Không thể gửi tin nhắn cho ${player.userId}`, error);
           await interaction.reply({
             content:
               'Không thể gửi tin nhắn cho bạn, hãy kiểm tra cài đặt quyền',
@@ -474,7 +473,7 @@ class GameRoom extends EventEmitter {
       } else if (player.role.id === WEREROLE.FOXSPIRIT) {
         // Cáo
         await user.send(
-          '🦊 Bạn là **Cáo**. Mỗi đêm dậy soi 3 người tự chọn trong danh sách, nếu 1 trong 3 người đó là sói thì được báo \"Có sói\", nếu đoán hụt thì mất chức năng.'
+          '🦊 Bạn là **Cáo**. Mỗi đêm dậy soi 3 người tự chọn trong danh sách, nếu 1 trong 3 người đó là sói thì được báo \\"Có sói\\", nếu đoán hụt thì mất chức năng.'
         );
 
         const viewButton = new ButtonBuilder()
@@ -1105,6 +1104,7 @@ class GameRoom extends EventEmitter {
       this.once('voteComplete', resolve);
     });
 
+    // eslint-disable-next-line no-unused-vars
     const notificationPromise = new Promise((resolve) => {
       setTimeout(
         async () => {
@@ -1446,7 +1446,7 @@ class GameRoom extends EventEmitter {
   checkVictory() {
     const alivePlayers = this.players.filter((p) => p.alive);
     const aliveWolves = alivePlayers.filter((p) => p.role.faction === 0);
-    const aliveVillagers = alivePlayers.filter((p) => p.role.faction === 1);
+    // const aliveVillagers = alivePlayers.filter((p) => p.role.faction === 1);
     const aliveSolos = alivePlayers.filter((p) => p.role.faction === 2);
 
     if (alivePlayers.length === aliveSolos.length && aliveSolos.length > 0) {
