@@ -7,6 +7,13 @@ module.exports = {
     .setDescription('Rời khỏi trò chơi đang chờ'),
 
   async execute(interaction) {
+    if (!interaction.inGuild()) {
+      return await interaction.reply({
+        content: 'Lệnh này chỉ sử dụng được trong server.',
+        ephemeral: true,
+      });
+    }
+
     const userId = interaction.user.id;
     const guildId = interaction.guildId;
 

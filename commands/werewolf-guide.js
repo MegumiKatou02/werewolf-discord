@@ -2,8 +2,8 @@ const {
   SlashCommandBuilder,
   EmbedBuilder,
   ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
+  StringSelectMenuBuilder,
+  StringSelectMenuOptionBuilder,
 } = require('discord.js');
 const tips = require('../data/tips.json');
 
@@ -52,20 +52,28 @@ module.exports = {
       )
       .setFooter({ text: `💡 Mẹo: ${getRandomTip()}` });
 
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId('guide_tips')
-        .setLabel('💡 Cách Chơi với Bot')
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId('guide_rules')
-        .setLabel('📜 Luật Chơi')
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId('guide_roles')
-        .setLabel('🎭 Vai Trò')
-        .setStyle(ButtonStyle.Primary)
-    );
+    const selectMenu = new StringSelectMenuBuilder()
+      .setCustomId('guide_select')
+      .setPlaceholder('Chọn hướng dẫn bạn muốn xem...')
+      .addOptions(
+        new StringSelectMenuOptionBuilder()
+          .setLabel('Cách Chơi với Bot')
+          .setDescription('Hướng dẫn cách sử dụng bot và các lệnh cơ bản')
+          .setValue('guide_tips')
+          .setEmoji('💡'),
+        new StringSelectMenuOptionBuilder()
+          .setLabel('Luật Chơi')
+          .setDescription('Các luật chơi cơ bản và điều kiện thắng thua')
+          .setValue('guide_rules')
+          .setEmoji('📜'),
+        new StringSelectMenuOptionBuilder()
+          .setLabel('Vai Trò')
+          .setDescription('Thông tin về các vai trò trong game Ma Sói')
+          .setValue('guide_roles')
+          .setEmoji('🎭')
+      );
+
+    const row = new ActionRowBuilder().addComponents(selectMenu);
 
     const response = await interaction.reply({
       embeds: [tipsEmbed],
@@ -80,7 +88,7 @@ module.exports = {
     collector.on('collect', async (i) => {
       if (i.user.id !== interaction.user.id) {
         await i.reply({
-          content: 'Bạn không thể sử dụng nút này!',
+          content: 'Bạn không thể sử dụng menu này!',
           ephemeral: true,
         });
         return;
@@ -199,7 +207,7 @@ module.exports = {
 
       await i.deferUpdate();
 
-      switch (i.customId) {
+      switch (i.values[0]) {
         case 'guide_tips':
           await i.editReply({ embeds: [tipsEmbed], components: [row] });
           break;
@@ -214,21 +222,7 @@ module.exports = {
 
     collector.on('end', async () => {
       const disabledRow = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId('guide_tips')
-          .setLabel('💡 Cách Chơi Với Bot')
-          .setStyle(ButtonStyle.Primary)
-          .setDisabled(true),
-        new ButtonBuilder()
-          .setCustomId('guide_rules')
-          .setLabel('📜 Luật Chơi')
-          .setStyle(ButtonStyle.Primary)
-          .setDisabled(true),
-        new ButtonBuilder()
-          .setCustomId('guide_roles')
-          .setLabel('🎭 Vai Trò')
-          .setStyle(ButtonStyle.Primary)
-          .setDisabled(true)
+        StringSelectMenuBuilder.from(selectMenu).setDisabled(true)
       );
 
       await interaction

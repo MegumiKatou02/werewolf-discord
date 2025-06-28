@@ -14,6 +14,13 @@ module.exports = {
     .setDescription('Xóa phòng chơi Ma Sói trong server'),
 
   async execute(interaction) {
+    if (!interaction.inGuild()) {
+      return await interaction.reply({
+        content: 'Lệnh này chỉ sử dụng được trong server.',
+        ephemeral: true,
+      });
+    }
+
     const guildId = interaction.guildId;
     const gameRoom = gameRooms.get(guildId);
 
