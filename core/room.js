@@ -569,6 +569,32 @@ class GameRoom extends EventEmitter {
 
         message = await user.send({ embeds: [embed], files: [attachment] });
         this.nightMessages.set(player.userId, message);
+      } else if (player.role.id === WEREROLE.PUPPETEER) {
+        await user.send(
+          `🐕‍🦺 Bạn là **Người Múa Rối**. Một lần duy nhất trong suốt ván chơi, bạn có thể chỉ định Sói ăn thịt một người. Người đó có thể là một người khác so với sự thống nhất ban đầu của Sói. Bạn cũng có thể buộc Sói ăn thịt một Sói khác.`
+        );
+        let puppetButton = null;
+        if (player.role.targetWolf === null) {
+          puppetButton = new ButtonBuilder()
+            .setCustomId(`puppet_target_puppeteer_${player.userId}`)
+            .setLabel('🎭 Chỉ định mục tiêu')
+            .setStyle(ButtonStyle.Primary);
+        } else {
+          puppetButton = new ButtonBuilder()
+            .setCustomId(`puppet_target_puppeteer_${player.userId}`)
+            .setLabel('🎭 Đã chỉ định mục tiêu')
+            .setStyle(ButtonStyle.Primary)
+            .setDisabled(true);
+        }
+
+        const row = new ActionRowBuilder().addComponents(puppetButton);
+
+        message = await user.send({
+          embeds: [embed],
+          files: [attachment],
+          components: [row],
+        });
+        this.nightMessages.set(player.userId, message);
       } else {
         await user.send('🌙 Một đêm yên tĩnh trôi qua. Bạn hãy chờ đến sáng.');
 
@@ -689,13 +715,24 @@ class GameRoom extends EventEmitter {
   async solvePhase2() {
     this.gameState.log.push(`## Đêm thứ ${this.gameState.nightCount}`);
 
-    const mostVotedUserId = this.totalVotedWolvesSolve();
+    let mostVotedUserId = this.totalVotedWolvesSolve();
     let killedPlayers = new Set(); // vẫn có thể cứu được
     let sureDieInTheNight = new Set(); // 100% chết ngay trong đêm đó (không thể cứu hay bảo vệ)
     // let savedPlayers = new Set();
     let revivedPlayers = new Set();
     let maidNewRole = null; // Lưu thông tin về vai trò mới của hầu gái
     let giaLangBiTanCong = false;
+
+    // Người múa rối ép sói ăn thịt mục tiêu được chỉ định
+    const puppeteer = this.players.find(
+      (p) => p.role.id === WEREROLE.PUPPETEER
+    );
+    if (puppeteer && puppeteer.role.targetWolf) {
+      mostVotedUserId = puppeteer.role.targetWolf;
+      this.gameState.log.push(
+        `Người múa rối đã chỉ định sói ăn thịt **${this.players.find((p) => p.userId === mostVotedUserId).name}**`
+      );
+    }
 
     const witch = this.players.find((p) => p.role.id === WEREROLE.WITCH);
     if (mostVotedUserId) {
@@ -1332,6 +1369,9 @@ class GameRoom extends EventEmitter {
               break;
             case 18:
               roleEmoji = '🐺';
+              break;
+            case 19:
+              roleEmoji = '🐕‍🦺';
               break;
           }
           return {

@@ -93,6 +93,9 @@ class CustomizeRolesName {
       soimeocon: 18,
       kittenwolf: 18,
       'sói mèo con': 18,
+      puppeteer: 19,
+      nguoimuaroi: 19,
+      'người múa rối': 19,
     };
 
     let customRoles = {};
