@@ -16,5 +16,7 @@
 15. Elder (Già Làng)
 16. Stalker (Stalker)
 17. Gunner (Xạ Thủ)
+18. Kitten Wolf (Sói Mèo Con)
+19. The Puppeteer (Người Múa Rối)
 
 - 0: sói, 1: dân, 2: solo, 3: dân làng hoặc ma sói

@@ -112,5 +112,11 @@
     "eName": "Kitten Wolf",
     "faction": 0,
     "description": "Bạn là một ma sói. Khi bạn bị giết, cuộc bỏ phiếu của sói tiếp theo sẽ biến đổi một dân làng thành ma sói thay vì giết chết họ."
+  },
+  "19": {
+    "title": "Người Múa Rối",
+    "eName": "The Puppeteer",
+    "faction": 1,
+    "description": "Một lần duy nhất trong suốt ván chơi, Người múa rối có thể chỉ định Sói ăn thịt một người. Người đó có thể là một người khác so với sự thống nhất ban đầu của Sói. Người múa rối cũng có thể buộc Sói ăn thịt một Sói khác."
   }
 }

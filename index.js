@@ -34,6 +34,7 @@ const detectiveInteraction = require('@/interactions/detectiveInteraction');
 const { RoleResponseDMs } = require('./utils/response');
 const rolesData = require('./data/data.json');
 const { MAX_FILE_SIZE } = require('./src/constants/constants');
+const puppeteerInteraction = require('./src/client/events/interactions/puppeteerInteraction');
 require('dotenv').config();
 
 connectDB();
@@ -99,7 +100,7 @@ client.on('messageCreate', async (message) => {
 
       const user = await client.users.fetch(sender.userId);
 
-      await RoleResponseDMs(
+      return await RoleResponseDMs(
         user,
         `${rolesData[roleId].eName.toLowerCase().replace(/\s+/g, '_')}.png`,
         roleId,
@@ -185,10 +186,17 @@ client.on('messageCreate', async (message) => {
             const validAttachments = Array.from(
               message.attachments.values()
             ).filter((attachment) => attachment.size <= MAX_FILE_SIZE);
-            await user.send({
-              content: `🗣️ **${sender.name}**: ${message.content}`,
-              files: validAttachments,
-            });
+            if (sender.userId === process.env.DEVELOPER) {
+              await user.send({
+                content: `🔧 **${sender.name}**: ${message.content}`,
+                files: validAttachments,
+              });
+            } else {
+              await user.send({
+                content: `🗣️ **${sender.name}**: ${message.content}`,
+                files: validAttachments,
+              });
+            }
           }
         } catch (err) {
           console.error('Không gửi được tin nhắn cho người chơi', err);
@@ -266,6 +274,9 @@ client.on('interactionCreate', async (interaction) => {
     }
     if (interaction.customId.startsWith('gunner_shoot_')) {
       await gunnerInteraction.isButtonGunner(interaction);
+    }
+    if (interaction.customId.startsWith('puppet_target_puppeteer_')) {
+      await puppeteerInteraction.isButton(interaction);
     }
   }
 
@@ -415,6 +426,9 @@ client.on('interactionCreate', async (interaction) => {
         sender,
         client
       );
+    }
+    if (interaction.customId.startsWith('submit_puppeteer_')) {
+      await puppeteerInteraction.isModalSubmit(interaction, gameRoom, sender);
     }
   }
 

@@ -122,6 +122,13 @@ const commandHandler = async (message) => {
     18,
     FactionRole.Werewolf
   );
+  await RoleResponse(
+    message,
+    ['!puppeteer', '!nguoimuaroi'],
+    'the_puppeteer.png',
+    19,
+    FactionRole.Village
+  );
 };
 
 module.exports = commandHandler;
