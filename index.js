@@ -1,4 +1,3 @@
-require('module-alias/register');
 const {
   Client,
   GatewayIntentBits,
@@ -14,23 +13,23 @@ const { gameRooms } = require('./core/room');
 const { WEREROLE, convertFactionRoles } = require('./utils/role');
 const connectDB = require('./config/database');
 const commandHandler = require('./src/client/handlers/commandHandler');
-const defaultRoles = require('@/interactions/defaultRoles');
-const customizeRolesJson = require('@/interactions/customizeRolesJson');
-const customizeRolesName = require('@/interactions/customizeRolesName');
-const wolfInteraction = require('@/interactions/wolfInteraction');
-const wolfSeerInteraction = require('@/interactions/wolfSeerInteraction');
-const alphawerewolfInteraction = require('@/interactions/alphawerewolfInteraction');
-const bodyguardInteraction = require('@/interactions/bodyguardInteraction');
-const seerInteraction = require('@/interactions/seerInteraction');
-const witchInteraction = require('@/interactions/witchInteraction');
-const mediumInteraction = require('@/interactions/mediumInteraction');
-const maidInteraction = require('@/interactions/maidInteraction');
-const foxSpiritInteraction = require('@/interactions/foxSpiritInteraction');
-const stalkerInteraction = require('@/interactions/stalkerInteraction');
-const gunnerInteraction = require('@/interactions/gunnerInteraction');
-const votingInteraction = require('@/interactions/votingInteraction');
-const settingsModel = require('@/interactions/settings');
-const detectiveInteraction = require('@/interactions/detectiveInteraction');
+const defaultRoles = require('./src/client/events/interactions/defaultRoles');
+const customizeRolesJson = require('./src/client/events/interactions/customizeRolesJson');
+const customizeRolesName = require('./src/client/events/interactions/customizeRolesName');
+const wolfInteraction = require('./src/client/events/interactions/wolfInteraction');
+const wolfSeerInteraction = require('./src/client/events/interactions/wolfSeerInteraction');
+const alphawerewolfInteraction = require('./src/client/events/interactions/alphawerewolfInteraction');
+const bodyguardInteraction = require('./src/client/events/interactions/bodyguardInteraction');
+const seerInteraction = require('./src/client/events/interactions/seerInteraction');
+const witchInteraction = require('./src/client/events/interactions/witchInteraction');
+const mediumInteraction = require('./src/client/events/interactions/mediumInteraction');
+const maidInteraction = require('./src/client/events/interactions/maidInteraction');
+const foxSpiritInteraction = require('./src/client/events/interactions/foxSpiritInteraction');
+const stalkerInteraction = require('./src/client/events/interactions/stalkerInteraction');
+const gunnerInteraction = require('./src/client/events/interactions/gunnerInteraction');
+const votingInteraction = require('./src/client/events/interactions/votingInteraction');
+const settingsModel = require('./src/client/events/interactions/settings');
+const detectiveInteraction = require('./src/client/events/interactions/detectiveInteraction');
 const { RoleResponseDMs } = require('./utils/response');
 const rolesData = require('./data/data.json');
 const { MAX_FILE_SIZE } = require('./src/constants/constants');
