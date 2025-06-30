@@ -5,19 +5,22 @@ import {
   ButtonStyle,
   type Interaction,
 } from 'discord.js';
+
 import ServerSettings from '../../../../models/ServerSettings.js';
 
 class Settings {
   isModalSubmit = async (interaction: Interaction) => {
-    if (!interaction.isModalSubmit()) return;
+    if (!interaction.isModalSubmit()) {
+      return;
+    }
 
     const newSettings = {
       wolfVoteTime: parseInt(
-        interaction.fields.getTextInputValue('wolfVoteTime')
+        interaction.fields.getTextInputValue('wolfVoteTime'),
       ),
       nightTime: parseInt(interaction.fields.getTextInputValue('nightTime')),
       discussTime: parseInt(
-        interaction.fields.getTextInputValue('discussTime')
+        interaction.fields.getTextInputValue('discussTime'),
       ),
       voteTime: parseInt(interaction.fields.getTextInputValue('voteTime')),
     };
@@ -26,7 +29,7 @@ class Settings {
 
     if (
       Object.values(newSettings).some(
-        (value) => isNaN(value) || value < 10 || value > 300
+        (value) => isNaN(value) || value < 10 || value > 300,
       )
     ) {
       await interaction.editReply({
@@ -43,7 +46,9 @@ class Settings {
     }
 
     const guildId = interaction.guild?.id;
-    if (!guildId) return;
+    if (!guildId) {
+      return;
+    }
     // serverSettings.set(guildId, newSettings);
 
     await ServerSettings.findOneAndUpdate({ guildId }, newSettings, {
@@ -75,7 +80,7 @@ class Settings {
           name: '🗳️ Thời Gian Vote Treo Cổ',
           value: `\`${newSettings.voteTime}\` giây`,
           inline: true,
-        }
+        },
       )
       .setFooter({
         text: '💡 Cài đặt sẽ được áp dụng cho các game tiếp theo',
@@ -88,7 +93,7 @@ class Settings {
           new ButtonBuilder()
             .setCustomId('edit_settings')
             .setLabel('🔧 Điều Chỉnh Cài Đặt')
-            .setStyle(ButtonStyle.Primary)
+            .setStyle(ButtonStyle.Primary),
         ),
       ],
     });

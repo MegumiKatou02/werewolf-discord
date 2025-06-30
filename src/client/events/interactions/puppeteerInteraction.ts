@@ -4,14 +4,17 @@ import {
   TextInputStyle,
   ActionRowBuilder,
   type Interaction,
-  Client,
 } from 'discord.js';
-import { WEREROLE } from '../../../../utils/role.js';
+
+import type { GameRoom } from '../../../../core/room.js';
 import type Player from '../../../../types/player.js';
 import Puppeteer from '../../../../types/roles/Puppeteer.js';
+import { WEREROLE } from '../../../../utils/role.js';
 class PuppeteerInteraction {
   isButton = async (interaction: Interaction) => {
-    if (!interaction.isButton()) return;
+    if (!interaction.isButton()) {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[3];
 
@@ -40,11 +43,15 @@ class PuppeteerInteraction {
   };
   isModalSubmit = async (
     interaction: Interaction,
-    gameRoom: any,
-    sender: Player
+    gameRoom: GameRoom,
+    sender: Player,
   ) => {
-    if (!interaction.isModalSubmit()) return;
-    if (!gameRoom || gameRoom.gameState.phase !== 'night') return;
+    if (!interaction.isModalSubmit()) {
+      return;
+    }
+    if (!gameRoom || gameRoom.gameState.phase !== 'night') {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[2];
 
@@ -56,7 +63,7 @@ class PuppeteerInteraction {
     }
 
     const viewIndexStr = interaction.fields.getTextInputValue(
-      'puppeteer_target_puppeteer'
+      'puppeteer_target_puppeteer',
     );
     const viewIndex = parseInt(viewIndexStr, 10);
 

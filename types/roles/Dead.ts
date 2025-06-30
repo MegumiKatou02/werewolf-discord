@@ -10,7 +10,7 @@ class Dead extends Role {
   }
 
   getDescription() {
-    return `Bạn đã chết rồi, đừng hỏi gì cả...`;
+    return 'Bạn đã chết rồi, đừng hỏi gì cả...';
   }
 
   resetDay() {}

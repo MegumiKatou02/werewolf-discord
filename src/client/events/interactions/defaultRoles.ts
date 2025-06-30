@@ -1,8 +1,15 @@
 import type { Interaction } from 'discord.js';
 
+import type { GameRoom } from '../../../../core/room.js';
+
 class DefaultRoles {
-  isButton = async (interaction: Interaction, gameRooms: Map<string, any>) => {
-    if (!interaction.isButton()) return;
+  isButton = async (
+    interaction: Interaction,
+    gameRooms: Map<string, GameRoom>,
+  ) => {
+    if (!interaction.isButton()) {
+      return;
+    }
 
     const guildId = interaction.guildId;
     if (!guildId) {

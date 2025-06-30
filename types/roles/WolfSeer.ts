@@ -1,7 +1,7 @@
 import Role from './role.js';
 
 class WolfSeer extends Role {
-  voteBite: number | null;
+  voteBite: string | null;
   seerCount: number;
 
   constructor() {

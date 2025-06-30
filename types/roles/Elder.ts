@@ -12,7 +12,7 @@ class Elder extends Role {
   }
 
   getDescription() {
-    return `Sói phải cắn 2 lần thì Già làng mới chết. Già Làng chỉ chết ngay lập tức nếu bị cả làng treo cổ, Phù Thủy bỏ độc... Khi Già làng chết thì tất cả những người phe dân làng đều mất khả năng đặc biệt cho đến hết ván.`;
+    return 'Sói phải cắn 2 lần thì Già làng mới chết. Già Làng chỉ chết ngay lập tức nếu bị cả làng treo cổ, Phù Thủy bỏ độc... Khi Già làng chết thì tất cả những người phe dân làng đều mất khả năng đặc biệt cho đến hết ván.';
   }
   resetDay() {}
 }

@@ -6,15 +6,18 @@ import {
   type Interaction,
   Client,
 } from 'discord.js';
-import { WEREROLE } from '../../../../utils/role.js';
-import type Player from '../../../../types/player.js';
-import Seer from '../../../../types/roles/Seer.js';
+
 import type { GameRoom } from '../../../../core/room.js';
+import type Player from '../../../../types/player.js';
 import AlphaWerewolf from '../../../../types/roles/AlphaWerewolf.js';
+import Seer from '../../../../types/roles/Seer.js';
+import { WEREROLE } from '../../../../utils/role.js';
 
 class SeerInteraction {
   isButton = async (interaction: Interaction) => {
-    if (!interaction.isButton()) return;
+    if (!interaction.isButton()) {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[3];
 
@@ -45,11 +48,15 @@ class SeerInteraction {
     interaction: Interaction,
     gameRoom: GameRoom,
     sender: Player,
-    client: Client
+    client: Client,
   ) => {
-    if (!interaction.isModalSubmit()) return;
+    if (!interaction.isModalSubmit()) {
+      return;
+    }
 
-    if (!gameRoom || gameRoom.gameState.phase !== 'night') return;
+    if (!gameRoom || gameRoom.gameState.phase !== 'night') {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[3];
 
@@ -107,7 +114,7 @@ class SeerInteraction {
       try {
         const user = await client.users.fetch(playerId);
         const alphaWerewolf = gameRoom.players.find(
-          (player: Player) => player.role?.id === WEREROLE.ALPHAWEREWOLF
+          (player: Player) => player.role?.id === WEREROLE.ALPHAWEREWOLF,
         );
         if (
           alphaWerewolf &&
@@ -116,25 +123,28 @@ class SeerInteraction {
           alphaWerewolf.role.maskWolf === targetPlayer.userId
         ) {
           await user.send(
-            `👁️ Phe của **${targetPlayer.name}** là: **Dân Làng**.`
+            `👁️ Phe của **${targetPlayer.name}** là: **Dân Làng**.`,
           );
         } else {
           if (targetPlayer.role.id === WEREROLE.LYCAN) {
             await user.send(
-              `👁️ Phe của **${targetPlayer.name}** là: **Ma Sói**.`
+              `👁️ Phe của **${targetPlayer.name}** là: **Ma Sói**.`,
             );
           } else {
             const seerFaction = () => {
-              if (targetPlayer.role.faction === 0) return 'Ma Sói';
+              if (targetPlayer.role.faction === 0) {
+                return 'Ma Sói';
+              }
               if (
                 targetPlayer.role.faction === 1 ||
                 targetPlayer.role.faction === 3
-              )
+              ) {
                 return 'Dân Làng';
+              }
               return 'Không xác định';
             };
             await user.send(
-              `👁️ Phe của **${targetPlayer.name}** là: **${seerFaction()}**.`
+              `👁️ Phe của **${targetPlayer.name}** là: **${seerFaction()}**.`,
             );
           }
         }

@@ -6,14 +6,17 @@ import {
   type Interaction,
   Client,
 } from 'discord.js';
-import { WEREROLE } from '../../../../utils/role.js';
+
+import type { GameRoom } from '../../../../core/room.js';
 import type Player from '../../../../types/player.js';
 import Werewolf from '../../../../types/roles/WereWolf.js';
-import type { GameRoom } from '../../../../core/room.js';
+import { WEREROLE } from '../../../../utils/role.js';
 
 class WolfInteraction {
   isButton = async (interaction: Interaction) => {
-    if (!interaction.isButton()) return;
+    if (!interaction.isButton()) {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[3];
 
@@ -55,11 +58,15 @@ class WolfInteraction {
     interaction: Interaction,
     gameRoom: GameRoom,
     sender: Player,
-    client: Client
+    client: Client,
   ) => {
-    if (!interaction.isModalSubmit()) return;
+    if (!interaction.isModalSubmit()) {
+      return;
+    }
 
-    if (!gameRoom || gameRoom.gameState.phase !== 'night') return;
+    if (!gameRoom || gameRoom.gameState.phase !== 'night') {
+      return;
+    }
 
     await interaction.deferReply({ ephemeral: true });
 
@@ -121,7 +128,7 @@ class WolfInteraction {
           if (player.userId !== playerId) {
             const targetUser = await client.users.fetch(player.userId);
             await targetUser.send(
-              `🐺 **${sender.name}** đã vote giết **${targetPlayer.name}**.`
+              `🐺 **${sender.name}** đã vote giết **${targetPlayer.name}**.`,
             );
           } else {
             await user.send(`🔪 Bạn đã vote giết: **${targetPlayer.name}**.`);

@@ -3,6 +3,7 @@ import tsParser from '@typescript-eslint/parser';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 import importPlugin from 'eslint-plugin-import';
 import nodePlugin from 'eslint-plugin-node';
+import globals from 'globals';
 
 export default [
   js.configs.recommended,
@@ -16,6 +17,9 @@ export default [
         sourceType: 'module',
         project: './tsconfig.json',
       },
+      globals: {
+        ...globals.node,
+      },
     },
     plugins: {
       '@typescript-eslint': tsPlugin,
@@ -24,10 +28,10 @@ export default [
     },
     rules: {
       // TypeScript rules
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        { argsIgnorePattern: '^_' },
-      ],
+      '@typescript-eslint/no-unused-vars': ['error', {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+      }],
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
@@ -59,7 +63,7 @@ export default [
       'node/no-missing-import': 'off',
       'node/no-unsupported-features/es-syntax': 'off',
 
-      'no-console': 'warn',
+      'no-console': 'off',
       'no-debugger': 'error',
       'no-var': 'error',
       'prefer-const': 'error',
@@ -112,6 +116,7 @@ export default [
       '*.config.mjs',
       'coverage/**',
       '.env*',
+      '__test__/**',
     ],
   },
 ];

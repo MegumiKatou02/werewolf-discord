@@ -1,5 +1,5 @@
-import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import mongoose from 'mongoose';
 
 dotenv.config();
 
@@ -10,8 +10,8 @@ const connectDB = async () => {
     }
     const conn = await mongoose.connect(process.env.MONGODB_URI);
     console.log(`MongoDB đã kết nối: ${conn.connection.host}`);
-  } catch (error: any) {
-    console.error(`Lỗi: ${error.message}`);
+  } catch (error) {
+    console.error(`Lỗi: ${(error as Error).message}`);
     process.exit(1);
   }
 };

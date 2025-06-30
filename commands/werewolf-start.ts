@@ -7,6 +7,7 @@ import {
   type Interaction,
   PermissionsBitField,
 } from 'discord.js';
+
 import { gameRooms } from '../core/room.js';
 
 export default {
@@ -32,7 +33,7 @@ export default {
 
     if (!gameRooms.has(guildId)) {
       return interaction.editReply(
-        'Chưa có phòng chơi, hãy để người chơi tham gia trước.'
+        'Chưa có phòng chơi, hãy để người chơi tham gia trước.',
       );
     }
 
@@ -40,7 +41,7 @@ export default {
 
     if (!room) {
       return interaction.editReply(
-        'Không tìm thấy phòng ma sói trong server này'
+        'Không tìm thấy phòng ma sói trong server này',
       );
     }
 
@@ -53,7 +54,7 @@ export default {
     const isAdmin =
       (interaction.member?.permissions instanceof PermissionsBitField &&
         interaction.member.permissions.has(
-          PermissionFlagsBits.Administrator
+          PermissionFlagsBits.Administrator,
         )) ??
       false;
     const isHost = interaction.user.id === room.hostId;
@@ -77,7 +78,7 @@ export default {
       new ButtonBuilder()
         .setCustomId('customize_roles_name')
         .setLabel('Tuỳ chỉnh vai trò (Tên)')
-        .setStyle(ButtonStyle.Secondary)
+        .setStyle(ButtonStyle.Secondary),
     );
 
     return interaction.editReply({

@@ -1,3 +1,7 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
 import {
   Client,
   GatewayIntentBits,
@@ -5,43 +9,49 @@ import {
   ChannelType,
   Partials,
   ActivityType,
+  SlashCommandBuilder,
+  type Interaction,
 } from 'discord.js';
-import fs from 'node:fs';
-import path from 'node:path';
-import { store } from './core/store.js';
-import { gameRooms, Player } from './core/room.js';
-import { WEREROLE, convertFactionRoles } from './utils/role.js';
+import { config } from 'dotenv';
+
 import connectDB from './config/database.js';
-import commandHandler from './src/client/handlers/commandHandler.js';
-import defaultRoles from './src/client/events/interactions/defaultRoles.js';
-import customizeRolesJson from './src/client/events/interactions/customizeRolesJson.js';
-import customizeRolesName from './src/client/events/interactions/customizeRolesName.js';
-import wolfInteraction from './src/client/events/interactions/wolfInteraction.js';
-import wolfSeerInteraction from './src/client/events/interactions/wolfSeerInteraction.js';
+import { gameRooms, Player } from './core/room.js';
+import type { GameRoom } from './core/room.js';
+import { store } from './core/store.js';
+import rolesData from './data/data.json' with { type: 'json' };
 import alphawerewolfInteraction from './src/client/events/interactions/alphawerewolfInteraction.js';
 import bodyguardInteraction from './src/client/events/interactions/bodyguardInteraction.js';
-import seerInteraction from './src/client/events/interactions/seerInteraction.js';
-import witchInteraction from './src/client/events/interactions/witchInteraction.js';
-import mediumInteraction from './src/client/events/interactions/mediumInteraction.js';
-import maidInteraction from './src/client/events/interactions/maidInteraction.js';
-import foxSpiritInteraction from './src/client/events/interactions/foxSpiritInteraction.js';
-import stalkerInteraction from './src/client/events/interactions/stalkerInteraction.js';
-import gunnerInteraction from './src/client/events/interactions/gunnerInteraction.js';
-import votingInteraction from './src/client/events/interactions/votingInteraction.js';
-import settingsModel from './src/client/events/interactions/settings.js';
+import customizeRolesJson from './src/client/events/interactions/customizeRolesJson.js';
+import customizeRolesName from './src/client/events/interactions/customizeRolesName.js';
+import defaultRoles from './src/client/events/interactions/defaultRoles.js';
 import detectiveInteraction from './src/client/events/interactions/detectiveInteraction.js';
+import foxSpiritInteraction from './src/client/events/interactions/foxSpiritInteraction.js';
+import gunnerInteraction from './src/client/events/interactions/gunnerInteraction.js';
+import maidInteraction from './src/client/events/interactions/maidInteraction.js';
+import mediumInteraction from './src/client/events/interactions/mediumInteraction.js';
 import puppeteerInteraction from './src/client/events/interactions/puppeteerInteraction.js';
-import { RoleResponseDMs } from './utils/response.js';
-import rolesData from './data/data.json' with { type: 'json' };
+import seerInteraction from './src/client/events/interactions/seerInteraction.js';
+import settingsModel from './src/client/events/interactions/settings.js';
+import stalkerInteraction from './src/client/events/interactions/stalkerInteraction.js';
+import votingInteraction from './src/client/events/interactions/votingInteraction.js';
+import witchInteraction from './src/client/events/interactions/witchInteraction.js';
+import wolfInteraction from './src/client/events/interactions/wolfInteraction.js';
+import wolfSeerInteraction from './src/client/events/interactions/wolfSeerInteraction.js';
+import commandHandler from './src/client/handlers/commandHandler.js';
 import { MAX_FILE_SIZE } from './src/constants/constants.js';
-import { config } from 'dotenv';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import type { GameRoom } from './core/room.js';
+import { RoleResponseDMs } from './utils/response.js';
+import { WEREROLE, convertFactionRoles } from './utils/role.js';
 config();
+
+interface SlashCommand {
+  data: SlashCommandBuilder;
+  // eslint-disable-next-line no-unused-vars
+  execute: (_interaction: Interaction) => Promise<void>;
+}
 
 declare module 'discord.js' {
   interface Client {
-    commands: Collection<string, any>;
+    commands: Collection<string, SlashCommand>;
   }
 }
 
@@ -97,20 +107,26 @@ client.on('messageCreate', async (message) => {
     const gameRoom = Array.from(gameRooms.values()).find(
       (room: GameRoom) =>
         room.status === 'starting' &&
-        room.players.some((p: Player) => p.userId === message.author.id)
+        room.players.some((p: Player) => p.userId === message.author.id),
     );
 
-    if (!gameRoom) return;
+    if (!gameRoom) {
+      return;
+    }
 
     const sender = gameRoom.players.find(
-      (p: Player) => p.userId === message.author.id
+      (p: Player) => p.userId === message.author.id,
     );
-    if (!sender) return;
+    if (!sender) {
+      return;
+    }
 
     if (message.content === '!role' && sender.alive) {
       const roleId = sender.role?.id;
 
-      if (roleId === null || roleId === undefined) return;
+      if (roleId === null || roleId === undefined) {
+        return;
+      }
 
       const user = await client.users.fetch(sender.userId);
 
@@ -119,7 +135,7 @@ client.on('messageCreate', async (message) => {
         user,
         `${rolesData[roleKey].eName.toLowerCase().replace(/\s+/g, '_')}.png`,
         roleId,
-        convertFactionRoles(rolesData[roleKey].faction)
+        convertFactionRoles(rolesData[roleKey].faction),
       );
     }
 
@@ -128,7 +144,7 @@ client.on('messageCreate', async (message) => {
       if (sender.role?.id === WEREROLE.WOLFSEER) {
         try {
           const user = await client.users.fetch(sender.userId);
-          await user.send(`_⚠️ Những sói khác sẽ không thấy bạn nhắn gì_`);
+          await user.send('_⚠️ Những sói khác sẽ không thấy bạn nhắn gì_');
         } catch (err) {
           console.error('Không gửi được tin nhắn cho Sói khác', err);
         }
@@ -145,7 +161,7 @@ client.on('messageCreate', async (message) => {
         // lọc ra những sói khác (còn sống)
         const wolves = gameRoom.players.filter(
           (p: Player) =>
-            p.role?.faction === 0 && p.alive && p.userId !== sender.userId
+            p.role?.faction === 0 && p.alive && p.userId !== sender.userId,
         );
         const notifyPromises = wolves.map(async (wolf: Player) => {
           try {
@@ -188,7 +204,7 @@ client.on('messageCreate', async (message) => {
     ) {
       // Gửi tin nhắn cho tất cả người chơi
       const playersInGame = gameRoom.players.filter(
-        (p: Player) => p.userId !== sender.userId
+        (p: Player) => p.userId !== sender.userId,
       );
 
       const notifyPromises = playersInGame.map(async (player: Player) => {
@@ -200,7 +216,7 @@ client.on('messageCreate', async (message) => {
             }
           } else {
             const validAttachments = Array.from(
-              message.attachments.values()
+              message.attachments.values(),
             ).filter((attachment) => attachment.size <= MAX_FILE_SIZE);
             if (sender.userId === process.env.DEVELOPER) {
               await user.send({
@@ -235,6 +251,13 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     const gameRoom = gameRooms.get(guildId);
+
+    if (!gameRoom) {
+      return interaction.reply({
+        content: 'Không tìm thấy phòng chơi ma sói trong server này.',
+        ephemeral: true,
+      });
+    }
 
     //
     if (interaction.customId === 'use_default_roles') {
@@ -318,112 +341,136 @@ client.on('interactionCreate', async (interaction) => {
     let sender: Player | null | undefined = null;
     if (gameRoom) {
       sender = gameRoom.players.find(
-        (p: Player) => p.userId === interaction.user.id
+        (p: Player) => p.userId === interaction.user.id,
       ); // player
-      if (!sender) return;
+      if (!sender) {
+        return;
+      }
     }
 
     if (interaction.customId.startsWith('submit_vote_wolf_')) {
-      if (!sender) return;
+      if (!sender) {
+        return;
+      }
       await wolfInteraction.isModalSubmit(
         interaction,
         gameRoom,
         sender,
-        client
+        client,
       );
     }
     if (interaction.customId.startsWith('submit_view_wolfseer_')) {
-      if (!sender) return;
+      if (!sender) {
+        return;
+      }
       await wolfSeerInteraction.isModalSubmit(
         interaction,
         gameRoom,
         sender,
-        client
+        client,
       );
     }
     if (interaction.customId.startsWith('submit_mask_alphawerewolf_')) {
-      if (!sender) return;
+      if (!sender) {
+        return;
+      }
       await alphawerewolfInteraction.isModalSubmit(
         interaction,
         gameRoom,
         sender,
-        client
+        client,
       );
     }
     if (interaction.customId.startsWith('submit_protect_bodyguard_')) {
-      if (!sender) return;
+      if (!sender) {
+        return;
+      }
       await bodyguardInteraction.isModalSubmit(
         interaction,
         gameRoom,
         sender,
-        client
+        client,
       );
     }
 
     if (interaction.customId.startsWith('submit_view_seer_')) {
-      if (!sender) return;
+      if (!sender) {
+        return;
+      }
       await seerInteraction.isModalSubmit(
         interaction,
         gameRoom,
         sender,
-        client
+        client,
       );
     }
     if (interaction.customId.startsWith('submit_investigate_detective_')) {
-      if (!sender) return;
+      if (!sender) {
+        return;
+      }
       await detectiveInteraction.isModalSubmit(
         interaction,
         gameRoom,
         sender,
-        client
+        client,
       );
     }
     if (interaction.customId.startsWith('submit_poison_witch_')) {
-      if (!sender) return;
+      if (!sender) {
+        return;
+      }
       await witchInteraction.isModalSubmitPoison(
         interaction,
         gameRoom,
         sender,
-        client
+        client,
       );
     }
     if (interaction.customId.startsWith('submit_heal_witch_')) {
-      if (!sender) return;
+      if (!sender) {
+        return;
+      }
       await witchInteraction.isModalSubmitHeal(
         interaction,
         gameRoom,
         sender,
-        client
+        client,
       );
     }
     if (interaction.customId.startsWith('submit_vote_hanged_')) {
-      if (!sender) return;
+      if (!sender) {
+        return;
+      }
       await votingInteraction.isModalSubmitVoteHanged(
         interaction,
         gameRoom,
         sender,
-        client
+        client,
       );
     }
     if (interaction.customId.startsWith('submit_revive_medium_')) {
-      if (!sender) return;
+      if (!sender) {
+        return;
+      }
       await mediumInteraction.isModalSubmit(
         interaction,
         gameRoom,
         sender,
-        client
+        client,
       );
     }
     if (interaction.customId === 'settings_modal') {
       await settingsModel.isModalSubmit(interaction);
     }
     if (interaction.customId.startsWith('submit_choose_master_maid_')) {
-      if (!sender) return;
+      if (!sender) {
+        return;
+      }
       await maidInteraction.isModalSubmit(
         interaction,
         gameRoom,
         sender,
-        client
+        client,
       );
     }
     if (interaction.customId === 'customize_roles_json_modal') {
@@ -433,48 +480,60 @@ client.on('interactionCreate', async (interaction) => {
       await customizeRolesName.isModalSubmit(interaction, gameRooms);
     }
     if (interaction.customId.startsWith('submit_view_foxspirit_')) {
-      if (!sender) return;
+      if (!sender) {
+        return;
+      }
       await foxSpiritInteraction.isModalSubmit(
         interaction,
         gameRoom,
         sender,
-        client
+        client,
       );
     }
     if (interaction.customId.startsWith('submit_stalk_stalker_')) {
-      if (!sender) return;
+      if (!sender) {
+        return;
+      }
       await stalkerInteraction.isModalSubmitStalker(
         interaction,
         gameRoom,
         sender,
-        client
+        client,
       );
     }
     if (interaction.customId.startsWith('submit_kill_stalker_')) {
-      if (!sender) return;
+      if (!sender) {
+        return;
+      }
       await stalkerInteraction.isModalSubmitKill(
         interaction,
         gameRoom,
         sender,
-        client
+        client,
       );
     }
     if (interaction.customId.startsWith('submit_gunner_shoot_')) {
-      if (!sender) return;
+      if (!sender) {
+        return;
+      }
       await gunnerInteraction.isModalSubmitGunner(
         interaction,
         gameRoom,
         sender,
-        client
+        client,
       );
     }
     if (interaction.customId.startsWith('submit_puppeteer_')) {
-      if (!sender) return;
+      if (!sender) {
+        return;
+      }
       await puppeteerInteraction.isModalSubmit(interaction, gameRoom, sender);
     }
   }
 
-  if (!interaction.isCommand()) return;
+  if (!interaction.isCommand()) {
+    return;
+  }
 
   const command = client.commands.get(interaction.commandName);
 

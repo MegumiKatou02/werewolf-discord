@@ -7,7 +7,7 @@ class Cursed extends Role {
   }
 
   getDescription() {
-    return `Bạn là dân làng bình thường cho tới khi bị ma sói cắn, lúc đó bạn sẽ trở thành Ma sói.`;
+    return 'Bạn là dân làng bình thường cho tới khi bị ma sói cắn, lúc đó bạn sẽ trở thành Ma sói.';
   }
   resetDay() {}
 }

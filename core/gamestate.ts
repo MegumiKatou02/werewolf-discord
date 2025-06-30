@@ -14,7 +14,9 @@ class GameState {
   nextPhase() {
     const sequence: GamePhase[] = ['night', 'day', 'voting'];
     const index = sequence.indexOf(this.phase);
-    if (index === -1 || index === sequence.length - 1) return;
+    if (index === -1 || index === sequence.length - 1) {
+      return;
+    }
     this.phase = sequence[index + 1];
   }
 

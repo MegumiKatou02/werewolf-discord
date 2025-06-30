@@ -1,4 +1,3 @@
-import { WEREROLE } from '../../../../utils/role.js';
 import {
   ModalBuilder,
   TextInputBuilder,
@@ -7,12 +6,18 @@ import {
   type Interaction,
   Client,
 } from 'discord.js';
+
+import type { GameRoom } from '../../../../core/room.js';
 import type Player from '../../../../types/player.js';
+import AlphaWerewolf from '../../../../types/roles/AlphaWerewolf.js';
 import FoxSpirit from '../../../../types/roles/FoxSpirit.js';
+import { WEREROLE } from '../../../../utils/role.js';
 
 class FoxSpiritInteraction {
-  isButton = async (interaction: Interaction, gameRoom: any) => {
-    if (!interaction.isButton()) return;
+  isButton = async (interaction: Interaction, gameRoom: GameRoom) => {
+    if (!interaction.isButton()) {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[3];
 
@@ -25,10 +30,14 @@ class FoxSpiritInteraction {
 
     try {
       const foxSpirit = gameRoom.players.find(
-        (p: Player) => p.role?.id === WEREROLE.FOXSPIRIT
+        (p: Player) => p.role?.id === WEREROLE.FOXSPIRIT,
       );
 
-      if (!foxSpirit.role.isHaveSkill) {
+      if (
+        foxSpirit &&
+        foxSpirit.role instanceof FoxSpirit &&
+        !foxSpirit.role.isHaveSkill
+      ) {
         return interaction.reply({
           content: 'Bạn đã bị mất chức năng.',
           ephemeral: true,
@@ -88,13 +97,17 @@ class FoxSpiritInteraction {
 
   isModalSubmit = async (
     interaction: Interaction,
-    gameRoom: any,
+    gameRoom: GameRoom,
     sender: Player,
-    client: Client
+    client: Client,
   ) => {
-    if (!interaction.isModalSubmit()) return;
+    if (!interaction.isModalSubmit()) {
+      return;
+    }
 
-    if (!gameRoom || gameRoom.gameState.phase !== 'night') return;
+    if (!gameRoom || gameRoom.gameState.phase !== 'night') {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[3];
 
@@ -163,19 +176,20 @@ class FoxSpiritInteraction {
       sender.role.threeViewed.push(
         targetPlayers[0].userId,
         targetPlayers[1].userId,
-        targetPlayers[2].userId
+        targetPlayers[2].userId,
       );
       sender.role.viewCount -= 1;
       const isHaveWolf = () => {
-        const AlphaWerewolf = gameRoom.players.find(
-          (p: Player) => p.role?.id === WEREROLE.ALPHAWEREWOLF
+        const alphaWerewolf = gameRoom.players.find(
+          (p: Player) => p.role?.id === WEREROLE.ALPHAWEREWOLF,
         );
         for (const player of targetPlayers) {
           if (
-            (player.role.faction === 0 && !AlphaWerewolf) ||
+            (player.role.faction === 0 && !alphaWerewolf) ||
             (player.role.faction === 0 &&
-              AlphaWerewolf &&
-              AlphaWerewolf.role.maskWolf !== player.userId) ||
+              alphaWerewolf &&
+              alphaWerewolf.role instanceof AlphaWerewolf &&
+              alphaWerewolf.role.maskWolf !== player.userId) ||
             player.role.id === WEREROLE.LYCAN
           ) {
             return true;
@@ -187,11 +201,11 @@ class FoxSpiritInteraction {
         const user = await client.users.fetch(playerId);
 
         await user.send(
-          `🔎 Trong 3 người bạn chọn: **${targetPlayers[0].name}**, **${targetPlayers[1].name}** và **${targetPlayers[2].name}** ${isHaveWolf() ? 'có Sói' : 'không có Sói'}.`
+          `🔎 Trong 3 người bạn chọn: **${targetPlayers[0].name}**, **${targetPlayers[1].name}** và **${targetPlayers[2].name}** ${isHaveWolf() ? 'có Sói' : 'không có Sói'}.`,
         );
         if (!isHaveWolf()) {
           await user.send(
-            `Bạn bị mất chức năng vì không có Sói trong 3 người bạn chọn.`
+            'Bạn bị mất chức năng vì không có Sói trong 3 người bạn chọn.',
           );
           sender.role.isHaveSkill = false;
         }

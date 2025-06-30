@@ -1,4 +1,3 @@
-import { WEREROLE } from '../../../../utils/role.js';
 import {
   ModalBuilder,
   TextInputBuilder,
@@ -7,13 +6,17 @@ import {
   type Interaction,
   Client,
 } from 'discord.js';
+
+import type { GameRoom } from '../../../../core/room.js';
 import type Player from '../../../../types/player.js';
 import Witch from '../../../../types/roles/Witch.js';
-import type { GameRoom } from '../../../../core/room.js';
+import { WEREROLE } from '../../../../utils/role.js';
 
 class WitchInteraction {
-  isButtonPoison = async (interaction: Interaction, gameRoom: any) => {
-    if (!interaction.isButton()) return;
+  isButtonPoison = async (interaction: Interaction, gameRoom: GameRoom) => {
+    if (!interaction.isButton()) {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[3];
 
@@ -25,10 +28,10 @@ class WitchInteraction {
     }
     try {
       const witch = gameRoom.players.find(
-        (p: Player) => p.role?.id === WEREROLE.WITCH
+        (p: Player) => p.role?.id === WEREROLE.WITCH,
       );
 
-      if (witch && witch.role.healedPerson) {
+      if (witch && witch.role instanceof Witch && witch.role.healedPerson) {
         return interaction.reply({
           content: 'Bạn không thể dùng 2 bình trong 1 đêm.',
           ephemeral: true,
@@ -70,8 +73,10 @@ class WitchInteraction {
     }
   };
 
-  isButtonHeal = async (interaction: Interaction, gameRoom: any) => {
-    if (!interaction.isButton()) return;
+  isButtonHeal = async (interaction: Interaction, gameRoom: GameRoom) => {
+    if (!interaction.isButton()) {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[3];
 
@@ -84,10 +89,10 @@ class WitchInteraction {
 
     try {
       const witch = gameRoom.players.find(
-        (p: Player) => p.role?.id === WEREROLE.WITCH
+        (p: Player) => p.role?.id === WEREROLE.WITCH,
       );
 
-      if (witch && witch.role.poisonedPerson) {
+      if (witch && witch.role instanceof Witch && witch.role.poisonedPerson) {
         return interaction.reply({
           content: 'Bạn không thể dùng 2 bình trong 1 đêm.',
           ephemeral: true,
@@ -133,11 +138,15 @@ class WitchInteraction {
     interaction: Interaction,
     gameRoom: GameRoom,
     sender: Player,
-    client: Client
+    client: Client,
   ) => {
-    if (!interaction.isModalSubmit()) return;
+    if (!interaction.isModalSubmit()) {
+      return;
+    }
 
-    if (!gameRoom || gameRoom.gameState.phase !== 'night') return;
+    if (!gameRoom || gameRoom.gameState.phase !== 'night') {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[3];
 
@@ -197,7 +206,7 @@ class WitchInteraction {
     try {
       const user = await client.users.fetch(playerId);
       await user.send(
-        `💉 Bạn đã chọn người chơi để dùng thuốc: **${targetPlayer.name}**.`
+        `💉 Bạn đã chọn người chơi để dùng thuốc: **${targetPlayer.name}**.`,
       );
     } catch (err) {
       console.error(`Không thể gửi DM cho ${playerId}:`, err);
@@ -212,11 +221,15 @@ class WitchInteraction {
     interaction: Interaction,
     gameRoom: GameRoom,
     sender: Player,
-    client: Client
+    client: Client,
   ) => {
-    if (!interaction.isModalSubmit()) return;
+    if (!interaction.isModalSubmit()) {
+      return;
+    }
 
-    if (!gameRoom || gameRoom.gameState.phase !== 'night') return;
+    if (!gameRoom || gameRoom.gameState.phase !== 'night') {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[3];
 
@@ -282,7 +295,7 @@ class WitchInteraction {
     try {
       const user = await client.users.fetch(playerId);
       await user.send(
-        `💫 Bạn đã chọn người chơi để cứu: **${targetPlayer.name}**.`
+        `💫 Bạn đã chọn người chơi để cứu: **${targetPlayer.name}**.`,
       );
     } catch (err) {
       console.error(`Không thể gửi DM cho ${playerId}:`, err);

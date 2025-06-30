@@ -6,14 +6,17 @@ import {
   type Interaction,
   Client,
 } from 'discord.js';
-import { WEREROLE } from '../../../../utils/role.js';
+
+import type { GameRoom } from '../../../../core/room.js';
 import type Player from '../../../../types/player.js';
 import Bodyguard from '../../../../types/roles/Bodyguard.js';
-import type { GameRoom } from '../../../../core/room.js';
+import { WEREROLE } from '../../../../utils/role.js';
 
 class BodyguardInteraction {
   isButton = async (interaction: Interaction) => {
-    if (!interaction.isButton()) return;
+    if (!interaction.isButton()) {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[3];
 
@@ -44,11 +47,15 @@ class BodyguardInteraction {
     interaction: Interaction,
     gameRoom: GameRoom,
     sender: Player,
-    client: Client
+    client: Client,
   ) => {
-    if (!interaction.isModalSubmit()) return;
+    if (!interaction.isModalSubmit()) {
+      return;
+    }
 
-    if (!gameRoom || gameRoom.gameState.phase !== 'night') return;
+    if (!gameRoom || gameRoom.gameState.phase !== 'night') {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[3];
 
@@ -60,7 +67,7 @@ class BodyguardInteraction {
     }
 
     const protectIndexStr = interaction.fields.getTextInputValue(
-      'protect_index_bodyguard'
+      'protect_index_bodyguard',
     );
     const protectIndex = parseInt(protectIndexStr, 10);
 

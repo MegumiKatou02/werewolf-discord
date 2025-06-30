@@ -6,9 +6,13 @@ import {
   type Interaction,
 } from 'discord.js';
 
+import type { GameRoom } from '../../../../core/room.js';
+
 class CustomizeRolesJson {
   isButton = async (interaction: Interaction) => {
-    if (!interaction.isButton()) return;
+    if (!interaction.isButton()) {
+      return;
+    }
     const modal = new ModalBuilder()
       .setCustomId('customize_roles_json_modal')
       .setTitle('Tuỳ chỉnh vai trò (JSON)');
@@ -21,7 +25,7 @@ class CustomizeRolesJson {
       .setRequired(true);
 
     const row = new ActionRowBuilder<TextInputBuilder>().addComponents(
-      jsonInput
+      jsonInput,
     );
     modal.addComponents(row);
 
@@ -29,9 +33,11 @@ class CustomizeRolesJson {
   };
   isModalSubmit = async (
     interaction: Interaction,
-    gameRooms: Map<string, any>
+    gameRooms: Map<string, GameRoom>,
   ) => {
-    if (!interaction.isModalSubmit()) return;
+    if (!interaction.isModalSubmit()) {
+      return;
+    }
 
     const guildId = interaction.guildId;
     if (!guildId) {

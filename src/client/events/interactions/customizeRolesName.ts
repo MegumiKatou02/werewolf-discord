@@ -5,11 +5,14 @@ import {
   ActionRowBuilder,
   type Interaction,
 } from 'discord.js';
-import { WEREROLE } from '../../../../utils/role.js';
+
+import type { GameRoom } from '../../../../core/room.js';
 
 class CustomizeRolesName {
   isButton = async (interaction: Interaction) => {
-    if (!interaction.isButton()) return;
+    if (!interaction.isButton()) {
+      return;
+    }
 
     const modal = new ModalBuilder()
       .setCustomId('customize_roles_name_modal')
@@ -23,7 +26,7 @@ class CustomizeRolesName {
       .setRequired(true);
 
     const row1 = new ActionRowBuilder<TextInputBuilder>().addComponents(
-      nameInput
+      nameInput,
     );
     modal.addComponents(row1);
 
@@ -32,9 +35,11 @@ class CustomizeRolesName {
 
   isModalSubmit = async (
     interaction: Interaction,
-    gameRooms: Map<string, any>
+    gameRooms: Map<string, GameRoom>,
   ) => {
-    if (!interaction.isModalSubmit()) return;
+    if (!interaction.isModalSubmit()) {
+      return;
+    }
 
     const guildId = interaction.guildId;
     if (!guildId) {
@@ -110,7 +115,7 @@ class CustomizeRolesName {
       'người múa rối': 19,
     };
 
-    let customRoles: Record<string, number> = {};
+    const customRoles: Record<string, number> = {};
 
     try {
       const pairs = rolesStr.split(',').map((pair) => pair.trim());
@@ -120,21 +125,21 @@ class CustomizeRolesName {
 
         if (!roleName || !countStr) {
           throw new Error(
-            `Định dạng không hợp lệ: "${pair}". Sử dụng định dạng "tên_vai_trò: số_lượng"`
+            `Định dạng không hợp lệ: "${pair}". Sử dụng định dạng "tên_vai_trò: số_lượng"`,
           );
         }
 
         const roleId = roleNameMap[roleName.toLowerCase()];
         if (roleId === undefined) {
           throw new Error(
-            `Tên vai trò không hợp lệ: "${roleName}". Xem tên từng role, vd: Thầy Đồng -> thaydong hoặc medium`
+            `Tên vai trò không hợp lệ: "${roleName}". Xem tên từng role, vd: Thầy Đồng -> thaydong hoặc medium`,
           );
         }
 
         const count = parseInt(countStr);
         if (isNaN(count) || count <= 0) {
           throw new Error(
-            `Số lượng không hợp lệ cho vai trò "${roleName}": ${countStr}`
+            `Số lượng không hợp lệ cho vai trò "${roleName}": ${countStr}`,
           );
         }
 

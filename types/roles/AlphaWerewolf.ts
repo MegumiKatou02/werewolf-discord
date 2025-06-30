@@ -1,7 +1,7 @@
 import Role from './role.js';
 
 class AlphaWerewolf extends Role {
-  voteBite: number | null;
+  voteBite: string | null;
   biteCount: number;
   maskWolf: string | null;
 

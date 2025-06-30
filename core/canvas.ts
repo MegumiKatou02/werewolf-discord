@@ -1,6 +1,7 @@
 import { createCanvas, loadImage } from 'canvas';
-import type Player from '../types/player.js';
 import type { Client } from 'discord.js';
+
+import type Player from '../types/player.js';
 
 async function createAvatarCollage(players: Player[], client: Client) {
   const avatarSize = 64;

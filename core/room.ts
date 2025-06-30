@@ -1,5 +1,5 @@
-import Player from '../types/player.js';
-import { RoleResponseDMs } from '../utils/response.js';
+import EventEmitter from 'events';
+
 import {
   EmbedBuilder,
   AttachmentBuilder,
@@ -9,35 +9,40 @@ import {
   Client,
   Message,
   type Interaction,
+  type APIActionRowComponent,
+  type APIButtonComponent,
 } from 'discord.js';
+
+import rolesData from '../data/data.json' with { type: 'json' };
+import ServerSettings from '../models/ServerSettings.js';
+import Player from '../types/player.js';
+import AlphaWerewolf from '../types/roles/AlphaWerewolf.js';
+import Bodyguard from '../types/roles/Bodyguard.js';
+import Dead from '../types/roles/Dead.js';
+import Detective from '../types/roles/Detective.js';
+import Elder from '../types/roles/Elder.js';
+import FoxSpirit from '../types/roles/FoxSpirit.js';
+import Gunner from '../types/roles/Gunner.js';
+import Maid from '../types/roles/Maid.js';
+import Medium from '../types/roles/Medium.js';
+import Puppeteer from '../types/roles/Puppeteer.js';
+import Seer from '../types/roles/Seer.js';
+import Stalker from '../types/roles/Stalker.js';
+import Villager from '../types/roles/Villager.js';
+import Werewolf from '../types/roles/WereWolf.js';
+import Witch from '../types/roles/Witch.js';
+import WolfSeer from '../types/roles/WolfSeer.js';
+import { RoleResponseDMs } from '../utils/response.js';
 import {
   roleTable,
   assignRolesGame,
   convertFactionRoles,
   WEREROLE,
 } from '../utils/role.js';
-import EventEmitter from 'events';
-import GameState from './gamestate.js';
-import rolesData from '../data/data.json' with { type: 'json' };
+
 import { createAvatarCollage } from './canvas.js';
+import GameState from './gamestate.js';
 import { store } from './store.js';
-import Dead from '../types/roles/Dead.js';
-import Werewolf from '../types/roles/WereWolf.js';
-import Villager from '../types/roles/Villager.js';
-import ServerSettings from '../models/ServerSettings.js';
-import Puppeteer from '../types/roles/Puppeteer.js';
-import Witch from '../types/roles/Witch.js';
-import Elder from '../types/roles/Elder.js';
-import Stalker from '../types/roles/Stalker.js';
-import Bodyguard from '../types/roles/Bodyguard.js';
-import Medium from '../types/roles/Medium.js';
-import Gunner from '../types/roles/Gunner.js';
-import Maid from '../types/roles/Maid.js';
-import Detective from '../types/roles/Detective.js';
-import WolfSeer from '../types/roles/WolfSeer.js';
-import AlphaWerewolf from '../types/roles/AlphaWerewolf.js';
-import FoxSpirit from '../types/roles/FoxSpirit.js';
-import Seer from '../types/roles/Seer.js';
 
 class GameRoom extends EventEmitter {
   client: Client;
@@ -89,7 +94,9 @@ class GameRoom extends EventEmitter {
 
   async addPlayer(userId: string) {
     const user = await this.fetchUser(userId);
-    if (!user) return;
+    if (!user) {
+      return;
+    }
 
     const name = user.globalName || user.username;
 
@@ -110,7 +117,10 @@ class GameRoom extends EventEmitter {
     return this.players.length === 0;
   }
 
-  assignRoles(playerCount: number, customRoles = null) {
+  assignRoles(
+    playerCount: number,
+    customRoles: Record<string | number, number> | null = null,
+  ) {
     const roles = [];
 
     if (playerCount < 4) {
@@ -135,17 +145,29 @@ class GameRoom extends EventEmitter {
         }
       } else {
         const werewolves = Math.floor(playerCount / 4);
-        for (let i = 0; i < werewolves; i++) roles.push(0);
+        for (let i = 0; i < werewolves; i++) {
+          roles.push(0);
+        }
         roles.push(2);
         roles.push(6);
         roles.push(8);
-        if (playerCount >= 7) roles.push(4);
-        if (playerCount >= 7) roles.push(5);
-        if (playerCount >= 8) roles.push(3);
-        if (playerCount >= 10) roles.push(7);
+        if (playerCount >= 7) {
+          roles.push(4);
+        }
+        if (playerCount >= 7) {
+          roles.push(5);
+        }
+        if (playerCount >= 8) {
+          roles.push(3);
+        }
+        if (playerCount >= 10) {
+          roles.push(7);
+        }
 
         const remaining = playerCount - roles.length;
-        for (let i = 0; i < remaining; i++) roles.push(1);
+        for (let i = 0; i < remaining; i++) {
+          roles.push(1);
+        }
       }
     }
 
@@ -157,9 +179,13 @@ class GameRoom extends EventEmitter {
     return roles;
   }
 
-  async startGame(interaction: Interaction, customRoles = null) {
-    if (this.status !== 'waiting')
+  async startGame(
+    interaction: Interaction,
+    customRoles: Record<string | number, number> | null = null,
+  ) {
+    if (this.status !== 'waiting') {
       throw new Error('Game đã bắt đầu hoặc kết thúc.');
+    }
 
     // lưu vào store
     for (const player of this.players) {
@@ -198,14 +224,14 @@ class GameRoom extends EventEmitter {
       try {
         const user = await interaction.client.users.fetch(player.userId);
         await user.send(
-          `🎮 Bạn được phân vai: **${role.name}**. Hãy giữ bí mật!!!`
+          `🎮 Bạn được phân vai: **${role.name}**. Hãy giữ bí mật!!!`,
         );
         const keyRole = role.id.toString() as keyof typeof rolesData;
         await RoleResponseDMs(
           user,
           `${rolesData[keyRole].eName.toLowerCase().replace(/\s+/g, '_')}.png`,
           role.id,
-          convertFactionRoles(rolesData[keyRole].faction)
+          convertFactionRoles(rolesData[keyRole].faction),
         );
       } catch (err) {
         console.error(`Không thể gửi tin nhắn cho ${player.userId}`, err);
@@ -233,7 +259,7 @@ class GameRoom extends EventEmitter {
                   return `**${teammate?.name}**`;
                 })
                 .join(', ') || 'Không có đồng đội.'
-            }`
+            }`,
           );
         } catch (error) {
           console.error(`Không thể gửi tin nhắn cho ${player.userId}`, error);
@@ -270,14 +296,16 @@ class GameRoom extends EventEmitter {
         }
         return acc;
       },
-      {}
+      {},
     );
 
     const voteEntries = Object.entries(totalVotes);
 
     console.log(totalVotes);
 
-    if (voteEntries.length === 0) return null;
+    if (voteEntries.length === 0) {
+      return null;
+    }
 
     let maxVotes = 0;
     let candidates: string[] = [];
@@ -308,10 +336,12 @@ class GameRoom extends EventEmitter {
 
     const dmPromises = this.players.map(async (player) => {
       const user = await this.fetchUser(player.userId);
-      if (!user) return;
+      if (!user) {
+        return;
+      }
 
       await user.send(
-        `# 🌑 Đêm ${this.gameState.nightCount === 1 ? 'đầu tiên' : `thứ ${this.gameState.nightCount}`}.`
+        `# 🌑 Đêm ${this.gameState.nightCount === 1 ? 'đầu tiên' : `thứ ${this.gameState.nightCount}`}.`,
       );
 
       const buffer = await createAvatarCollage(this.players, this.client);
@@ -333,11 +363,11 @@ class GameRoom extends EventEmitter {
           .setStyle(ButtonStyle.Primary);
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-          voteButton
+          voteButton,
         );
 
         await user.send(
-          `🌙 Bạn là **Sói**. Hãy vote người cần giết trong ${this.settings.wolfVoteTime} giây. Bạn có thể trò chuyện với các Sói khác ngay tại đây.`
+          `🌙 Bạn là **Sói**. Hãy vote người cần giết trong ${this.settings.wolfVoteTime} giây. Bạn có thể trò chuyện với các Sói khác ngay tại đây.`,
         );
         message = await user.send({
           embeds: [embed],
@@ -354,11 +384,11 @@ class GameRoom extends EventEmitter {
           .setStyle(ButtonStyle.Primary);
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-          viewButton
+          viewButton,
         );
 
         await user.send(
-          '🌙 Bạn là **Sói Tiên Tri**. Bạn có thể xem vai trò của một người chơi có phải là tiên tri hay không.'
+          '🌙 Bạn là **Sói Tiên Tri**. Bạn có thể xem vai trò của một người chơi có phải là tiên tri hay không.',
         );
         message = await user.send({
           embeds: [embed],
@@ -374,11 +404,11 @@ class GameRoom extends EventEmitter {
           .setStyle(ButtonStyle.Primary);
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-          maskButton
+          maskButton,
         );
 
         await user.send(
-          '🌙 Bạn là **Sói Trùm**. Bạn có thể che sói khỏi tiên tri, mỗi đêm 1 sói, được phép che liên tục một sói.'
+          '🌙 Bạn là **Sói Trùm**. Bạn có thể che sói khỏi tiên tri, mỗi đêm 1 sói, được phép che liên tục một sói.',
         );
         message = await user.send({
           embeds: [embed],
@@ -394,11 +424,11 @@ class GameRoom extends EventEmitter {
           .setStyle(ButtonStyle.Primary);
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-          protectButton
+          protectButton,
         );
 
         await user.send(
-          '🌙 Bạn là **Bảo Vệ**. Hãy chọn người bạn muốn bảo vệ trong đêm nay. Bạn có thể tự bảo vệ mình.'
+          '🌙 Bạn là **Bảo Vệ**. Hãy chọn người bạn muốn bảo vệ trong đêm nay. Bạn có thể tự bảo vệ mình.',
         );
         message = await user.send({
           embeds: [embed],
@@ -414,11 +444,11 @@ class GameRoom extends EventEmitter {
           .setStyle(ButtonStyle.Primary);
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-          viewButton
+          viewButton,
         );
 
         await user.send(
-          '🌙 Bạn là **Tiên Tri**. Bạn có thể xem phe của một người chơi khác trong đêm nay.'
+          '🌙 Bạn là **Tiên Tri**. Bạn có thể xem phe của một người chơi khác trong đêm nay.',
         );
         message = await user.send({
           embeds: [embed],
@@ -434,11 +464,11 @@ class GameRoom extends EventEmitter {
           .setStyle(ButtonStyle.Primary);
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-          investigateButton
+          investigateButton,
         );
 
         await user.send(
-          '🌙 Bạn là **Thám Tử**. Bạn có thể điều tra hai người chơi để biết họ ở cùng phe hay khác phe.'
+          '🌙 Bạn là **Thám Tử**. Bạn có thể điều tra hai người chơi để biết họ ở cùng phe hay khác phe.',
         );
         message = await user.send({
           embeds: [embed],
@@ -464,11 +494,11 @@ class GameRoom extends EventEmitter {
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
           poisonButton,
-          healButton
+          healButton,
         );
 
         await user.send(
-          `🌙 Bạn là **Phù Thuỷ**. Bạn có hai bình thuốc: một để đầu độc và một để cứu người. Bình cứu chỉ có tác dụng nếu người đó bị tấn công.\n (Bình độc: ${player.role.poisonCount}, Bình cứu: ${player.role.healCount}).`
+          `🌙 Bạn là **Phù Thuỷ**. Bạn có hai bình thuốc: một để đầu độc và một để cứu người. Bình cứu chỉ có tác dụng nếu người đó bị tấn công.\n (Bình độc: ${player.role.poisonCount}, Bình cứu: ${player.role.healCount}).`,
         );
         message = await user.send({
           embeds: [embed],
@@ -486,7 +516,7 @@ class GameRoom extends EventEmitter {
           .setStyle(ButtonStyle.Primary);
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-          reviveButton
+          reviveButton,
         );
 
         const villagerDead = this.players
@@ -496,11 +526,11 @@ class GameRoom extends EventEmitter {
           .map((player) => `<@${player.userId}>`)
           .join(', ');
         await user.send(
-          '🌙 Bạn là **Thầy Đồng**. Bạn có thể hồi sinh một người phe dân đã chết trong đêm nay. Bạn chỉ có thể làm điều này một lần trong ván đấu.'
+          '🌙 Bạn là **Thầy Đồng**. Bạn có thể hồi sinh một người phe dân đã chết trong đêm nay. Bạn chỉ có thể làm điều này một lần trong ván đấu.',
         );
         if (player.alive && villagerDead.length > 0) {
           await user.send(
-            `${villagerDead} là những người thuộc phe dân làng đã bị chết, bạn có thể hồi sinh trong số họ.`
+            `${villagerDead} là những người thuộc phe dân làng đã bị chết, bạn có thể hồi sinh trong số họ.`,
           );
         }
         message = await user.send({
@@ -511,14 +541,14 @@ class GameRoom extends EventEmitter {
         this.nightMessages.set(player.userId, message);
       } else if (player.role.id === WEREROLE.DEAD) {
         await user.send(
-          '💀 Bạn đã bị chết, hãy trò chuyện với hội người âm của bạn.'
+          '💀 Bạn đã bị chết, hãy trò chuyện với hội người âm của bạn.',
         );
 
         message = await user.send({ embeds: [embed], files: [attachment] });
         this.nightMessages.set(player.userId, message);
       } else if (player.role.id === WEREROLE.FOOL) {
         await user.send(
-          '⚜️ Bạn là thằng ngố, nhiệm vụ của bạn là lừa những người khác vote bạn để chiến thắng.'
+          '⚜️ Bạn là thằng ngố, nhiệm vụ của bạn là lừa những người khác vote bạn để chiến thắng.',
         );
 
         message = await user.send({ embeds: [embed], files: [attachment] });
@@ -526,7 +556,7 @@ class GameRoom extends EventEmitter {
       } else if (player.role.id === WEREROLE.FOXSPIRIT) {
         // Cáo
         await user.send(
-          '🦊 Bạn là **Cáo**. Mỗi đêm dậy soi 3 người tự chọn trong danh sách, nếu 1 trong 3 người đó là sói thì được báo \\"Có sói\\", nếu đoán hụt thì mất chức năng.'
+          '🦊 Bạn là **Cáo**. Mỗi đêm dậy soi 3 người tự chọn trong danh sách, nếu 1 trong 3 người đó là sói thì được báo \\"Có sói\\", nếu đoán hụt thì mất chức năng.',
         );
 
         const viewButton = new ButtonBuilder()
@@ -535,7 +565,7 @@ class GameRoom extends EventEmitter {
           .setStyle(ButtonStyle.Primary);
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-          viewButton
+          viewButton,
         );
 
         message = await user.send({
@@ -560,11 +590,11 @@ class GameRoom extends EventEmitter {
         }
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-          chooseMasterButton
+          chooseMasterButton,
         );
 
         await user.send(
-          '🌙 Bạn là **Hầu Gái**. Hãy chọn một người làm chủ của bạn.'
+          '🌙 Bạn là **Hầu Gái**. Hãy chọn một người làm chủ của bạn.',
         );
         message = await user.send({
           embeds: [embed],
@@ -574,14 +604,14 @@ class GameRoom extends EventEmitter {
         this.nightMessages.set(player.userId, message);
       } else if (player.role.id === WEREROLE.LYCAN) {
         await user.send(
-          '🤷 Bạn là **Lycan**. Hãy chấp nhận số phận của mình đi!!!'
+          '🤷 Bạn là **Lycan**. Hãy chấp nhận số phận của mình đi!!!',
         );
 
         message = await user.send({ embeds: [embed], files: [attachment] });
         this.nightMessages.set(player.userId, message);
       } else if (player.role.id === WEREROLE.ELDER) {
         await user.send(
-          '👴 Bạn là **Già Làng**. Sói phải cắn 2 lần thì Già làng mới chết.'
+          '👴 Bạn là **Già Làng**. Sói phải cắn 2 lần thì Già làng mới chết.',
         );
 
         message = await user.send({ embeds: [embed], files: [attachment] });
@@ -591,7 +621,7 @@ class GameRoom extends EventEmitter {
         player.role instanceof Stalker
       ) {
         await user.send(
-          `👀 Bạn là **Stalker**. Bạn có thể theo dõi 1 người chơi và biết đêm đó họ có hành động hay không. Bạn còn có thể chọn người để ám sát, nếu ám sát trúng người không làm gì đêm đó thì người đó chết. Thắng khi là người duy nhất sống sót. (Theo dõi: ${player.role.stalkCount}, Ám sát: ${player.role.killCount})`
+          `👀 Bạn là **Stalker**. Bạn có thể theo dõi 1 người chơi và biết đêm đó họ có hành động hay không. Bạn còn có thể chọn người để ám sát, nếu ám sát trúng người không làm gì đêm đó thì người đó chết. Thắng khi là người duy nhất sống sót. (Theo dõi: ${player.role.stalkCount}, Ám sát: ${player.role.killCount})`,
         );
 
         const stalkButton = new ButtonBuilder()
@@ -606,7 +636,7 @@ class GameRoom extends EventEmitter {
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
           stalkButton,
-          killButton
+          killButton,
         );
 
         message = await user.send({
@@ -620,14 +650,14 @@ class GameRoom extends EventEmitter {
         player.role instanceof Gunner
       ) {
         await user.send(
-          `🔫 Bạn là **Xạ thủ**. Bạn có hai viên đạn, bạn có thể sử dụng đạn để bắn người chơi khác. Bạn chỉ có thể bắn một viên đạn mỗi ngày (Đạn: ${player.role.bullets}).`
+          `🔫 Bạn là **Xạ thủ**. Bạn có hai viên đạn, bạn có thể sử dụng đạn để bắn người chơi khác. Bạn chỉ có thể bắn một viên đạn mỗi ngày (Đạn: ${player.role.bullets}).`,
         );
 
         message = await user.send({ embeds: [embed], files: [attachment] });
         this.nightMessages.set(player.userId, message);
       } else if (player.role.id === WEREROLE.KITTENWOLF) {
         await user.send(
-          `🐺 Bạn là **Sói Mèo Con**. Khi bạn bị giết, cuộc bỏ phiếu của sói tiếp theo sẽ biến đổi một dân làng thành ma sói thay vì giết chết họ.`
+          '🐺 Bạn là **Sói Mèo Con**. Khi bạn bị giết, cuộc bỏ phiếu của sói tiếp theo sẽ biến đổi một dân làng thành ma sói thay vì giết chết họ.',
         );
 
         message = await user.send({ embeds: [embed], files: [attachment] });
@@ -637,7 +667,7 @@ class GameRoom extends EventEmitter {
         player.role instanceof Puppeteer
       ) {
         await user.send(
-          `🐕‍🦺 Bạn là **Người Múa Rối**. Một lần duy nhất trong suốt ván chơi, bạn có thể chỉ định Sói ăn thịt một người. Người đó có thể là một người khác so với sự thống nhất ban đầu của Sói. Bạn cũng có thể buộc Sói ăn thịt một Sói khác.`
+          '🐕‍🦺 Bạn là **Người Múa Rối**. Một lần duy nhất trong suốt ván chơi, bạn có thể chỉ định Sói ăn thịt một người. Người đó có thể là một người khác so với sự thống nhất ban đầu của Sói. Bạn cũng có thể buộc Sói ăn thịt một Sói khác.',
         );
         let puppetButton = null;
         if (player.role.targetWolf === null) {
@@ -654,7 +684,7 @@ class GameRoom extends EventEmitter {
         }
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-          puppetButton
+          puppetButton,
         );
 
         message = await user.send({
@@ -681,7 +711,7 @@ class GameRoom extends EventEmitter {
             try {
               const user = await this.fetchUser(wolf.userId);
               if (user) {
-                await user.send(`### ⚠️ Thông báo: còn **10** giây để vote!`);
+                await user.send('### ⚠️ Thông báo: còn **10** giây để vote!');
               }
             } catch (err) {
               console.error(`Không thể gửi tin nhắn cho ${wolf.userId}`, err);
@@ -689,14 +719,14 @@ class GameRoom extends EventEmitter {
           });
         await Promise.allSettled(notifyWolves);
       },
-      this.settings.wolfVoteTime * 1000 - 10000
+      this.settings.wolfVoteTime * 1000 - 10000,
     );
 
     setTimeout(async () => {
       for (const message of wolfMessages) {
         try {
           const row = ActionRowBuilder.from(
-            message.components[0] as any
+            message.components[0] as APIActionRowComponent<APIButtonComponent>,
           ) as ActionRowBuilder<ButtonBuilder>;
           (row.components[0] as ButtonBuilder)
             .setDisabled(true)
@@ -723,18 +753,19 @@ class GameRoom extends EventEmitter {
               const witchMessage = this.witchMessages.get(player.userId);
               if (witchMessage) {
                 const row = ActionRowBuilder.from(
-                  witchMessage.components[0] as any
+                  witchMessage
+                    .components[0] as APIActionRowComponent<APIButtonComponent>,
                 ) as ActionRowBuilder<ButtonBuilder>;
                 (row.components[1] as ButtonBuilder).setDisabled(false);
                 await witchMessage.edit({ components: [row] });
               }
               const victim = this.players.find(
-                (p) => p.userId === mostVotedUserId
+                (p) => p.userId === mostVotedUserId,
               );
               const victimIndex =
                 this.players.findIndex((p) => p.userId === mostVotedUserId) + 1;
               await user.send(
-                `🌙 Sói đã chọn giết người chơi **${victim?.name}** (${victimIndex}).`
+                `🌙 Sói đã chọn giết người chơi **${victim?.name}** (${victimIndex}).`,
               );
             }
           }
@@ -749,7 +780,7 @@ class GameRoom extends EventEmitter {
             const user = await this.fetchUser(player.userId);
             if (user) {
               await user.send(
-                `### ⚠️ Thông báo: còn **10** giây nữa trời sẽ sáng!`
+                '### ⚠️ Thông báo: còn **10** giây nữa trời sẽ sáng!',
               );
             }
           } catch (err) {
@@ -758,7 +789,7 @@ class GameRoom extends EventEmitter {
         });
         await Promise.allSettled(notifyPlayers);
       },
-      this.settings.nightTime * 1000 - 10000
+      this.settings.nightTime * 1000 - 10000,
     );
 
     setTimeout(async () => {
@@ -767,7 +798,7 @@ class GameRoom extends EventEmitter {
           if (message.components && message.components.length > 0) {
             const rows = message.components.map((row) => {
               const newRow = ActionRowBuilder.from(
-                row as any
+                row as APIActionRowComponent<APIButtonComponent>,
               ) as ActionRowBuilder<ButtonBuilder>;
               newRow.components.forEach((component) => {
                 (component as ButtonBuilder).setDisabled(true);
@@ -778,7 +809,7 @@ class GameRoom extends EventEmitter {
                   buttonComponent.data.label
                 ) {
                   buttonComponent.setLabel(
-                    `${buttonComponent.data.label} (Hết hạn)`
+                    `${buttonComponent.data.label} (Hết hạn)`,
                   );
                 }
               });
@@ -794,7 +825,7 @@ class GameRoom extends EventEmitter {
     }, this.settings.nightTime * 1000);
 
     await new Promise((resolve) =>
-      setTimeout(resolve, this.settings.nightTime * 1000)
+      setTimeout(resolve, this.settings.nightTime * 1000),
     );
   }
 
@@ -807,16 +838,16 @@ class GameRoom extends EventEmitter {
     this.gameState.log.push(`## Đêm thứ ${this.gameState.nightCount}`);
 
     let mostVotedUserId = this.totalVotedWolvesSolve();
-    let killedPlayers = new Set(); // vẫn có thể cứu được
-    let sureDieInTheNight = new Set(); // 100% chết ngay trong đêm đó (không thể cứu hay bảo vệ)
+    const killedPlayers = new Set(); // vẫn có thể cứu được
+    const sureDieInTheNight = new Set(); // 100% chết ngay trong đêm đó (không thể cứu hay bảo vệ)
     // let savedPlayers = new Set();
-    let revivedPlayers = new Set();
+    const revivedPlayers = new Set();
     let maidNewRole = null; // Lưu thông tin về vai trò mới của hầu gái
     let giaLangBiTanCong = false;
 
     // Người múa rối ép sói ăn thịt mục tiêu được chỉ định
     const puppeteer = this.players.find(
-      (p) => p.role.id === WEREROLE.PUPPETEER
+      (p) => p.role.id === WEREROLE.PUPPETEER,
     );
     if (
       puppeteer &&
@@ -825,17 +856,17 @@ class GameRoom extends EventEmitter {
     ) {
       mostVotedUserId = puppeteer.role.targetWolf;
       this.gameState.log.push(
-        `Người múa rối đã chỉ định sói ăn thịt **${this.players.find((p) => p.userId === mostVotedUserId)?.name}**`
+        `Người múa rối đã chỉ định sói ăn thịt **${this.players.find((p) => p.userId === mostVotedUserId)?.name}**`,
       );
     }
 
     const witch = this.players.find((p) => p.role.id === WEREROLE.WITCH);
     if (mostVotedUserId) {
       this.gameState.log.push(
-        `Sói đã chọn cắn **${this.players.find((p) => p.userId === mostVotedUserId)?.name}**`
+        `Sói đã chọn cắn **${this.players.find((p) => p.userId === mostVotedUserId)?.name}**`,
       );
       const nguoiBiChoCan = this.players.find(
-        (p) => p.userId === mostVotedUserId
+        (p) => p.userId === mostVotedUserId,
       );
       if (
         witch &&
@@ -845,7 +876,7 @@ class GameRoom extends EventEmitter {
       ) {
         // Đêm đầu tiên phù thuỷ không bị sao cả
         this.gameState.log.push(
-          `Vì là đêm đầu tiên nên phù thuỷ không bị sao cả`
+          'Vì là đêm đầu tiên nên phù thuỷ không bị sao cả',
         );
       } else if (
         nguoiBiChoCan &&
@@ -866,11 +897,11 @@ class GameRoom extends EventEmitter {
     if (witch && witch.role instanceof Witch && witch.role.poisonedPerson) {
       const witchRole = witch.role;
       const nguoiBiDinhDoc = this.players.find(
-        (p) => p.userId === witchRole.poisonedPerson
+        (p) => p.userId === witchRole.poisonedPerson,
       );
       if (nguoiBiDinhDoc) {
         this.gameState.log.push(
-          `Phù thuỷ đã đầu độc **${nguoiBiDinhDoc.name}**`
+          `Phù thuỷ đã đầu độc **${nguoiBiDinhDoc.name}**`,
         );
         sureDieInTheNight.add(nguoiBiDinhDoc.userId);
         killedPlayers.delete(nguoiBiDinhDoc.userId);
@@ -891,7 +922,7 @@ class GameRoom extends EventEmitter {
         const user = await this.fetchUser(stalker.userId);
         if (user) {
           await user.send(
-            `**Thông báo:** 🔍 bạn đã theo dõi **${player.name}** và người này đã hành động.`
+            `**Thông báo:** 🔍 bạn đã theo dõi **${player.name}** và người này đã hành động.`,
           );
         }
       }
@@ -906,7 +937,7 @@ class GameRoom extends EventEmitter {
         const user = await this.fetchUser(stalker.userId);
         if (user) {
           await user.send(
-            `**Thông báo:** 🔍 bạn đã theo dõi **${player.name}** và người này không hành động.`
+            `**Thông báo:** 🔍 bạn đã theo dõi **${player.name}** và người này không hành động.`,
           );
         }
       }
@@ -921,7 +952,7 @@ class GameRoom extends EventEmitter {
         const user = await this.fetchUser(stalker.userId);
         if (user) {
           await user.send(
-            `**Thông báo:** Vì **${player.name}** đã hành động nên bạn không thể giết được người này.`
+            `**Thông báo:** Vì **${player.name}** đã hành động nên bạn không thể giết được người này.`,
           );
         }
       }
@@ -936,7 +967,7 @@ class GameRoom extends EventEmitter {
         const user = await this.fetchUser(stalker.userId);
         if (user) {
           await user.send(
-            `**Thông báo:** Vì **${player.name}** không hành động nên bạn đã giết được người này.`
+            `**Thông báo:** Vì **${player.name}** không hành động nên bạn đã giết được người này.`,
           );
           this.gameState.log.push(`Stalker đã giết **${player.name}**`);
           sureDieInTheNight.add(player.userId);
@@ -948,7 +979,9 @@ class GameRoom extends EventEmitter {
     const giaLang = this.players.find((p) => p.role.id === WEREROLE.ELDER);
     for (const killedId of killedPlayers) {
       // người bị chó cắn
-      if (!guard || !guard.alive) break;
+      if (!guard || !guard.alive) {
+        break;
+      }
 
       if (
         guard.role instanceof Bodyguard &&
@@ -956,14 +989,14 @@ class GameRoom extends EventEmitter {
       ) {
         const hp = (guard.role.hp -= 1);
         this.gameState.log.push(
-          `Bảo vệ đã bảo vệ **${this.players.find((p) => p.userId === killedId)?.name}**, anh ấy còn ${hp} máu`
+          `Bảo vệ đã bảo vệ **${this.players.find((p) => p.userId === killedId)?.name}**, anh ấy còn ${hp} máu`,
         );
         // được bảo vệ đỡ đạn
         killedPlayers.delete(killedId);
         if (hp <= 0) {
           // sureDieInTheNight.add(guard.userId);
           killedPlayers.add(guard.userId);
-          this.gameState.log.push(`Bảo vệ đã chết do chịu 2 lần cắn của sói`);
+          this.gameState.log.push('Bảo vệ đã chết do chịu 2 lần cắn của sói');
         }
 
         if (
@@ -980,7 +1013,7 @@ class GameRoom extends EventEmitter {
     if (witch && witch.role instanceof Witch && witch.role.healedPerson) {
       const witchRole = witch.role;
       const saved = this.players.find(
-        (p) => p.userId === witchRole.healedPerson
+        (p) => p.userId === witchRole.healedPerson,
       );
       // chưa được ai bảo vệ trước đó
       this.gameState.log.push(`Phù thuỷ đã chọn cứu **${saved?.name}**`);
@@ -1000,11 +1033,11 @@ class GameRoom extends EventEmitter {
     if (medium && medium.role instanceof Medium && medium.role.revivedPerson) {
       const mediumRole = medium.role;
       const saved = this.players.find(
-        (p) => p.userId === mediumRole.revivedPerson && !p.alive
+        (p) => p.userId === mediumRole.revivedPerson && !p.alive,
       );
       if (saved && saved.role instanceof Dead) {
         this.gameState.log.push(
-          `Thầy đồng đã hồi sinh thành công **${saved.name}**`
+          `Thầy đồng đã hồi sinh thành công **${saved.name}**`,
         );
 
         saved.role = assignRolesGame(saved.role.originalRoleId);
@@ -1027,7 +1060,7 @@ class GameRoom extends EventEmitter {
         this.gameState.log.push(`Bán sói **${killed.name}** đã biến thành sói`);
         const user = await this.fetchUser(killed.userId);
         if (user) {
-          await user.send(`### Bạn đã bị sói cắn và biến thành sói`);
+          await user.send('### Bạn đã bị sói cắn và biến thành sói');
         }
 
         killed.role = new Werewolf();
@@ -1060,16 +1093,18 @@ class GameRoom extends EventEmitter {
       const dmVillagerPromise = this.players
         .filter(
           (p) =>
-            (p.alive && p.role.faction === 1) || p.role.id === WEREROLE.ELDER
+            (p.alive && p.role.faction === 1) || p.role.id === WEREROLE.ELDER,
         )
         .map(async (player) => {
           const user = await this.fetchUser(player.userId);
-          if (!user) return;
+          if (!user) {
+            return;
+          }
           await user.send(
-            `### 👴 Già làng đã chết, tất cả những người thuộc phe dân làng đều sẽ bị mất chức năng.`
+            '### 👴 Già làng đã chết, tất cả những người thuộc phe dân làng đều sẽ bị mất chức năng.',
           );
           this.gameState.log.push(
-            `👴 Già làng đã chết, tất cả những người thuộc phe dân làng đều sẽ bị mất chức năng.`
+            '👴 Già làng đã chết, tất cả những người thuộc phe dân làng đều sẽ bị mất chức năng.',
           );
           player.role = new Villager();
         });
@@ -1083,17 +1118,19 @@ class GameRoom extends EventEmitter {
             const player = this.players.find((p) => p.userId === id);
             return `**${player?.name}**`;
           })
-          .join(', ')} đã thiệt mạng\n`
+          .join(', ')} đã thiệt mạng\n`,
       );
     }
 
     if (allDeadTonight.size === 0) {
-      this.gameState.log.push(`Không có ai thiệt mạng\n`);
+      this.gameState.log.push('Không có ai thiệt mạng\n');
     }
 
     const dmPromises = this.players.map(async (player) => {
       const user = await this.fetchUser(player.userId);
-      if (!user) return;
+      if (!user) {
+        return;
+      }
 
       try {
         if (allDeadTonight.size === 0) {
@@ -1116,7 +1153,7 @@ class GameRoom extends EventEmitter {
 
         if (maidNewRole) {
           await user.send(
-            `### 👒 Hầu gái đã lên thay vai trò **${maidNewRole}** của chủ vì chủ đã chết.\n`
+            `### 👒 Hầu gái đã lên thay vai trò **${maidNewRole}** của chủ vì chủ đã chết.\n`,
           );
         }
 
@@ -1128,7 +1165,7 @@ class GameRoom extends EventEmitter {
             })
             .join(', ');
           await user.send(
-            `### 🔮 ${revivedPlayersList} đã được hồi sinh bởi Thầy Đồng.\n`
+            `### 🔮 ${revivedPlayersList} đã được hồi sinh bởi Thầy Đồng.\n`,
           );
 
           if (revivedPlayers.has(player.userId)) {
@@ -1150,16 +1187,20 @@ class GameRoom extends EventEmitter {
   }
 
   async dayPhase() {
-    if (this.status === 'ended') return;
+    if (this.status === 'ended') {
+      return;
+    }
     this.gameState.phase = 'day';
     this.emit('day', this.guildId, this.players, this.gameState);
 
     const isFirstDay = this.gameState.nightCount === 1;
     const dmPromises = this.players.map(async (player) => {
       const user = await this.fetchUser(player.userId);
-      if (!user) return;
+      if (!user) {
+        return;
+      }
       await user.send(
-        `# ☀️ Ban ngày đã đến. \nHãy thảo luận và bỏ phiếu để loại trừ người khả nghi nhất. Bạn có ${this.settings.discussTime} giây để thảo luận.`
+        `# ☀️ Ban ngày đã đến. \nHãy thảo luận và bỏ phiếu để loại trừ người khả nghi nhất. Bạn có ${this.settings.discussTime} giây để thảo luận.`,
       );
 
       const buffer = await createAvatarCollage(this.players, this.client);
@@ -1183,7 +1224,7 @@ class GameRoom extends EventEmitter {
           .setStyle(ButtonStyle.Danger);
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-          shootButton
+          shootButton,
         );
 
         await user.send({
@@ -1208,7 +1249,7 @@ class GameRoom extends EventEmitter {
             const user = await this.fetchUser(player.userId);
             if (user) {
               await user.send(
-                `### ⚠️ Thông báo: còn **10** giây để thảo luận!`
+                '### ⚠️ Thông báo: còn **10** giây để thảo luận!',
               );
             }
           } catch (err) {
@@ -1217,24 +1258,28 @@ class GameRoom extends EventEmitter {
         });
         await Promise.allSettled(notifyPlayers);
       },
-      this.settings.discussTime * 1000 - 10000
+      this.settings.discussTime * 1000 - 10000,
     );
 
     await new Promise((resolve) =>
-      setTimeout(resolve, this.settings.discussTime * 1000)
+      setTimeout(resolve, this.settings.discussTime * 1000),
     );
   }
 
   async votePhase() {
-    if (this.status === 'ended') return;
+    if (this.status === 'ended') {
+      return;
+    }
     this.gameState.phase = 'voting';
     this.emit('vote', this.guildId, this.players, this.gameState);
 
     const dmPromises = this.players.map(async (player) => {
       const user = await this.fetchUser(player.userId);
-      if (!user) return;
+      if (!user) {
+        return;
+      }
       await user.send(
-        `🗳️ Thời gian bỏ phiếu đã đến. Người có số phiếu cao nhất và có ít nhất 2 phiếu sẽ bị treo cổ. Hãy chọn người bạn muốn loại trừ trong ${this.settings.voteTime} giây tới.\n💡 Nhập số 0 hoặc 36 để bỏ qua vote.`
+        `🗳️ Thời gian bỏ phiếu đã đến. Người có số phiếu cao nhất và có ít nhất 2 phiếu sẽ bị treo cổ. Hãy chọn người bạn muốn loại trừ trong ${this.settings.voteTime} giây tới.\n💡 Nhập số 0 hoặc 36 để bỏ qua vote.`,
       );
 
       const buffer = await createAvatarCollage(this.players, this.client);
@@ -1252,7 +1297,7 @@ class GameRoom extends EventEmitter {
         .setStyle(ButtonStyle.Primary);
 
       const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        voteButton
+        voteButton,
       );
       const message = await user.send({
         embeds: [embed],
@@ -1265,14 +1310,14 @@ class GameRoom extends EventEmitter {
     await Promise.allSettled(dmPromises);
 
     const timeoutPromise = new Promise((resolve) =>
-      setTimeout(resolve, this.settings.voteTime * 1000)
+      setTimeout(resolve, this.settings.voteTime * 1000),
     );
 
     const voteCompletePromise = new Promise((resolve) => {
       this.once('voteComplete', resolve);
     });
 
-    // eslint-disable-next-line no-unused-vars
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
     const notificationPromise = new Promise<void>((resolve) => {
       setTimeout(
         async () => {
@@ -1280,7 +1325,7 @@ class GameRoom extends EventEmitter {
             try {
               const user = await this.fetchUser(player.userId);
               if (user) {
-                await user.send(`### ⚠️ Thông báo: còn **10** giây để vote!`);
+                await user.send('### ⚠️ Thông báo: còn **10** giây để vote!');
               }
             } catch (err) {
               console.error(`Không thể gửi tin nhắn cho ${player.userId}`, err);
@@ -1289,7 +1334,7 @@ class GameRoom extends EventEmitter {
           await Promise.allSettled(notifyPlayers);
           resolve();
         },
-        this.settings.voteTime * 1000 - 10000
+        this.settings.voteTime * 1000 - 10000,
       );
     });
 
@@ -1299,7 +1344,7 @@ class GameRoom extends EventEmitter {
       try {
         if (message.components && message.components.length > 0) {
           const row = ActionRowBuilder.from(
-            message.components[0] as any
+            message.components[0] as APIActionRowComponent<APIButtonComponent>,
           ) as ActionRowBuilder<ButtonBuilder>;
           (row.components[0] as ButtonBuilder)
             .setDisabled(true)
@@ -1318,26 +1363,30 @@ class GameRoom extends EventEmitter {
       this.gameState.log.push('Không ai bị treo cổ do không đủ phiếu bầu\n');
       const noHangPromises = this.players.map(async (player) => {
         const user = await this.fetchUser(player.userId);
-        if (!user) return;
+        if (!user) {
+          return;
+        }
         await user.send(
-          '🎭 Không đủ số phiếu hoặc có nhiều người cùng số phiếu cao nhất, không ai bị treo cổ trong ngày hôm nay.'
+          '🎭 Không đủ số phiếu hoặc có nhiều người cùng số phiếu cao nhất, không ai bị treo cổ trong ngày hôm nay.',
         );
       });
       await Promise.allSettled(noHangPromises);
     } else {
       this.gameState.log.push(
-        `**${hangedPlayer.name}** đã bị dân làng treo cổ`
+        `**${hangedPlayer.name}** đã bị dân làng treo cổ`,
       );
       if (hangedPlayer.role.id === WEREROLE.FOOL) {
         this.gameState.log.push(
-          `**${hangedPlayer.name}** là Thằng Ngố - Thằng Ngố thắng!`
+          `**${hangedPlayer.name}** là Thằng Ngố - Thằng Ngố thắng!`,
         );
         this.status = 'ended';
         const foolMessages = this.players.map(async (player) => {
           const user = await this.fetchUser(player.userId);
-          if (!user) return;
+          if (!user) {
+            return;
+          }
           await user.send(
-            `🎭 **${hangedPlayer.name}** là **Ngố** và đã bị treo cổ. \n🎉 **Ngố** thắng !!.`
+            `🎭 **${hangedPlayer.name}** là **Ngố** và đã bị treo cổ. \n🎉 **Ngố** thắng !!.`,
           );
           const roleRevealEmbed = this.revealRoles();
           await user.send({ embeds: [roleRevealEmbed] });
@@ -1349,23 +1398,25 @@ class GameRoom extends EventEmitter {
       hangedPlayer.alive = false;
       hangedPlayer.role = new Dead(
         hangedPlayer.role.faction,
-        hangedPlayer.role.id
+        hangedPlayer.role.id,
       );
 
       const maidNewRole = await this.checkIfMasterIsDead(hangedPlayer);
 
       const hangMessages = this.players.map(async (player) => {
         const user = await this.fetchUser(player.userId);
-        if (!user) return;
+        if (!user) {
+          return;
+        }
         await user.send(
-          `🎭 **${hangedPlayer.name}** đã bị dân làng treo cổ vì có số phiếu cao nhất.`
+          `🎭 **${hangedPlayer.name}** đã bị dân làng treo cổ vì có số phiếu cao nhất.`,
         );
         if (hangedPlayer.userId === player.userId) {
           await user.send('💀 Bạn đã bị dân làng treo cổ.');
         }
         if (maidNewRole) {
           await user.send(
-            `### 👒 Hầu gái đã lên thay vai trò **${maidNewRole}** của chủ vì chủ đã bị treo cổ.\n`
+            `### 👒 Hầu gái đã lên thay vai trò **${maidNewRole}** của chủ vì chủ đã bị treo cổ.\n`,
           );
         }
       });
@@ -1374,10 +1425,10 @@ class GameRoom extends EventEmitter {
     }
 
     const normalWolvesAlive = this.players.filter(
-      (p) => p.alive && p.role.faction === 0 && p.role.id === WEREROLE.WEREWOLF
+      (p) => p.alive && p.role.faction === 0 && p.role.id === WEREROLE.WEREWOLF,
     );
     const otherWolvesAlive = this.players.filter(
-      (p) => p.alive && p.role.faction === 0 && p.role.id !== WEREROLE.WEREWOLF
+      (p) => p.alive && p.role.faction === 0 && p.role.id !== WEREROLE.WEREWOLF,
     );
 
     if (normalWolvesAlive.length === 0 && otherWolvesAlive.length > 0) {
@@ -1386,7 +1437,7 @@ class GameRoom extends EventEmitter {
         const user = await this.fetchUser(wolf.userId);
         if (user) {
           return user.send(
-            '### 🐺 Vì không còn Sói thường nào sống sót, bạn đã biến thành Sói thường!'
+            '### 🐺 Vì không còn Sói thường nào sống sót, bạn đã biến thành Sói thường!',
           );
         }
       });
@@ -1394,7 +1445,7 @@ class GameRoom extends EventEmitter {
       await Promise.allSettled(wolfTransformPromises);
 
       this.gameState.log.push(
-        `🐺 **${otherWolvesAlive.length}** Sói chức năng đã biến thành **Sói thường** vì không còn Sói thường nào sống sót.`
+        `🐺 **${otherWolvesAlive.length}** Sói chức năng đã biến thành **Sói thường** vì không còn Sói thường nào sống sót.`,
       );
     }
 
@@ -1404,22 +1455,24 @@ class GameRoom extends EventEmitter {
         !p.alive &&
         p.role.id === WEREROLE.DEAD &&
         p.role instanceof Dead &&
-        p.role.originalRoleId === WEREROLE.ELDER
+        p.role.originalRoleId === WEREROLE.ELDER,
     );
     if (giaLang && !giaLang.alive) {
       const dmVillagerPromise = this.players
         .filter(
           (p) =>
-            (p.alive && p.role.faction === 1) || p.role.id === WEREROLE.ELDER
+            (p.alive && p.role.faction === 1) || p.role.id === WEREROLE.ELDER,
         )
         .map(async (player) => {
           const user = await this.fetchUser(player.userId);
-          if (!user) return;
+          if (!user) {
+            return;
+          }
           await user.send(
-            `### 👴 Già làng đã chết, tất cả những người thuộc phe dân làng đều sẽ bị mất chức năng.`
+            '### 👴 Già làng đã chết, tất cả những người thuộc phe dân làng đều sẽ bị mất chức năng.',
           );
           this.gameState.log.push(
-            `👴 Già làng đã chết, tất cả những người thuộc phe dân làng đều sẽ bị mất chức năng.`
+            '👴 Già làng đã chết, tất cả những người thuộc phe dân làng đều sẽ bị mất chức năng.',
           );
           player.role = new Villager();
         });
@@ -1460,70 +1513,70 @@ class GameRoom extends EventEmitter {
             (player.role instanceof Dead && player.role.originalRoleId) ||
             player.role.id
           ) {
-            case 0:
-              roleEmoji = '🐺';
-              break;
-            case 1:
-              roleEmoji = '👥';
-              break;
-            case 2:
-              roleEmoji = '🛡️';
-              break;
-            case 3:
-              roleEmoji = '🌙';
-              break;
-            case 4:
-              roleEmoji = '👁️';
-              break;
-            case 5:
-              roleEmoji = '🔍';
-              break;
-            case 6:
-              roleEmoji = '🧪';
-              break;
-            case 7:
-              roleEmoji = '🃏';
-              break;
-            case 8:
-              roleEmoji = '🔮';
-              break;
-            case 10:
-              roleEmoji = '👒';
-              break;
-            case 11:
-              roleEmoji = '🤷';
-              break;
-            case 12:
-              roleEmoji = '🐺';
-              break;
-            case 13:
-              roleEmoji = '🐺';
-              break;
-            case 14:
-              roleEmoji = '🦊';
-              break;
-            case 15:
-              roleEmoji = '👴';
-              break;
-            case 16:
-              roleEmoji = '👀';
-              break;
-            case 17:
-              roleEmoji = '🔫';
-              break;
-            case 18:
-              roleEmoji = '🐺';
-              break;
-            case 19:
-              roleEmoji = '🐕‍🦺';
-              break;
+          case 0:
+            roleEmoji = '🐺';
+            break;
+          case 1:
+            roleEmoji = '👥';
+            break;
+          case 2:
+            roleEmoji = '🛡️';
+            break;
+          case 3:
+            roleEmoji = '🌙';
+            break;
+          case 4:
+            roleEmoji = '👁️';
+            break;
+          case 5:
+            roleEmoji = '🔍';
+            break;
+          case 6:
+            roleEmoji = '🧪';
+            break;
+          case 7:
+            roleEmoji = '🃏';
+            break;
+          case 8:
+            roleEmoji = '🔮';
+            break;
+          case 10:
+            roleEmoji = '👒';
+            break;
+          case 11:
+            roleEmoji = '🤷';
+            break;
+          case 12:
+            roleEmoji = '🐺';
+            break;
+          case 13:
+            roleEmoji = '🐺';
+            break;
+          case 14:
+            roleEmoji = '🦊';
+            break;
+          case 15:
+            roleEmoji = '👴';
+            break;
+          case 16:
+            roleEmoji = '👀';
+            break;
+          case 17:
+            roleEmoji = '🔫';
+            break;
+          case 18:
+            roleEmoji = '🐺';
+            break;
+          case 19:
+            roleEmoji = '🐕‍🦺';
+            break;
           }
           return {
             name: `${roleEmoji} ${nameRole}`,
             value: `**${player.name}**${!player.alive ? ' (💀 Đã chết)' : ''}`,
             inline: true,
           };
-        })
+        }),
       )
       .setTimestamp()
       .setFooter({ text: 'Hẹ hẹ hẹ' });
@@ -1542,12 +1595,14 @@ class GameRoom extends EventEmitter {
         }
         return acc;
       },
-      {}
+      {},
     );
 
     const voteEntries = Object.entries(totalVotes);
 
-    if (voteEntries.length === 0) return null;
+    if (voteEntries.length === 0) {
+      return null;
+    }
 
     let maxVotes = 0;
     let candidates: string[] = [];
@@ -1578,22 +1633,24 @@ class GameRoom extends EventEmitter {
       this.status = 'ended';
       let winMessage = '';
       switch (victoryResult.winner) {
-        case 'werewolf':
-          winMessage = `🐺 **Ma Sói thắng!** Họ đã tiêu diệt tất cả dân làng.`;
-          break;
-        case 'village':
-          winMessage = '👥 **Dân Làng thắng!** Họ đã tiêu diệt tất cả Ma Sói.';
-          break;
-        case 'solo':
-          winMessage =
+      case 'werewolf':
+        winMessage = '🐺 **Ma Sói thắng!** Họ đã tiêu diệt tất cả dân làng.';
+        break;
+      case 'village':
+        winMessage = '👥 **Dân Làng thắng!** Họ đã tiêu diệt tất cả Ma Sói.';
+        break;
+      case 'solo':
+        winMessage =
             '🎭 **Phe Solo thắng!** Họ đã hoàn thành mục tiêu của mình.';
-          break;
+        break;
       }
 
       const roleRevealEmbed = this.revealRoles();
       const endGameMessages = this.players.map(async (player) => {
         const user = await this.fetchUser(player.userId);
-        if (!user) return;
+        if (!user) {
+          return;
+        }
 
         return Promise.all([
           user.send(winMessage),
@@ -1657,67 +1714,79 @@ class GameRoom extends EventEmitter {
    */
   isActivity(role: number) {
     const player = this.players.find((p) => p.role.id === role);
-    if (!player) return false;
+    if (!player) {
+      return false;
+    }
     if (
       player.role.id === WEREROLE.WEREWOLF &&
       player.role instanceof Werewolf &&
       player.role.voteBite
-    )
+    ) {
       return true;
+    }
     if (
       player.role.id === WEREROLE.BODYGUARD &&
       player.role instanceof Bodyguard &&
       player.role.protectedPerson
-    )
+    ) {
       return true;
+    }
     if (
       player.role.id === WEREROLE.SEER &&
       player.role instanceof Seer &&
       player.role.viewCount <= 0
-    )
+    ) {
       return true;
+    }
     if (
       player.role.id === WEREROLE.DETECTIVE &&
       player.role instanceof Detective &&
       player.role.investigatedPairs.length > 0
-    )
+    ) {
       return true;
+    }
     if (
       player.role.id === WEREROLE.WITCH &&
       player.role instanceof Witch &&
       player.role.poisonedPerson
-    )
+    ) {
       return true;
+    }
     if (
       player.role.id === WEREROLE.WITCH &&
       player.role instanceof Witch &&
       player.role.healedPerson
-    )
+    ) {
       return true;
+    }
     if (
       player.role.id === WEREROLE.MEDIUM &&
       player.role instanceof Medium &&
       player.role.revivedPerson
-    )
+    ) {
       return true;
+    }
     if (
       player.role.id === WEREROLE.WOLFSEER &&
       player.role instanceof WolfSeer &&
       player.role.seerCount <= 0
-    )
+    ) {
       return true;
+    }
     if (
       player.role.id === WEREROLE.ALPHAWEREWOLF &&
       player.role instanceof AlphaWerewolf &&
       player.role.maskWolf
-    )
+    ) {
       return true;
+    }
     if (
       player.role.id === WEREROLE.FOXSPIRIT &&
       player.role instanceof FoxSpirit &&
       player.role.threeViewed.length > 0
-    )
+    ) {
       return true;
+    }
 
     return false;
   }
@@ -1731,13 +1800,13 @@ class GameRoom extends EventEmitter {
       (p) =>
         p.role.id === WEREROLE.MAID &&
         p.role instanceof Maid &&
-        p.role.master === deadPlayer.userId
+        p.role.master === deadPlayer.userId,
     );
     let maidNewRole = null;
     if (maid) {
       maid.role = assignRolesGame(
         (deadPlayer.role instanceof Dead && deadPlayer.role.originalRoleId) ||
-          deadPlayer.role.id
+          deadPlayer.role.id,
       );
       maidNewRole = maid.role.name;
 
@@ -1745,13 +1814,13 @@ class GameRoom extends EventEmitter {
       // phần thông báo cho maid
       if (maidUser) {
         await maidUser.send(
-          `### 👑 Chủ của bạn đã bị chết, bạn đã trở thành **${maid.role.name}**`
+          `### 👑 Chủ của bạn đã bị chết, bạn đã trở thành **${maid.role.name}**`,
         );
       }
 
       // phần log
       this.gameState.log.push(
-        `### 👒 Hầu gái đã lên thay vai trò **${maid.role.name}** của chủ vì chủ đã bị chết.`
+        `### 👒 Hầu gái đã lên thay vai trò **${maid.role.name}** của chủ vì chủ đã bị chết.`,
       );
     }
     return maidNewRole;
@@ -1760,7 +1829,9 @@ class GameRoom extends EventEmitter {
   async updateAllPlayerList() {
     const dmPromises = this.players.map(async (player) => {
       const user = await this.fetchUser(player.userId);
-      if (!user) return;
+      if (!user) {
+        return;
+      }
 
       const buffer = await createAvatarCollage(this.players, this.client);
       const attachment = new AttachmentBuilder(buffer, { name: 'avatars.png' });
