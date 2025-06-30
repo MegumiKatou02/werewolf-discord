@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+
 import { REST, Routes } from 'discord.js';
 import { config } from 'dotenv';
 config();
@@ -39,7 +40,7 @@ if (!clientId) {
     console.log('🛠️ Đang đăng ký slash command...');
     console.log(
       'Lệnh sẽ được đăng ký:',
-      commands.map((c) => c.name)
+      commands.map((c) => c.name),
     );
     await rest.put(Routes.applicationCommands(clientId), {
       // co s

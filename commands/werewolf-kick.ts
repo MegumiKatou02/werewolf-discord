@@ -4,6 +4,7 @@ import {
   type Interaction,
   PermissionsBitField,
 } from 'discord.js';
+
 import { gameRooms } from '../core/room.js';
 
 export default {
@@ -14,7 +15,7 @@ export default {
       option
         .setName('player')
         .setDescription('Người chơi cần kick')
-        .setRequired(true)
+        .setRequired(true),
     ),
 
   async execute(interaction: Interaction) {
@@ -75,7 +76,7 @@ export default {
 
     room.removePlayer(targetUser.id);
     await interaction.reply(
-      `✅ Đã kick **${targetUser.globalName}** ra khỏi phòng.`
+      `✅ Đã kick **${targetUser.globalName}** ra khỏi phòng.`,
     );
   },
 };

@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, type Interaction } from 'discord.js';
+
 import { gameRooms } from '../core/room.js';
 
 export default {
@@ -63,7 +64,7 @@ export default {
       gameRooms.delete(guildId);
 
       return interaction.channel?.send(
-        'Không còn ai trong phòng nên phòng đã bị hủy'
+        'Không còn ai trong phòng nên phòng đã bị hủy',
       );
     }
 

@@ -6,14 +6,17 @@ import {
   type Interaction,
   Client,
 } from 'discord.js';
-import { WEREROLE } from '../../../../utils/role.js';
+
+import type { GameRoom } from '../../../../core/room.js';
 import type Player from '../../../../types/player.js';
 import WolfSeer from '../../../../types/roles/WolfSeer.js';
-import type { GameRoom } from '../../../../core/room.js';
+import { WEREROLE } from '../../../../utils/role.js';
 
 class WolfSeerInteraction {
   isButton = async (interaction: Interaction) => {
-    if (!interaction.isButton()) return;
+    if (!interaction.isButton()) {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[3];
 
@@ -54,11 +57,15 @@ class WolfSeerInteraction {
     interaction: Interaction,
     gameRoom: GameRoom,
     sender: Player,
-    client: Client
+    client: Client,
   ) => {
-    if (!interaction.isModalSubmit()) return;
+    if (!interaction.isModalSubmit()) {
+      return;
+    }
 
-    if (!gameRoom || gameRoom.gameState.phase !== 'night') return;
+    if (!gameRoom || gameRoom.gameState.phase !== 'night') {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[3];
 
@@ -70,7 +77,7 @@ class WolfSeerInteraction {
     }
 
     const viewIndexStr = interaction.fields.getTextInputValue(
-      'view_index_wolfseer'
+      'view_index_wolfseer',
     );
     const viewIndex = parseInt(viewIndexStr, 10);
 
@@ -113,7 +120,7 @@ class WolfSeerInteraction {
 
         const user = await client.users.fetch(playerId);
         await user.send(
-          `🔍 Vai trò của: **${targetPlayer.name}** là ${checkSeer() ? 'Tiên Tri' : 'Không phải Tiên Tri'}.`
+          `🔍 Vai trò của: **${targetPlayer.name}** là ${checkSeer() ? 'Tiên Tri' : 'Không phải Tiên Tri'}.`,
         );
 
         sender.role.seerCount -= 1;
@@ -126,13 +133,13 @@ class WolfSeerInteraction {
             ) {
               const wolfUser = await client.users.fetch(player.userId);
               await wolfUser.send(
-                `**Thông báo:** 🐺🔍 **Sói Tiên Tri** đã soi **${targetPlayer.name}** và phát hiện người này **${checkSeer() ? 'LÀ' : 'KHÔNG PHẢI'}** Tiên Tri.`
+                `**Thông báo:** 🐺🔍 **Sói Tiên Tri** đã soi **${targetPlayer.name}** và phát hiện người này **${checkSeer() ? 'LÀ' : 'KHÔNG PHẢI'}** Tiên Tri.`,
               );
             } else {
               // Những người còn lại (dân làng/solo/...)
               const user = await client.users.fetch(player.userId);
               await user.send(
-                `**Thông báo:** 🐺🔍 **Sói Tiên Tri** đã soi **${targetPlayer.name}**.`
+                `**Thông báo:** 🐺🔍 **Sói Tiên Tri** đã soi **${targetPlayer.name}**.`,
               );
             }
           } catch (err) {

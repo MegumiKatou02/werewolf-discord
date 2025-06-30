@@ -6,12 +6,15 @@ import {
   type Interaction,
   Client,
 } from 'discord.js';
-import type Player from '../../../../types/player.js';
+
 import type { GameRoom } from '../../../../core/room.js';
+import type Player from '../../../../types/player.js';
 
 class VotingInteraction {
   isButtonVoteHanged = async (interaction: Interaction) => {
-    if (!interaction.isButton()) return;
+    if (!interaction.isButton()) {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[2];
 
@@ -54,9 +57,11 @@ class VotingInteraction {
     interaction: Interaction,
     gameRoom: GameRoom,
     sender: Player,
-    client: Client
+    client: Client,
   ) => {
-    if (!gameRoom || !interaction.isModalSubmit()) return;
+    if (!gameRoom || !interaction.isModalSubmit()) {
+      return;
+    }
 
     if (gameRoom.gameState.phase === 'day') {
       return interaction.reply({
@@ -128,11 +133,11 @@ class VotingInteraction {
           return targetUser.send(`✅ **${sender.name}** đã vote.`);
         } else {
           if (voteIndex === 0 || voteIndex === 36) {
-            return targetUser.send(`✅ Bạn đã chọn bỏ qua vote.`);
+            return targetUser.send('✅ Bạn đã chọn bỏ qua vote.');
           } else {
             const targetPlayer = gameRoom.players[voteIndex - 1];
             return targetUser.send(
-              `✅ Bạn đã vote treo cổ: **${targetPlayer.name}**.`
+              `✅ Bạn đã vote treo cổ: **${targetPlayer.name}**.`,
             );
           }
         }
@@ -142,14 +147,14 @@ class VotingInteraction {
 
       const alivePlayers = gameRoom.players.filter((p: Player) => p.alive);
       const allVoted = alivePlayers.every(
-        (p: Player) => p.role?.voteHanged !== null
+        (p: Player) => p.role?.voteHanged !== null,
       );
 
       if (allVoted) {
         const notifyEndVote = gameRoom.players.map(async (player: Player) => {
           const user = await client.users.fetch(player.userId);
           return user.send(
-            `### ⚡ Tất cả mọi người đã vote xong! Kết quả sẽ được công bố ngay lập tức.`
+            '### ⚡ Tất cả mọi người đã vote xong! Kết quả sẽ được công bố ngay lập tức.',
           );
         });
         await Promise.allSettled(notifyEndVote);

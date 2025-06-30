@@ -6,13 +6,17 @@ import {
   type Interaction,
   Client,
 } from 'discord.js';
-import { WEREROLE } from '../../../../utils/role.js';
+
+import type { GameRoom } from '../../../../core/room.js';
 import type Player from '../../../../types/player.js';
 import Stalker from '../../../../types/roles/Stalker.js';
+import { WEREROLE } from '../../../../utils/role.js';
 
 class StalkerInteraction {
-  isButtonStalker = async (interaction: Interaction, gameRoom: any) => {
-    if (!interaction.isButton()) return;
+  isButtonStalker = async (interaction: Interaction, gameRoom: GameRoom) => {
+    if (!interaction.isButton()) {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[3];
 
@@ -25,10 +29,14 @@ class StalkerInteraction {
 
     try {
       const stalker = gameRoom.players.find(
-        (p: Player) => p.role?.id === WEREROLE.STALKER
+        (p: Player) => p.role?.id === WEREROLE.STALKER,
       );
 
-      if (stalker && stalker.role.killedPerson) {
+      if (
+        stalker &&
+        stalker.role instanceof Stalker &&
+        stalker.role.killedPerson
+      ) {
         return interaction.reply({
           content: 'Bạn đã chọn ám sát người chơi khác rồi.',
           ephemeral: true,
@@ -72,13 +80,17 @@ class StalkerInteraction {
 
   isModalSubmitStalker = async (
     interaction: Interaction,
-    gameRoom: any,
+    gameRoom: GameRoom,
     sender: Player,
-    client: Client
+    client: Client,
   ) => {
-    if (!interaction.isModalSubmit()) return;
+    if (!interaction.isModalSubmit()) {
+      return;
+    }
 
-    if (!gameRoom || gameRoom.gameState.phase !== 'night') return;
+    if (!gameRoom || gameRoom.gameState.phase !== 'night') {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[3];
 
@@ -92,7 +104,7 @@ class StalkerInteraction {
     await interaction.deferReply({ ephemeral: true });
 
     const stalkIndexStr = interaction.fields.getTextInputValue(
-      'stalk_index_stalker'
+      'stalk_index_stalker',
     );
     const stalkIndex = parseInt(stalkIndexStr, 10);
 
@@ -143,7 +155,7 @@ class StalkerInteraction {
     try {
       const user = await client.users.fetch(playerId);
       await user.send(
-        `👀 Bạn đã chọn người chơi để theo dõi: **${targetPlayer.name}**.`
+        `👀 Bạn đã chọn người chơi để theo dõi: **${targetPlayer.name}**.`,
       );
     } catch (err) {
       console.error(`Không thể gửi DM cho ${playerId}:`, err);
@@ -153,8 +165,10 @@ class StalkerInteraction {
       content: '✅ Chọn người chơi thành công.',
     });
   };
-  isButtonKill = async (interaction: Interaction, gameRoom: any) => {
-    if (!interaction.isButton()) return;
+  isButtonKill = async (interaction: Interaction, gameRoom: GameRoom) => {
+    if (!interaction.isButton()) {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[3];
 
@@ -167,10 +181,14 @@ class StalkerInteraction {
 
     try {
       const stalker = gameRoom.players.find(
-        (p: Player) => p.role?.id === WEREROLE.STALKER
+        (p: Player) => p.role?.id === WEREROLE.STALKER,
       );
 
-      if (stalker && stalker.role.stalkedPerson) {
+      if (
+        stalker &&
+        stalker.role instanceof Stalker &&
+        stalker.role.stalkedPerson
+      ) {
         return interaction.reply({
           content: 'Bạn đã theo dõi người chơi khác rồi.',
           ephemeral: true,
@@ -213,13 +231,17 @@ class StalkerInteraction {
   };
   isModalSubmitKill = async (
     interaction: Interaction,
-    gameRoom: any,
+    gameRoom: GameRoom,
     sender: Player,
-    client: Client
+    client: Client,
   ) => {
-    if (!interaction.isModalSubmit()) return;
+    if (!interaction.isModalSubmit()) {
+      return;
+    }
 
-    if (!gameRoom || gameRoom.gameState.phase !== 'night') return;
+    if (!gameRoom || gameRoom.gameState.phase !== 'night') {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[3];
 
@@ -281,7 +303,7 @@ class StalkerInteraction {
     try {
       const user = await client.users.fetch(playerId);
       await user.send(
-        `🔪 Bạn đã chọn người chơi để ám sát: **${targetPlayer.name}**.`
+        `🔪 Bạn đã chọn người chơi để ám sát: **${targetPlayer.name}**.`,
       );
     } catch (err) {
       console.error(`Không thể gửi DM cho ${playerId}:`, err);

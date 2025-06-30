@@ -1,4 +1,3 @@
-import { WEREROLE } from '../../../../utils/role.js';
 import {
   ModalBuilder,
   TextInputBuilder,
@@ -7,13 +6,17 @@ import {
   type Interaction,
   Client,
 } from 'discord.js';
+
+import type { GameRoom } from '../../../../core/room.js';
 import type Player from '../../../../types/player.js';
 import Maid from '../../../../types/roles/Maid.js';
-import type { GameRoom } from '../../../../core/room.js';
+import { WEREROLE } from '../../../../utils/role.js';
 
 class MaidInteraction {
   isButton = async (interaction: Interaction) => {
-    if (!interaction.isButton()) return;
+    if (!interaction.isButton()) {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[3];
 
@@ -56,11 +59,15 @@ class MaidInteraction {
     interaction: Interaction,
     gameRoom: GameRoom,
     sender: Player,
-    client: Client
+    client: Client,
   ) => {
-    if (!interaction.isModalSubmit()) return;
+    if (!interaction.isModalSubmit()) {
+      return;
+    }
 
-    if (!gameRoom || gameRoom.gameState.phase !== 'night') return;
+    if (!gameRoom || gameRoom.gameState.phase !== 'night') {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[4];
 
@@ -111,7 +118,7 @@ class MaidInteraction {
     try {
       const user = await client.users.fetch(playerId);
       await user.send(
-        `👑 Bạn đã chọn **${targetPlayer.name}** làm chủ của mình.`
+        `👑 Bạn đã chọn **${targetPlayer.name}** làm chủ của mình.`,
       );
     } catch (err) {
       console.error(`Không thể gửi DM cho ${playerId}:`, err);

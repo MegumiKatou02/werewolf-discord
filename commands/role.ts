@@ -9,8 +9,8 @@ import {
 } from 'discord.js';
 
 import rolesData from '../data/data.json' with { type: 'json' };
-import { convertFactionRoles } from '../utils/role.js';
 import EmbedBuilderWerewolf from '../utils/embed.js';
+import { convertFactionRoles } from '../utils/role.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -18,27 +18,29 @@ export default {
     .setDescription('Xem thông tin chi tiết của các vai trò trong game Ma Sói'),
 
   async execute(interaction: Interaction) {
-    if (!interaction.isChatInputCommand()) return;
+    if (!interaction.isChatInputCommand()) {
+      return;
+    }
 
     const roleOptions = Object.entries(rolesData)
       .filter(([id]) => id !== '9')
       .map(([id, role]) => {
         let emoji;
         switch (role.faction) {
-          case 0:
-            emoji = '🐺';
-            break;
-          case 1:
-            emoji = '👤';
-            break;
-          case 2:
-            emoji = '🎪';
-            break;
-          case 3:
-            emoji = '🌙';
-            break;
-          default:
-            emoji = '❓';
+        case 0:
+          emoji = '🐺';
+          break;
+        case 1:
+          emoji = '👤';
+          break;
+        case 2:
+          emoji = '🎪';
+          break;
+        case 3:
+          emoji = '🌙';
+          break;
+        default:
+          emoji = '❓';
         }
 
         let shortDescription = role.description;
@@ -59,7 +61,7 @@ export default {
       .addOptions(roleOptions);
 
     const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-      selectMenu
+      selectMenu,
     );
 
     const initialEmbed = new EmbedBuilder()
@@ -70,7 +72,7 @@ export default {
           '🐺 **Phe Sói** - Cần tiêu diệt dân làng\n' +
           '👤 **Phe Dân** - Cần tìm và tiêu diệt sói\n' +
           '🎪 **Phe Solo** - Có mục tiêu riêng\n' +
-          '🌙 **??** - Có thể chuyển phe'
+          '🌙 **??** - Có thể chuyển phe',
       )
       .setFooter({ text: 'Sử dụng menu bên dưới để chọn vai trò!' });
 
@@ -122,7 +124,7 @@ export default {
     collector.on('end', async () => {
       const disabledRow =
         new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-          StringSelectMenuBuilder.from(selectMenu).setDisabled(true)
+          StringSelectMenuBuilder.from(selectMenu).setDisabled(true),
         );
 
       await interaction

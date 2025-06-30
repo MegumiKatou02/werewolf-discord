@@ -1,7 +1,3 @@
-import type { GameRoom } from '../../../../core/room.js';
-import type Player from '../../../../types/player.js';
-import Detective from '../../../../types/roles/Detective.js';
-import { WEREROLE } from '../../../../utils/role.js';
 import {
   ModalBuilder,
   TextInputBuilder,
@@ -11,9 +7,16 @@ import {
   Client,
 } from 'discord.js';
 
+import type { GameRoom } from '../../../../core/room.js';
+import type Player from '../../../../types/player.js';
+import Detective from '../../../../types/roles/Detective.js';
+import { WEREROLE } from '../../../../utils/role.js';
+
 class DetectiveInteraction {
   isButton = async (interaction: Interaction) => {
-    if (!interaction.isButton()) return;
+    if (!interaction.isButton()) {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[3];
 
@@ -53,14 +56,15 @@ class DetectiveInteraction {
     interaction: Interaction,
     gameRoom: GameRoom,
     sender: Player,
-    client: Client
+    client: Client,
   ) => {
     if (
       !gameRoom ||
       gameRoom.gameState.phase !== 'night' ||
       !interaction.isModalSubmit()
-    )
+    ) {
       return;
+    }
 
     const playerId = interaction.customId.split('_')[3];
 
@@ -72,10 +76,10 @@ class DetectiveInteraction {
     }
 
     const index1Str = interaction.fields.getTextInputValue(
-      'investigate_index_1'
+      'investigate_index_1',
     );
     const index2Str = interaction.fields.getTextInputValue(
-      'investigate_index_2'
+      'investigate_index_2',
     );
     const index1 = parseInt(index1Str, 10);
     const index2 = parseInt(index2Str, 10);
@@ -119,7 +123,7 @@ class DetectiveInteraction {
 
       sender.role.investigatedPairs.push(
         targetPlayer1.userId,
-        targetPlayer2.userId
+        targetPlayer2.userId,
       );
       sender.role.investigatedCount -= 1; // soi rồi không chọn lại được nữa
 
@@ -138,15 +142,17 @@ class DetectiveInteraction {
           targetPlayer2.role.faction === 1 &&
           targetPlayer1.role.id !== WEREROLE.LYCAN &&
           targetPlayer2.role.id !== WEREROLE.LYCAN
-        )
+        ) {
           return true;
+        }
         if (
           targetPlayer1.role.faction === 1 &&
           targetPlayer2.role.faction === 3 &&
           targetPlayer1.role.id !== WEREROLE.LYCAN &&
           targetPlayer2.role.id !== WEREROLE.LYCAN
-        )
+        ) {
           return true;
+        }
 
         if (
           targetPlayer1.role.id === WEREROLE.LYCAN ||
@@ -162,7 +168,7 @@ class DetectiveInteraction {
       try {
         const user = await client.users.fetch(playerId);
         await user.send(
-          `🔎 Bạn đã điều tra: **${targetPlayer1.name}** và **${targetPlayer2.name}**. Họ ${checkFaction() ? 'cùng phe' : 'khác phe'}.`
+          `🔎 Bạn đã điều tra: **${targetPlayer1.name}** và **${targetPlayer2.name}**. Họ ${checkFaction() ? 'cùng phe' : 'khác phe'}.`,
         );
       } catch (err) {
         console.error(`Không thể gửi DM cho ${playerId}:`, err);

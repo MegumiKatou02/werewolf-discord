@@ -6,14 +6,17 @@ import {
   type Interaction,
   Client,
 } from 'discord.js';
-import { WEREROLE } from '../../../../utils/role.js';
+
+import type { GameRoom } from '../../../../core/room.js';
 import type Player from '../../../../types/player.js';
 import AlphaWerewolf from '../../../../types/roles/AlphaWerewolf.js';
-import type { GameRoom } from '../../../../core/room.js';
+import { WEREROLE } from '../../../../utils/role.js';
 
 class AlphaWerewolfInteraction {
   isButton = async (interaction: Interaction) => {
-    if (!interaction.isButton()) return;
+    if (!interaction.isButton()) {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[3];
 
@@ -55,9 +58,11 @@ class AlphaWerewolfInteraction {
     interaction: Interaction,
     gameRoom: GameRoom,
     sender: Player,
-    client: Client
+    client: Client,
   ) => {
-    if (!interaction.isModalSubmit()) return;
+    if (!interaction.isModalSubmit()) {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[3];
 
@@ -69,7 +74,7 @@ class AlphaWerewolfInteraction {
     }
 
     const maskIndexStr = interaction.fields.getTextInputValue(
-      'mask_index_alphawerewolf'
+      'mask_index_alphawerewolf',
     );
     const maskIndex = parseInt(maskIndexStr, 10);
 

@@ -7,7 +7,7 @@ class Fool extends Role {
   }
 
   getDescription() {
-    return `Bạn phải lừa dân làng treo cổ bạn. Nếu họ treo cổ bạn, bạn thắng.`;
+    return 'Bạn phải lừa dân làng treo cổ bạn. Nếu họ treo cổ bạn, bạn thắng.';
   }
   resetDay() {}
 }

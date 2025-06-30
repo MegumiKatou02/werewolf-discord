@@ -8,8 +8,8 @@ import {
   type Interaction,
   PermissionsBitField,
 } from 'discord.js';
-import { gameRooms } from '../core/room.js';
-import { Player } from '../core/room.js';
+
+import { gameRooms, Player } from '../core/room.js';
 export default {
   data: new SlashCommandBuilder()
     .setName('status')
@@ -70,14 +70,14 @@ export default {
     const statusEmbed = new EmbedBuilder()
       .setColor(statusColors[gameRoom.status as keyof typeof statusColors])
       .setTitle(
-        `${statusIcons[gameRoom.status as keyof typeof statusIcons]} PHÒNG MA SÓI ${gameRoom.status === 'starting' ? '#' + gameRoom.gameState.nightCount : ''}`
+        `${statusIcons[gameRoom.status as keyof typeof statusIcons]} PHÒNG MA SÓI ${gameRoom.status === 'starting' ? '#' + gameRoom.gameState.nightCount : ''}`,
       )
       .setDescription(
         gameRoom.status === 'waiting'
           ? '```ini\n[Phòng đang chờ người chơi tham gia...]\n```'
           : gameRoom.status === 'starting'
             ? '```fix\n[Trò chơi đang diễn ra...]\n```'
-            : '```diff\n+ Trò chơi đã kết thúc\n```'
+            : '```diff\n+ Trò chơi đã kết thúc\n```',
       )
       .addFields(
         {
@@ -89,7 +89,7 @@ export default {
           name: '👥 Số Người Chơi',
           value: `> ${gameRoom.players.length}${gameRoom.status === 'waiting' ? '/18' : ''}`,
           inline: true,
-        }
+        },
       );
 
     if (gameRoom.status === 'starting') {
@@ -117,7 +117,7 @@ export default {
           name: '💀 Đã Chết',
           value: `> ${deadCount}`,
           inline: true,
-        }
+        },
       );
     }
 
@@ -153,7 +153,7 @@ export default {
       const isAdmin =
         (interaction.member?.permissions instanceof PermissionsBitField &&
           interaction.member.permissions.has(
-            PermissionFlagsBits.Administrator
+            PermissionFlagsBits.Administrator,
           )) ??
         false;
       const isHost = gameRoom.hostId === interaction.user.id;
@@ -166,7 +166,7 @@ export default {
           .setStyle(ButtonStyle.Primary);
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-          viewLogButton
+          viewLogButton,
         );
         components.push(row);
       }
@@ -204,7 +204,7 @@ export default {
             .setTitle('📜 LOG GAME MA SÓI')
             .setDescription(
               gameRoom.gameState.log.join('\n') ||
-                '*Không có log nào được ghi lại*'
+                '*Không có log nào được ghi lại*',
             )
             .setTimestamp()
             .setFooter({
@@ -224,7 +224,7 @@ export default {
             new ActionRowBuilder<ButtonBuilder>().addComponents(
               ButtonBuilder.from(components[0].components[0])
                 .setDisabled(true)
-                .setLabel('📜 Log Game (Hết hạn)')
+                .setLabel('📜 Log Game (Hết hạn)'),
             );
           await interaction.editReply({
             components: [disabledRow],

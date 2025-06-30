@@ -5,6 +5,7 @@ import Role from './role.js';
  */
 class Gunner extends Role {
   bullets: number;
+
   constructor() {
     super('Xạ Thủ', 1);
     this.id = 17;

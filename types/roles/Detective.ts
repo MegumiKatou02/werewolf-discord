@@ -12,7 +12,7 @@ class Detective extends Role {
   }
 
   getDescription() {
-    return `Mỗi đêm, bạn có thể chọn hai người chơi để điều tra và biết được họ ở cùng một phe hay là khác phe.`;
+    return 'Mỗi đêm, bạn có thể chọn hai người chơi để điều tra và biết được họ ở cùng một phe hay là khác phe.';
   }
 
   resetDay() {

@@ -1,6 +1,8 @@
-import EmbedBuilderWerewolf from './embed.js';
-import roles from '../data/data.json' with { type: 'json' };
 import type { Message, User } from 'discord.js';
+
+import roles from '../data/data.json' with { type: 'json' };
+
+import EmbedBuilderWerewolf from './embed.js';
 
 /**
  * Tạo embed theo từng role
@@ -17,7 +19,7 @@ const RoleResponse = async (
   commandNames: string[],
   fileName: string,
   indexRole: number,
-  factionRole: string
+  factionRole: string,
 ) => {
   const msg = message.content.toLowerCase();
 
@@ -46,7 +48,7 @@ const RoleResponseDMs = async (
   user: User,
   fileName: string,
   indexRole: number,
-  factionRole: string
+  factionRole: string,
 ) => {
   const roleKey = indexRole.toString() as keyof typeof roles;
   const { embed, file } = EmbedBuilderWerewolf(fileName, {

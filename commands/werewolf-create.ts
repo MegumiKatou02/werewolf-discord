@@ -3,6 +3,7 @@ import {
   EmbedBuilder,
   type Interaction,
 } from 'discord.js';
+
 import { gameRooms, GameRoom } from '../core/room.js';
 
 export default {
@@ -46,7 +47,7 @@ export default {
     const newRoom = new GameRoom(
       interaction.client,
       guildId,
-      interaction.user.id
+      interaction.user.id,
     );
     gameRooms.set(guildId, newRoom);
     newRoom.addPlayer(interaction.user.id);
@@ -70,7 +71,7 @@ export default {
           name: '⌛ Trạng Thái',
           value: 'Đang chờ',
           inline: true,
-        }
+        },
       )
       .setFooter({ text: '💡 Sử dụng /masoi-join để tham gia phòng' })
       .setTimestamp();

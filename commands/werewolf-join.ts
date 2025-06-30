@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, type Interaction } from 'discord.js';
+
 import { gameRooms } from '../core/room.js';
 
 export default {

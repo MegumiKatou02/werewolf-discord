@@ -1,5 +1,3 @@
-import { WEREROLE } from '../../../../utils/role.js';
-import Dead from '../../../../types/roles/Dead.js';
 import {
   ModalBuilder,
   TextInputBuilder,
@@ -8,13 +6,18 @@ import {
   type Interaction,
   Client,
 } from 'discord.js';
-import type Player from '../../../../types/player.js';
-import Gunner from '../../../../types/roles/Gunner.js';
+
 import type { GameRoom } from '../../../../core/room.js';
+import type Player from '../../../../types/player.js';
+import Dead from '../../../../types/roles/Dead.js';
+import Gunner from '../../../../types/roles/Gunner.js';
+import { WEREROLE } from '../../../../utils/role.js';
 
 class GunnerInteraction {
   isButtonGunner = async (interaction: Interaction) => {
-    if (!interaction.isButton()) return;
+    if (!interaction.isButton()) {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[2];
 
@@ -57,11 +60,15 @@ class GunnerInteraction {
     interaction: Interaction,
     gameRoom: GameRoom,
     sender: Player,
-    client: Client
+    client: Client,
   ) => {
-    if (!interaction.isModalSubmit()) return;
+    if (!interaction.isModalSubmit()) {
+      return;
+    }
 
-    if (!gameRoom || gameRoom.gameState.phase !== 'day') return;
+    if (!gameRoom || gameRoom.gameState.phase !== 'day') {
+      return;
+    }
 
     const playerId = interaction.customId.split('_')[3];
 
@@ -116,12 +123,14 @@ class GunnerInteraction {
       targetPlayer.alive = false;
       targetPlayer.role = new Dead(
         targetPlayer.role.faction,
-        targetPlayer.role.id
+        targetPlayer.role.id,
       );
 
       const notifyPromises = gameRoom.players.map(async (player: Player) => {
         const user = await client.users.fetch(player.userId);
-        if (!user) return;
+        if (!user) {
+          return;
+        }
 
         if (player.userId === targetPlayer.userId) {
           await user.send('💀 Bạn đã bị Xạ thủ bắn chết.');
@@ -132,11 +141,11 @@ class GunnerInteraction {
           sender.role.bullets === 1
         ) {
           await user.send(
-            `🔫 **${sender.name}** đã bắn chết **${targetPlayer.name}**!`
+            `🔫 **${sender.name}** đã bắn chết **${targetPlayer.name}**!`,
           );
         } else {
           await user.send(
-            `🔫 **Xạ Thủ** đã bắn chết **${targetPlayer.name}**!`
+            `🔫 **Xạ Thủ** đã bắn chết **${targetPlayer.name}**!`,
           );
         }
       });
@@ -146,7 +155,7 @@ class GunnerInteraction {
       await gameRoom.updateAllPlayerList();
 
       gameRoom.gameState.log.push(
-        `🔫 **${sender.name}** đã bắn chết **${targetPlayer.name}`
+        `🔫 **${sender.name}** đã bắn chết **${targetPlayer.name}`,
       );
 
       // Kiểm tra master của hầu gái
@@ -155,10 +164,12 @@ class GunnerInteraction {
       if (maidNewRole) {
         const notifyPromises = gameRoom.players.map(async (player: Player) => {
           const user = await client.users.fetch(player.userId);
-          if (!user) return;
+          if (!user) {
+            return;
+          }
 
           await user.send(
-            `### 👒 Hầu gái đã lên thay vai trò **${maidNewRole}** của chủ vì chủ đã bị bắn.\n`
+            `### 👒 Hầu gái đã lên thay vai trò **${maidNewRole}** của chủ vì chủ đã bị bắn.\n`,
           );
         });
         await Promise.allSettled(notifyPromises);

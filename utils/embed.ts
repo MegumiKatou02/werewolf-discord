@@ -1,13 +1,14 @@
-import { EmbedBuilder, AttachmentBuilder } from 'discord.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { EmbedBuilder, AttachmentBuilder } from 'discord.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const EmbedBuilderWerewolf = (
   fileName: string,
-  { title, description }: { title: string; description: string }
+  { title, description }: { title: string; description: string },
 ) => {
   const imagePath = path.join(__dirname, '..', 'assets', fileName);
   const file = new AttachmentBuilder(imagePath);

@@ -10,7 +10,7 @@ class Seer extends Role {
   }
 
   getDescription() {
-    return `Mỗi đêm bạn có thể xem phe của người chơi khác.`;
+    return 'Mỗi đêm bạn có thể xem phe của người chơi khác.';
   }
   resetDay() {
     this.viewCount = 1;

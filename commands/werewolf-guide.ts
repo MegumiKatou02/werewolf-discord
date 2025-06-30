@@ -7,6 +7,7 @@ import {
   type Interaction,
   type MessageComponentInteraction,
 } from 'discord.js';
+
 import tips from '../data/tips.json' with { type: 'json' };
 
 export default {
@@ -54,7 +55,7 @@ export default {
             '`/status` - Xem trạng thái phòng trong server\n' +
             '`/huongdan` - Xem hướng dẫn này\n' +
             '...',
-        }
+        },
       )
       .setFooter({ text: `💡 Mẹo: ${getRandomTip()}` });
 
@@ -76,11 +77,11 @@ export default {
           .setLabel('Vai Trò')
           .setDescription('Thông tin về các vai trò trong game Ma Sói')
           .setValue('guide_roles')
-          .setEmoji('🎭')
+          .setEmoji('🎭'),
       );
 
     const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-      selectMenu
+      selectMenu,
     );
 
     const response = await interaction.reply({
@@ -125,7 +126,7 @@ export default {
               '• **Phe Sói**: Thắng khi số Sói >= số Dân\n' +
               '• **Phe Dân**: Thắng khi tiêu diệt hết Sói\n' +
               '• **Phe Solo**: Thắng theo điều kiện riêng',
-          }
+          },
         )
         .setFooter({ text: `💡 Mẹo: ${getRandomTip()}` });
 
@@ -209,7 +210,7 @@ export default {
             value:
               '• Mỗi đêm dậy soi 3 người tự chọn trong danh sách, nếu 1 trong 3 người đó là sói thì được báo "Có sói", nếu đoán hụt thì mất chức năng.',
             inline: true,
-          }
+          },
         )
         .setFooter({ text: `💡 Mẹo: ${getRandomTip()}` });
 
@@ -217,15 +218,15 @@ export default {
 
       if (i.isStringSelectMenu()) {
         switch (i.values[0]) {
-          case 'guide_tips':
-            await i.editReply({ embeds: [tipsEmbed], components: [row] });
-            break;
-          case 'guide_rules':
-            await i.editReply({ embeds: [rulesEmbed], components: [row] });
-            break;
-          case 'guide_roles':
-            await i.editReply({ embeds: [rolesEmbed], components: [row] });
-            break;
+        case 'guide_tips':
+          await i.editReply({ embeds: [tipsEmbed], components: [row] });
+          break;
+        case 'guide_rules':
+          await i.editReply({ embeds: [rulesEmbed], components: [row] });
+          break;
+        case 'guide_roles':
+          await i.editReply({ embeds: [rolesEmbed], components: [row] });
+          break;
         }
       }
     });
@@ -233,7 +234,7 @@ export default {
     collector.on('end', async () => {
       const disabledRow =
         new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-          StringSelectMenuBuilder.from(selectMenu).setDisabled(true)
+          StringSelectMenuBuilder.from(selectMenu).setDisabled(true),
         );
 
       await interaction

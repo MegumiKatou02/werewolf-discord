@@ -9,6 +9,7 @@ import {
   type MessageComponentInteraction,
   PermissionsBitField,
 } from 'discord.js';
+
 import { gameRooms } from '../core/room.js';
 
 export default {
@@ -41,7 +42,7 @@ export default {
     const isAdmin =
       (interaction.member?.permissions instanceof PermissionsBitField &&
         interaction.member.permissions.has(
-          PermissionFlagsBits.Administrator
+          PermissionFlagsBits.Administrator,
         )) ??
       false;
     const isHost = gameRoom.hostId === interaction.user.id;
@@ -83,7 +84,7 @@ export default {
           name: '👥 Số Người Chơi',
           value: `\`${gameRoom.players.length}\``,
           inline: true,
-        }
+        },
       )
       .setFooter({ text: '⚠️ Hành động này không thể hoàn tác!' });
 
@@ -95,7 +96,7 @@ export default {
       new ButtonBuilder()
         .setCustomId('cancel_clear_room')
         .setLabel('❌ Hủy')
-        .setStyle(ButtonStyle.Secondary)
+        .setStyle(ButtonStyle.Secondary),
     );
 
     const response = await interaction.reply({
@@ -128,7 +129,7 @@ export default {
         const channel = interaction.channel;
         if (channel) {
           channel.send(
-            `✅ Phòng chơi trong server đã bị xóa bởi <@${i.user.id}>.`
+            `✅ Phòng chơi trong server đã bị xóa bởi <@${i.user.id}>.`,
           );
         }
       } else if (i.customId === 'cancel_clear_room') {

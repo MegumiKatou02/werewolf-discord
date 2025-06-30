@@ -11,6 +11,7 @@ import {
   type Interaction,
   PermissionsBitField,
 } from 'discord.js';
+
 import { gameRooms } from '../core/room.js';
 import ServerSettings from '../models/ServerSettings.js';
 
@@ -41,7 +42,7 @@ export default {
     const isAdmin =
       (interaction.member?.permissions instanceof PermissionsBitField &&
         interaction.member.permissions.has(
-          PermissionFlagsBits.Administrator
+          PermissionFlagsBits.Administrator,
         )) ??
       false;
     const isDev = interaction.user.id === process.env.DEVELOPER;
@@ -96,7 +97,7 @@ export default {
           name: '🗳️ Thời Gian Vote Treo Cổ',
           value: `\`${settings.voteTime}\` giây`,
           inline: true,
-        }
+        },
       )
       .setFooter({ text: '💡 Chỉ Admin mới có thể thay đổi cài đặt' });
 
@@ -104,7 +105,7 @@ export default {
       new ButtonBuilder()
         .setCustomId('edit_settings')
         .setLabel('🔧 Điều Chỉnh Cài Đặt')
-        .setStyle(ButtonStyle.Primary)
+        .setStyle(ButtonStyle.Primary),
     );
 
     const response = await interaction.reply({
@@ -185,12 +186,12 @@ export default {
         modal.addComponents(
           new ActionRowBuilder<TextInputBuilder>().addComponents(wolfVoteInput),
           new ActionRowBuilder<TextInputBuilder>().addComponents(
-            nightTimeInput
+            nightTimeInput,
           ),
           new ActionRowBuilder<TextInputBuilder>().addComponents(
-            discussTimeInput
+            discussTimeInput,
           ),
-          new ActionRowBuilder<TextInputBuilder>().addComponents(voteTimeInput)
+          new ActionRowBuilder<TextInputBuilder>().addComponents(voteTimeInput),
         );
 
         await i.showModal(modal);
