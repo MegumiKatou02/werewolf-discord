@@ -44,12 +44,14 @@ import { createAvatarCollage } from './canvas.js';
 import GameState from './gamestate.js';
 import { store } from './store.js';
 
+type GamePhase = 'waiting' | 'starting' | 'ended';
+
 class GameRoom extends EventEmitter {
   client: Client;
   guildId: string;
   hostId: string;
   players: Player[];
-  status: string;
+  status: GamePhase;
   gameState: GameState;
   witchMessages: Map<string, Message>;
   nightMessages: Map<string, Message>;
