@@ -206,10 +206,9 @@ export default {
             inline: true,
           },
           {
-            name: '🦊 Cáo (Phe Dân)',
-            value:
-              '• Mỗi đêm dậy soi 3 người tự chọn trong danh sách, nếu 1 trong 3 người đó là sói thì được báo "Có sói", nếu đoán hụt thì mất chức năng.',
-            inline: true,
+            name: 'ℹ️ Xem thêm',
+            value: 'Xem thêm nhiều role khác bằng cách dùng lệnh `/role`',
+            inline: false,
           },
         )
         .setFooter({ text: `💡 Mẹo: ${getRandomTip()}` });
