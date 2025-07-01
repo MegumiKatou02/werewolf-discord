@@ -77,7 +77,7 @@ export default {
       .addFields(
         {
           name: '📊 Trạng Thái Phòng',
-          value: `\`${gameRoom.status === 'starting' ? '🎮 Đang chơi' : '⌛ Đang chờ'}\``,
+          value: `\`${gameRoom.status === 'waiting' ? '⌛ Đang chờ' : '🎮 Đang chơi'}\``,
           inline: true,
         },
         {
