@@ -835,9 +835,7 @@ class GameRoom extends EventEmitter {
   }
 
   /**
-   *
-   * @returns {Promise<void>}
-   * Đoạn này xin được phép comment nhiều vì sợ đọc lại không hiểu <(")
+   * @description Đoạn này xin được phép comment nhiều vì sợ đọc lại không hiểu <(")
    */
   async solvePhase2() {
     this.gameState.log.push(`## Đêm thứ ${this.gameState.nightCount}`);
@@ -1492,10 +1490,6 @@ class GameRoom extends EventEmitter {
     await this.checkEndGame();
   }
 
-  /**
-   *
-   * @returns {EmbedBuilder}
-   */
   revealRoles() {
     const roleRevealEmbed = new EmbedBuilder()
       .setColor(0x2ecc71)
@@ -1667,6 +1661,10 @@ class GameRoom extends EventEmitter {
 
       console.log(this.gameState.log);
       this.status = 'ended';
+      // Xoá người chơi trong guild khỏi store
+      for (const player of this.players) {
+        store.delete(player.userId);
+      }
       return true;
     }
 
@@ -1687,8 +1685,6 @@ class GameRoom extends EventEmitter {
   }
 
   /**
-   *
-   * @returns {Object|null}
    * @property {string} winner -  ('werewolf', 'village', 'solo').
    * @property {number} faction -  (0: sói, 1: dân, 2: solo)
    */
@@ -1857,6 +1853,9 @@ class GameRoom extends EventEmitter {
   }
 }
 
+/**
+ * @description [guildId]: phòng chơi
+ */
 export const gameRooms = new Map<string, GameRoom>();
 
 export { GameRoom, Player };
