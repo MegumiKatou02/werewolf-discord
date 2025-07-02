@@ -1,6 +1,7 @@
 import { MessageFlags, SlashCommandBuilder, type Interaction } from 'discord.js';
 
 import { gameRooms } from '../core/room.js';
+import { store } from '../core/store.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -49,6 +50,13 @@ export default {
     if (room.hasPlayer(userId)) {
       return interaction.reply({
         content: 'Bạn đã tham gia trò chơi rồi',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    if (store.has(userId)) {
+      return interaction.reply({
+        content: 'Bạn đã tham gia trò chơi ở server khác rồi',
         flags: MessageFlags.Ephemeral,
       });
     }

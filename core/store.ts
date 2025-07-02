@@ -5,7 +5,9 @@ const defaultSettings = {
   voteTime: 30,
 };
 
-// [id người dùng]: id server
+/**
+ * @description [id người dùng]: id guild
+ */
 export const store = new Map<string, string>();
 export const serverSettings = new Map();
 
