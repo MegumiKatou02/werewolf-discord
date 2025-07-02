@@ -9,7 +9,7 @@
 
 **Bot Discord game Soi Má (Werewolf) được viết bằng TypeScript với Discord.js v14 <(")**
 
-[🔗  Invate](#invite) • [🚀 Commands](#-commands) • [⚙️ Installation](#️-cài-đặt--chạy) • [📝 Configuration](#-cấu-hình) • [📄 License](#license)
+[🔗  Invate](#-invite-the-bot-to-your-server) • [🚀 Commands](#-commands) • [⚙️ Installation](#️-cài-đặt--chạy) • [📝 Configuration](#-cấu-hình) • [📄 License](#%EF%B8%8F-quan-trọng---bản-quyền--sử-dụng)
 
 </div>
 
