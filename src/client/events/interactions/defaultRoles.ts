@@ -1,4 +1,4 @@
-import type { Interaction } from 'discord.js';
+import { MessageFlags, type Interaction } from 'discord.js';
 
 import type { GameRoom } from '../../../../core/room.js';
 
@@ -17,7 +17,7 @@ class DefaultRoles {
     }
     const room = gameRooms.get(guildId);
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     if (!room) {
       return interaction.editReply({

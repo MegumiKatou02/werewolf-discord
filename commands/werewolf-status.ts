@@ -7,6 +7,7 @@ import {
   PermissionFlagsBits,
   type Interaction,
   PermissionsBitField,
+  MessageFlags,
 } from 'discord.js';
 
 import { gameRooms, Player } from '../core/room.js';
@@ -23,7 +24,7 @@ export default {
     if (!interaction.inGuild()) {
       return await interaction.reply({
         content: 'Lệnh này chỉ sử dụng được trong server.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -45,7 +46,6 @@ export default {
 
       return interaction.reply({
         embeds: [noGameEmbed],
-        ephemeral: false,
       });
     }
 
@@ -175,7 +175,6 @@ export default {
     const response = await interaction.reply({
       embeds: [statusEmbed],
       components,
-      ephemeral: false,
     });
 
     if (components.length > 0) {
@@ -194,7 +193,7 @@ export default {
           if (!isAdmin && !isHost) {
             await i.reply({
               content: '❌ Chỉ Admin hoặc Host mới có thể xem log game.',
-              ephemeral: true,
+              flags: MessageFlags.Ephemeral,
             });
             return;
           }
@@ -213,7 +212,6 @@ export default {
 
           await i.reply({
             embeds: [logEmbed],
-            ephemeral: false,
           });
         }
       });

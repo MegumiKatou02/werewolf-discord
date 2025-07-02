@@ -6,6 +6,7 @@ import {
   ButtonStyle,
   type Interaction,
   PermissionsBitField,
+  MessageFlags,
 } from 'discord.js';
 
 import { gameRooms } from '../core/room.js';
@@ -23,11 +24,11 @@ export default {
     if (!interaction.inGuild()) {
       return interaction.reply({
         content: 'Lệnh này chỉ sử dụng được trong server.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const guildId = interaction.guildId;
 

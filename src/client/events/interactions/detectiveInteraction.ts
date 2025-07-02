@@ -6,6 +6,7 @@ import {
   type Interaction,
   Client,
 } from 'discord.js';
+import { MessageFlags } from 'discord.js';
 
 import type { GameRoom } from '../../../../core/room.js';
 import type Player from '../../../../types/player.js';
@@ -23,7 +24,7 @@ class DetectiveInteraction {
     if (interaction.user.id !== playerId) {
       return interaction.reply({
         content: 'Bạn không được nhấn nút này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -71,7 +72,7 @@ class DetectiveInteraction {
     if (interaction.user.id !== playerId) {
       return interaction.reply({
         content: 'Bạn không được gửi form này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -95,7 +96,7 @@ class DetectiveInteraction {
     ) {
       return interaction.reply({
         content: 'Số thứ tự không hợp lệ hoặc trùng nhau.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -110,14 +111,14 @@ class DetectiveInteraction {
       if (!targetPlayer1.alive || !targetPlayer2.alive) {
         return interaction.reply({
           content: 'Không có tác dụng lên người chết',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
       if (sender.role.investigatedCount <= 0) {
         return interaction.reply({
           content: 'Bạn đã hết lượt dùng chức năng',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -177,7 +178,7 @@ class DetectiveInteraction {
 
     await interaction.reply({
       content: '✅ Điều tra thành công.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   };
 }

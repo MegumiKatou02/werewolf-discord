@@ -5,6 +5,7 @@ import {
   ActionRowBuilder,
   type Interaction,
   Client,
+  MessageFlags,
 } from 'discord.js';
 
 import type { GameRoom } from '../../../../core/room.js';
@@ -23,7 +24,7 @@ class AlphaWerewolfInteraction {
     if (interaction.user.id !== playerId) {
       return interaction.reply({
         content: 'Bạn không được nhấn nút này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -49,7 +50,7 @@ class AlphaWerewolfInteraction {
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
           content: 'Tương tác đã hết hạn hoặc xảy ra lỗi. Vui lòng thử lại.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
     }
@@ -69,7 +70,7 @@ class AlphaWerewolfInteraction {
     if (interaction.user.id !== playerId) {
       return interaction.reply({
         content: 'Bạn không được nhấn nút này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -85,7 +86,7 @@ class AlphaWerewolfInteraction {
     ) {
       return interaction.reply({
         content: 'Số thứ tự không hợp lệ.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -99,14 +100,14 @@ class AlphaWerewolfInteraction {
       if (!targetPlayer.alive) {
         return interaction.reply({
           content: 'Không có tác dụng lên người chết',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
       if (targetPlayer.role.faction !== 0) {
         return interaction.reply({
           content: 'Người bạn che không phải sói',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -122,7 +123,7 @@ class AlphaWerewolfInteraction {
 
     await interaction.reply({
       content: '✅ Che thành công.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   };
 }

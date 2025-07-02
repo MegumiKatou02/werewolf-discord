@@ -6,6 +6,7 @@ import {
   type Interaction,
   Client,
 } from 'discord.js';
+import { MessageFlags } from 'discord.js';
 
 import type { GameRoom } from '../../../../core/room.js';
 import type Player from '../../../../types/player.js';
@@ -23,7 +24,7 @@ class WitchInteraction {
     if (interaction.user.id !== playerId) {
       return interaction.reply({
         content: 'Bạn không được nhấn nút này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
     try {
@@ -34,14 +35,14 @@ class WitchInteraction {
       if (witch && witch.role instanceof Witch && witch.role.healedPerson) {
         return interaction.reply({
           content: 'Bạn không thể dùng 2 bình trong 1 đêm.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
     } catch (err) {
       console.error('❌ Lỗi khi fetch user:', err);
       return interaction.reply({
         content: 'Không tìm thấy người chơi.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -67,7 +68,7 @@ class WitchInteraction {
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
           content: 'Tương tác đã hết hạn hoặc xảy ra lỗi. Vui lòng thử lại.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
     }
@@ -83,7 +84,7 @@ class WitchInteraction {
     if (interaction.user.id !== playerId) {
       return interaction.reply({
         content: 'Bạn không được nhấn nút này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -95,14 +96,14 @@ class WitchInteraction {
       if (witch && witch.role instanceof Witch && witch.role.poisonedPerson) {
         return interaction.reply({
           content: 'Bạn không thể dùng 2 bình trong 1 đêm.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
     } catch (err) {
       console.error('❌ Lỗi khi fetch user:', err);
       return interaction.reply({
         content: 'Không tìm thấy người chơi.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -128,7 +129,7 @@ class WitchInteraction {
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
           content: 'Tương tác đã hết hạn hoặc xảy ra lỗi. Vui lòng thử lại.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
     }
@@ -153,7 +154,7 @@ class WitchInteraction {
     if (interaction.user.id !== playerId) {
       return interaction.reply({
         content: 'Bạn không được gửi form này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -168,7 +169,7 @@ class WitchInteraction {
     ) {
       return interaction.reply({
         content: 'Số thứ tự không hợp lệ.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -181,21 +182,21 @@ class WitchInteraction {
       if (!targetPlayer.alive) {
         return interaction.reply({
           content: 'Không có tác dụng lên người chết',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
       if (sender.role.poisonCount <= 0) {
         return interaction.reply({
           content: 'Bạn đã hết lượt dùng chức năng',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
       if (targetPlayer.userId === sender.userId) {
         return interaction.reply({
           content: 'Bạn không thể chọn chính bản thân bạn.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -214,7 +215,7 @@ class WitchInteraction {
 
     await interaction.reply({
       content: '✅ Chọn người chơi thành công.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   };
   isModalSubmitHeal = async (
@@ -236,7 +237,7 @@ class WitchInteraction {
     if (interaction.user.id !== playerId) {
       return interaction.reply({
         content: 'Bạn không được gửi form này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -251,7 +252,7 @@ class WitchInteraction {
     ) {
       return interaction.reply({
         content: 'Số thứ tự không hợp lệ.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -264,27 +265,27 @@ class WitchInteraction {
       if (!targetPlayer.alive) {
         return interaction.reply({
           content: 'Không có tác dụng lên người chết',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
       if (sender.role.healCount <= 0) {
         return interaction.reply({
           content: 'Bạn đã hết lượt dùng chức năng',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
       if (targetPlayer.userId === sender.userId) {
         return interaction.reply({
           content: 'Bạn không thể cứu chính bản thân bạn.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
       if (targetPlayer.userId !== sender.role.needHelpPerson) {
         return interaction.reply({
           content: 'Bạn chỉ có thể cứu người chơi đã được yêu cầu giúp đỡ.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -303,7 +304,7 @@ class WitchInteraction {
 
     await interaction.reply({
       content: '✅ Chọn người chơi thành công.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   };
 }

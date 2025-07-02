@@ -5,6 +5,7 @@ import {
   TextInputStyle,
   type Interaction,
   Client,
+  MessageFlags,
 } from 'discord.js';
 
 import type { GameRoom } from '../../../../core/room.js';
@@ -23,7 +24,7 @@ class MediumInteraction {
     if (interaction.user.id !== playerId) {
       return interaction.reply({
         content: 'Bạn không được nhấn nút này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -49,7 +50,7 @@ class MediumInteraction {
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
           content: 'Tương tác đã hết hạn hoặc xảy ra lỗi. Vui lòng thử lại.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
     }
@@ -74,7 +75,7 @@ class MediumInteraction {
     if (interaction.user.id !== playerId) {
       return interaction.reply({
         content: 'Bạn không được gửi form này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -90,7 +91,7 @@ class MediumInteraction {
     ) {
       return interaction.reply({
         content: 'Số thứ tự không hợp lệ.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -103,14 +104,14 @@ class MediumInteraction {
       if (sender.role.revivedCount <= 0) {
         return interaction.reply({
           content: 'Bạn đã hết lượt dùng chức năng',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
       if (targetPlayer.alive) {
         return interaction.reply({
           content: 'Người chơi này vẫn còn sống, không thể hồi sinh.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -118,7 +119,7 @@ class MediumInteraction {
         return interaction.reply({
           content:
             'Người chơi này không thuộc phe dân làng, không thể hồi sinh.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -136,7 +137,7 @@ class MediumInteraction {
     }
     await interaction.reply({
       content: '✅ Chọn người chơi thành công.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   };
 }

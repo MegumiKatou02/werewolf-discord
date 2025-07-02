@@ -7,6 +7,7 @@ import {
   type Interaction,
   type MessageComponentInteraction,
 } from 'discord.js';
+import { MessageFlags } from 'discord.js';
 
 import rolesData from '../data/data.json' with { type: 'json' };
 import EmbedBuilderWerewolf from '../utils/embed.js';
@@ -93,7 +94,7 @@ export default {
         await i.reply({
           content:
             'Bạn không thể sử dụng menu này! Hãy gõ `/role` để tạo menu riêng cho bạn :v',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }

@@ -12,6 +12,7 @@ import {
   type APIActionRowComponent,
   type APIButtonComponent,
 } from 'discord.js';
+import { MessageFlags } from 'discord.js';
 
 import rolesData from '../data/data.json' with { type: 'json' };
 import ServerSettings from '../models/ServerSettings.js';
@@ -50,6 +51,7 @@ class GameRoom extends EventEmitter {
   client: Client;
   guildId: string;
   hostId: string;
+  channelId: string;
   players: Player[];
   status: GamePhase;
   gameState: GameState;
@@ -64,12 +66,13 @@ class GameRoom extends EventEmitter {
     voteTime: number;
   };
 
-  constructor(client: Client, guildId: string, hostId: string) {
+  constructor(client: Client, guildId: string, hostId: string, channelId: string) {
     super();
 
     this.client = client;
     this.guildId = guildId;
     this.hostId = hostId;
+    this.channelId = channelId;
     this.players = [];
     this.status = 'waiting'; // waiting, starting, ended
     this.gameState = new GameState();
@@ -240,7 +243,7 @@ class GameRoom extends EventEmitter {
         if (interaction.isRepliable()) {
           await interaction.reply({
             content: `Không thể gửi tin nhắn cho bạn (<@${player.userId}>), hãy kiểm tra cài đặt quyền`,
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
       }
@@ -269,7 +272,7 @@ class GameRoom extends EventEmitter {
             await interaction.reply({
               content:
                 'Không thể gửi tin nhắn cho bạn, hãy kiểm tra cài đặt quyền',
-              ephemeral: true,
+              flags: MessageFlags.Ephemeral,
             });
           }
         }

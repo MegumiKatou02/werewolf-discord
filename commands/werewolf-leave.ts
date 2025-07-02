@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, type Interaction } from 'discord.js';
+import { MessageFlags } from 'discord.js';
 
 import { gameRooms } from '../core/room.js';
 
@@ -15,7 +16,7 @@ export default {
     if (!interaction.inGuild()) {
       return await interaction.reply({
         content: 'Lệnh này chỉ sử dụng được trong server.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -25,7 +26,7 @@ export default {
     if (!gameRooms.has(guildId)) {
       return interaction.reply({
         content: 'Không có trò chơi ma sói nào đang chờ trong server',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -34,21 +35,21 @@ export default {
     if (!room) {
       return interaction.reply({
         content: 'Không tìm thấy phòng ma sói trong server này',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
     if (!room.hasPlayer(userId)) {
       return interaction.reply({
         content: 'Bạn chưa tham gia phòng chơi nào trong server này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
     if (room.status === 'starting') {
       return interaction.reply({
         content: 'Trò chơi đã bắt đầu, bạn không thể rời.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 

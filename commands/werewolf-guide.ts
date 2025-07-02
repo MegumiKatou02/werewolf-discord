@@ -6,6 +6,7 @@ import {
   StringSelectMenuOptionBuilder,
   type Interaction,
   type MessageComponentInteraction,
+  MessageFlags,
 } from 'discord.js';
 
 import tips from '../data/tips.json' with { type: 'json' };
@@ -98,7 +99,7 @@ export default {
       if (i.user.id !== interaction.user.id) {
         await i.reply({
           content: 'Bạn không thể sử dụng menu này!',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }

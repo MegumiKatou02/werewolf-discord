@@ -5,6 +5,7 @@ import {
   ActionRowBuilder,
   type Interaction,
   Client,
+  MessageFlags,
 } from 'discord.js';
 
 import type { GameRoom } from '../../../../core/room.js';
@@ -23,7 +24,7 @@ class BodyguardInteraction {
     if (interaction.user.id !== playerId) {
       return interaction.reply({
         content: 'Bạn không được nhấn nút này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -62,7 +63,7 @@ class BodyguardInteraction {
     if (interaction.user.id !== playerId) {
       return interaction.reply({
         content: 'Bạn không được gửi form này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -78,7 +79,7 @@ class BodyguardInteraction {
     ) {
       return interaction.reply({
         content: 'Số thứ tự không hợp lệ.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -91,21 +92,21 @@ class BodyguardInteraction {
       if (!targetPlayer.alive) {
         return interaction.reply({
           content: 'Không có tác dụng lên người chết',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
       if (sender.role.protectedCount <= 0) {
         return interaction.reply({
           content: 'Bạn đã hết lượt dùng chức năng',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
       if (targetPlayer.userId === sender.userId) {
         return interaction.reply({
           content: 'Bạn đã tự bảo vệ bản thân rồi, không cần bảo vệ tiếp nữa',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -122,7 +123,7 @@ class BodyguardInteraction {
 
     await interaction.reply({
       content: '✅ Bảo vệ thành công.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   };
 }
