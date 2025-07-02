@@ -50,6 +50,7 @@ class GameRoom extends EventEmitter {
   client: Client;
   guildId: string;
   hostId: string;
+  channelId: string;
   players: Player[];
   status: GamePhase;
   gameState: GameState;
@@ -64,12 +65,13 @@ class GameRoom extends EventEmitter {
     voteTime: number;
   };
 
-  constructor(client: Client, guildId: string, hostId: string) {
+  constructor(client: Client, guildId: string, hostId: string, channelId: string) {
     super();
 
     this.client = client;
     this.guildId = guildId;
     this.hostId = hostId;
+    this.channelId = channelId;
     this.players = [];
     this.status = 'waiting'; // waiting, starting, ended
     this.gameState = new GameState();

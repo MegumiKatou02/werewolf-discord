@@ -48,6 +48,7 @@ export default {
       interaction.client,
       guildId,
       interaction.user.id,
+      interaction.channelId,
     );
     gameRooms.set(guildId, newRoom);
     newRoom.addPlayer(interaction.user.id);

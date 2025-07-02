@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, type Interaction } from 'discord.js';
+import { MessageFlags, SlashCommandBuilder, type Interaction } from 'discord.js';
 
 import { gameRooms } from '../core/room.js';
 
@@ -50,6 +50,13 @@ export default {
       return interaction.reply({
         content: 'Bạn đã tham gia trò chơi rồi',
         ephemeral: true,
+      });
+    }
+
+    if (interaction.channelId !== room.channelId) {
+      return interaction.reply({
+        content: `Trò chơi bắt đầu ở kênh <#${room.channelId}>, hãy vào kênh để dùng lệnh tham gia\nNếu không thấy kênh, hãy liên hệ <@${room.hostId}> hoặc ADMIN`,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
