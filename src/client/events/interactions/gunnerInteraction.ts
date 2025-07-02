@@ -6,6 +6,7 @@ import {
   type Interaction,
   Client,
 } from 'discord.js';
+import { MessageFlags } from 'discord.js';
 
 import type { GameRoom } from '../../../../core/room.js';
 import type Player from '../../../../types/player.js';
@@ -24,7 +25,7 @@ class GunnerInteraction {
     if (interaction.user.id !== playerId) {
       return interaction.reply({
         content: 'Bạn không được nhấn nút này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -50,7 +51,7 @@ class GunnerInteraction {
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
           content: 'Tương tác đã hết hạn hoặc xảy ra lỗi. Vui lòng thử lại.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
     }
@@ -75,11 +76,11 @@ class GunnerInteraction {
     if (interaction.user.id !== playerId) {
       return interaction.reply({
         content: 'Bạn không được gửi form này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const shootIndexStr =
       interaction.fields.getTextInputValue('shoot_index_gunner');

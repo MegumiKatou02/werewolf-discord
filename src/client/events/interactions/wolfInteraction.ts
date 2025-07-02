@@ -5,6 +5,7 @@ import {
   ActionRowBuilder,
   type Interaction,
   Client,
+  MessageFlags,
 } from 'discord.js';
 
 import type { GameRoom } from '../../../../core/room.js';
@@ -23,7 +24,7 @@ class WolfInteraction {
     if (interaction.user.id !== playerId) {
       return interaction.reply({
         content: 'Bạn không được nhấn nút này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -49,7 +50,7 @@ class WolfInteraction {
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
           content: 'Tương tác đã hết hạn hoặc xảy ra lỗi. Vui lòng thử lại.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
     }
@@ -68,7 +69,7 @@ class WolfInteraction {
       return;
     }
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const playerId = interaction.customId.split('_')[3];
 

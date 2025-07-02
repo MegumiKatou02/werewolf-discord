@@ -9,6 +9,7 @@ import {
   type MessageComponentInteraction,
   PermissionsBitField,
 } from 'discord.js';
+import { MessageFlags } from 'discord.js';
 
 import { gameRooms } from '../core/room.js';
 
@@ -25,7 +26,7 @@ export default {
     if (!interaction.inGuild()) {
       return await interaction.reply({
         content: 'Lệnh này chỉ sử dụng được trong server.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -35,7 +36,7 @@ export default {
     if (!gameRoom) {
       return interaction.reply({
         content: '❌ Không có phòng chơi nào trong server này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -51,14 +52,14 @@ export default {
     if (!isAdmin && !isHost && !isDev) {
       return interaction.reply({
         content: '❌ Chỉ Admin/Host/Dev mới có thể xóa phòng.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
     if (gameRoom.status === 'starting') {
       return interaction.reply({
         content: '❌ Không thể xóa phòng chơi khi trò chơi đã bắt đầu!',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -66,7 +67,7 @@ export default {
       gameRooms.delete(guildId);
       return interaction.reply({
         content: '✅ Đã xóa phòng chơi.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -102,7 +103,7 @@ export default {
     const response = await interaction.reply({
       embeds: [warningEmbed],
       components: [row],
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
 
     const collector = response.createMessageComponentCollector({
@@ -113,7 +114,7 @@ export default {
       if (i.user.id !== interaction.user.id) {
         await i.reply({
           content: '❌ Bạn không thể sử dụng nút này.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }

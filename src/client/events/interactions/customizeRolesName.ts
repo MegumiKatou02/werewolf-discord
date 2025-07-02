@@ -5,6 +5,7 @@ import {
   ActionRowBuilder,
   type Interaction,
 } from 'discord.js';
+import { MessageFlags } from 'discord.js';
 
 import type { GameRoom } from '../../../../core/room.js';
 
@@ -47,7 +48,7 @@ class CustomizeRolesName {
     }
     const room = gameRooms.get(guildId);
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     if (!room) {
       return interaction.editReply({

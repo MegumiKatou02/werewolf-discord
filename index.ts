@@ -12,6 +12,7 @@ import {
   SlashCommandBuilder,
   type Interaction,
 } from 'discord.js';
+import { MessageFlags } from 'discord.js';
 import { config } from 'dotenv';
 
 import connectDB from './config/database.js';
@@ -246,7 +247,7 @@ client.on('interactionCreate', async (interaction) => {
     if (!guildId) {
       return interaction.reply({
         content: 'Không tìm thấy guild liên kết với người dùng này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -255,7 +256,7 @@ client.on('interactionCreate', async (interaction) => {
     if (!gameRoom) {
       return interaction.reply({
         content: 'Không tìm thấy phòng chơi ma sói trong server này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -325,7 +326,7 @@ client.on('interactionCreate', async (interaction) => {
     if (!guildId) {
       return interaction.reply({
         content: 'Không tìm thấy guild liên kết với người dùng này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -334,7 +335,7 @@ client.on('interactionCreate', async (interaction) => {
     if (!gameRoom) {
       return interaction.reply({
         content: 'Không tìm thấy phòng chơi ma sói trong server này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -540,7 +541,7 @@ client.on('interactionCreate', async (interaction) => {
   if (!command) {
     return await interaction.reply({
       content: 'Lệnh không tồn tại!',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
@@ -550,7 +551,7 @@ client.on('interactionCreate', async (interaction) => {
     console.error(error);
     await interaction.reply({
       content: 'Có lỗi xảy ra khi thực thi lệnh!',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 });

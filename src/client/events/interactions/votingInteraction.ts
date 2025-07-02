@@ -6,6 +6,7 @@ import {
   type Interaction,
   Client,
 } from 'discord.js';
+import { MessageFlags } from 'discord.js';
 
 import type { GameRoom } from '../../../../core/room.js';
 import type Player from '../../../../types/player.js';
@@ -21,7 +22,7 @@ class VotingInteraction {
     if (interaction.user.id !== playerId) {
       return interaction.reply({
         content: 'Bạn không được nhấn nút này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -47,7 +48,7 @@ class VotingInteraction {
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
           content: 'Tương tác đã hết hạn hoặc xảy ra lỗi. Vui lòng thử lại.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
     }
@@ -66,7 +67,7 @@ class VotingInteraction {
     if (gameRoom.gameState.phase === 'day') {
       return interaction.reply({
         content: 'Bạn chưa thể vote ngay lúc này',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -75,7 +76,7 @@ class VotingInteraction {
     if (interaction.user.id !== playerId) {
       return interaction.reply({
         content: 'Bạn không được gửi form này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -90,14 +91,14 @@ class VotingInteraction {
     ) {
       return interaction.reply({
         content: 'Số thứ tự không hợp lệ. Nhập 0 hoặc 36 để bỏ qua vote.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
     if (!sender.alive) {
       return interaction.reply({
         content: 'Người chết không thể vote.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -110,21 +111,21 @@ class VotingInteraction {
       if (targetPlayer.userId === sender.userId) {
         return interaction.reply({
           content: 'Bạn không thể vote chính mình.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
       if (!targetPlayer.alive) {
         return interaction.reply({
           content: 'Không thể vote người đã chết.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
       sender.role!.voteHanged = targetPlayer.userId;
     }
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     try {
       const notifyPromises = gameRoom.players.map(async (player: Player) => {

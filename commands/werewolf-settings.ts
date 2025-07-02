@@ -11,6 +11,7 @@ import {
   type Interaction,
   PermissionsBitField,
 } from 'discord.js';
+import { MessageFlags } from 'discord.js';
 
 import { gameRooms } from '../core/room.js';
 import ServerSettings from '../models/ServerSettings.js';
@@ -35,7 +36,7 @@ export default {
     if (!interaction.inGuild()) {
       return interaction.reply({
         content: 'Lệnh này chỉ sử dụng được trong server.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -50,7 +51,7 @@ export default {
     if (!isAdmin && !isDev) {
       return interaction.reply({
         content: '❌ Bạn không có quyền sử dụng lệnh này!',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -60,7 +61,7 @@ export default {
     if (gameRoom && gameRoom.status === 'starting') {
       return interaction.reply({
         content: '❌ Không thể thay đổi cài đặt khi đang có phòng chơi!',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -122,7 +123,7 @@ export default {
         if (!i.inGuild()) {
           return i.reply({
             content: 'Lệnh này chỉ sử dụng được trong server.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
         if (
@@ -134,7 +135,7 @@ export default {
         ) {
           await i.reply({
             content: '❌ Bạn cần có quyền Admin để thay đổi cài đặt!',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
           return;
         }

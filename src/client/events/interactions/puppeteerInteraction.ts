@@ -4,6 +4,7 @@ import {
   TextInputStyle,
   ActionRowBuilder,
   type Interaction,
+  MessageFlags,
 } from 'discord.js';
 
 import type { GameRoom } from '../../../../core/room.js';
@@ -21,7 +22,7 @@ class PuppeteerInteraction {
     if (interaction.user.id !== playerId) {
       return interaction.reply({
         content: 'Bạn không được nhấn nút này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -58,7 +59,7 @@ class PuppeteerInteraction {
     if (interaction.user.id !== playerId) {
       return interaction.reply({
         content: 'Bạn không được gửi form này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -74,13 +75,13 @@ class PuppeteerInteraction {
     ) {
       return interaction.reply({
         content: 'Số thứ tự không hợp lệ.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
     const targetPlayer = gameRoom.players[viewIndex - 1];
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     if (
       sender.role &&

@@ -6,6 +6,7 @@ import {
   type Interaction,
   Client,
 } from 'discord.js';
+import { MessageFlags } from 'discord.js';
 
 import type { GameRoom } from '../../../../core/room.js';
 import type Player from '../../../../types/player.js';
@@ -24,7 +25,7 @@ class FoxSpiritInteraction {
     if (interaction.user.id !== playerId) {
       return interaction.reply({
         content: 'Bạn không được nhấn nút này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -40,14 +41,14 @@ class FoxSpiritInteraction {
       ) {
         return interaction.reply({
           content: 'Bạn đã bị mất chức năng.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
     } catch (err) {
       console.error('❌ Lỗi khi fetch user:', err);
       return interaction.reply({
         content: 'Không tìm thấy người chơi.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -89,7 +90,7 @@ class FoxSpiritInteraction {
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
           content: 'Tương tác đã hết hạn hoặc xảy ra lỗi. Vui lòng thử lại.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
     }
@@ -114,7 +115,7 @@ class FoxSpiritInteraction {
     if (interaction.user.id !== playerId) {
       return interaction.reply({
         content: 'Bạn không được gửi form này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -142,7 +143,7 @@ class FoxSpiritInteraction {
     ) {
       return interaction.reply({
         content: 'Số thứ tự không hợp lệ hoặc trùng nhau.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -157,7 +158,7 @@ class FoxSpiritInteraction {
       sender.role.id === WEREROLE.FOXSPIRIT &&
       sender.role instanceof FoxSpirit
     ) {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       if (
         !targetPlayers[0].alive ||
         !targetPlayers[1].alive ||

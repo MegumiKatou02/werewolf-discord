@@ -2,6 +2,7 @@ import {
   SlashCommandBuilder,
   EmbedBuilder,
   type Interaction,
+  MessageFlags,
 } from 'discord.js';
 
 import { gameRooms, GameRoom } from '../core/room.js';
@@ -19,7 +20,7 @@ export default {
     if (!interaction.inGuild()) {
       return await interaction.reply({
         content: 'Lệnh này chỉ sử dụng được trong server.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -32,13 +33,13 @@ export default {
       } else if (existingRoom.status === 'waiting') {
         await interaction.reply({
           content: '❌ Đã có phòng đang chờ người chơi trong server này!',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       } else if (existingRoom.status === 'starting') {
         await interaction.reply({
           content: '❌ Đã có game đang diễn ra trong server này!',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }

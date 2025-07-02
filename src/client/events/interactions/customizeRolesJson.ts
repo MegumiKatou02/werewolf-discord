@@ -4,6 +4,7 @@ import {
   TextInputStyle,
   ActionRowBuilder,
   type Interaction,
+  MessageFlags,
 } from 'discord.js';
 
 import type { GameRoom } from '../../../../core/room.js';
@@ -45,7 +46,7 @@ class CustomizeRolesJson {
     }
     const room = gameRooms.get(guildId);
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     if (!room) {
       return interaction.editReply({

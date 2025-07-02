@@ -5,6 +5,7 @@ import {
   TextInputStyle,
   type Interaction,
   Client,
+  MessageFlags,
 } from 'discord.js';
 
 import type { GameRoom } from '../../../../core/room.js';
@@ -23,7 +24,7 @@ class MaidInteraction {
     if (interaction.user.id !== playerId) {
       return interaction.reply({
         content: 'Bạn không được nhấn nút này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -49,7 +50,7 @@ class MaidInteraction {
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
           content: 'Tương tác đã hết hạn hoặc xảy ra lỗi. Vui lòng thử lại.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
     }
@@ -74,7 +75,7 @@ class MaidInteraction {
     if (interaction.user.id !== playerId) {
       return interaction.reply({
         content: 'Bạn không được gửi form này.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -82,7 +83,7 @@ class MaidInteraction {
       interaction.fields.getTextInputValue('master_index_maid');
     const masterIndex = parseInt(masterIndexStr, 10);
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     if (
       isNaN(masterIndex) ||

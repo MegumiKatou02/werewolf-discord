@@ -3,6 +3,7 @@ import {
   PermissionFlagsBits,
   type Interaction,
   PermissionsBitField,
+  MessageFlags,
 } from 'discord.js';
 
 import { gameRooms } from '../core/room.js';
@@ -26,7 +27,7 @@ export default {
     if (!interaction.inGuild()) {
       return await interaction.reply({
         content: 'Lệnh này chỉ sử dụng được trong server.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -36,14 +37,14 @@ export default {
     if (!room) {
       return await interaction.reply({
         content: '❌ Không có phòng nào đang mở.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
     if (room.status !== 'waiting') {
       return await interaction.reply({
         content: '❌ Không thể kick người chơi khi game đã bắt đầu.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -55,7 +56,7 @@ export default {
     if (interaction.user.id !== room.hostId && !isAdmin && !isDev) {
       return await interaction.reply({
         content: '❌ Chỉ host/admin/dev mới có thể kick người chơi.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -63,14 +64,14 @@ export default {
     if (!targetUser || !room.hasPlayer(targetUser.id)) {
       return await interaction.reply({
         content: '❌ Người chơi này không có trong phòng.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
     if (targetUser.id === room.hostId) {
       return await interaction.reply({
         content: '❌ Không thể kick host.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
