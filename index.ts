@@ -251,7 +251,15 @@ client.on('interactionCreate', async (interaction) => {
       });
     }
 
-    const gameRoom = gameRooms.get(guildId);
+    const gameRoom: GameRoom | undefined = gameRooms.get(guildId);
+
+    /**
+     * @description Button mà không bắt buộc phải tạo phòng trước
+     */
+    if (interaction.customId === 'edit_settings') {
+      await settingsModel.handleButtonClick(interaction);
+      return;
+    }
 
     if (!gameRoom) {
       return interaction.reply({
@@ -260,7 +268,9 @@ client.on('interactionCreate', async (interaction) => {
       });
     }
 
-    //
+    /**
+     * @description Button bắt buộc phải tạo phòng mới dùng được
+     */
     if (interaction.customId === 'use_default_roles') {
       await defaultRoles.isButton(interaction, gameRooms);
     }
@@ -332,6 +342,14 @@ client.on('interactionCreate', async (interaction) => {
 
     const gameRoom: GameRoom | undefined = gameRooms.get(guildId);
 
+    /**
+     * @description Button mà không bắt buộc phải tạo phòng trước
+     */
+    if (interaction.customId === 'settings_modal') {
+      await settingsModel.isModalSubmit(interaction);
+      return;
+    }
+
     if (!gameRoom) {
       return interaction.reply({
         content: 'Không tìm thấy phòng chơi ma sói trong server này.',
@@ -349,6 +367,9 @@ client.on('interactionCreate', async (interaction) => {
       }
     }
 
+    /**
+     * @description Button bắt buộc phải tạo phòng mới dùng được
+     */
     if (interaction.customId.startsWith('submit_vote_wolf_')) {
       if (!sender) {
         return;
@@ -460,9 +481,6 @@ client.on('interactionCreate', async (interaction) => {
         client,
       );
     }
-    if (interaction.customId === 'settings_modal') {
-      await settingsModel.isModalSubmit(interaction);
-    }
     if (interaction.customId.startsWith('submit_choose_master_maid_')) {
       if (!sender) {
         return;
@@ -528,7 +546,7 @@ client.on('interactionCreate', async (interaction) => {
       if (!sender) {
         return;
       }
-      await puppeteerInteraction.isModalSubmit(interaction, gameRoom, sender);
+      await puppeteerInteraction.isModalSubmit(interaction, gameRoom, sender, client);
     }
   }
 

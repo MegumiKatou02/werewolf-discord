@@ -4,9 +4,6 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  ModalBuilder,
-  TextInputBuilder,
-  TextInputStyle,
   PermissionFlagsBits,
   type Interaction,
   PermissionsBitField,
@@ -109,94 +106,9 @@ export default {
         .setStyle(ButtonStyle.Primary),
     );
 
-    const response = await interaction.reply({
+    await interaction.reply({
       embeds: [settingsEmbed],
       components: [row],
-    });
-
-    const collector = response.createMessageComponentCollector({
-      time: 60000, // 1p
-    });
-
-    collector.on('collect', async (i) => {
-      if (i.customId === 'edit_settings') {
-        if (!i.inGuild()) {
-          return i.reply({
-            content: 'Lệnh này chỉ sử dụng được trong server.',
-            flags: MessageFlags.Ephemeral,
-          });
-        }
-        if (
-          !(
-            i.member?.permissions instanceof PermissionsBitField &&
-            i.member.permissions.has(PermissionFlagsBits.Administrator)
-          ) &&
-          !isDev
-        ) {
-          await i.reply({
-            content: '❌ Bạn cần có quyền Admin để thay đổi cài đặt!',
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-
-        const modal = new ModalBuilder()
-          .setCustomId('settings_modal')
-          .setTitle('⚙️ Điều Chỉnh Thông Số Game');
-
-        const wolfVoteInput = new TextInputBuilder()
-          .setCustomId('wolfVoteTime')
-          .setLabel('🐺 Thời gian Sói vote (giây)')
-          .setStyle(TextInputStyle.Short)
-          .setPlaceholder('Mặc định: 40')
-          .setValue(settings.wolfVoteTime.toString())
-          .setRequired(true)
-          .setMinLength(1)
-          .setMaxLength(3);
-
-        const nightTimeInput = new TextInputBuilder()
-          .setCustomId('nightTime')
-          .setLabel('🌙 Thời gian Ban đêm (giây)')
-          .setStyle(TextInputStyle.Short)
-          .setPlaceholder('Mặc định: 70')
-          .setValue(settings.nightTime.toString())
-          .setRequired(true)
-          .setMinLength(1)
-          .setMaxLength(3);
-
-        const discussTimeInput = new TextInputBuilder()
-          .setCustomId('discussTime')
-          .setLabel('💭 Thời gian Thảo luận (giây)')
-          .setStyle(TextInputStyle.Short)
-          .setPlaceholder('Mặc định: 90')
-          .setValue(settings.discussTime.toString())
-          .setRequired(true)
-          .setMinLength(1)
-          .setMaxLength(3);
-
-        const voteTimeInput = new TextInputBuilder()
-          .setCustomId('voteTime')
-          .setLabel('🗳️ Thời gian Vote treo cổ (giây)')
-          .setStyle(TextInputStyle.Short)
-          .setPlaceholder('Mặc định: 30')
-          .setValue(settings.voteTime.toString())
-          .setRequired(true)
-          .setMinLength(1)
-          .setMaxLength(3);
-
-        modal.addComponents(
-          new ActionRowBuilder<TextInputBuilder>().addComponents(wolfVoteInput),
-          new ActionRowBuilder<TextInputBuilder>().addComponents(
-            nightTimeInput,
-          ),
-          new ActionRowBuilder<TextInputBuilder>().addComponents(
-            discussTimeInput,
-          ),
-          new ActionRowBuilder<TextInputBuilder>().addComponents(voteTimeInput),
-        );
-
-        await i.showModal(modal);
-      }
     });
   },
 };

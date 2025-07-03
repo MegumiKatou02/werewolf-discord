@@ -12,7 +12,6 @@ import EmbedBuilderWerewolf from './embed.js';
  * @param {string} fileName - Tên file
  * @param {number} indexRole - Role id
  * @param {string} factionRole - 'Dân làng', 'Ma sói'
- * @returns {Promise<void>}
  */
 const RoleResponse = async (
   message: Message,
@@ -41,8 +40,6 @@ const RoleResponse = async (
  * @param {string} fileName - Tên file
  * @param {number} indexRole - Role id
  * @param {string} factionRole - 'Dân làng', 'Ma sói'
- *
- * @returns {Promise<void>}
  */
 const RoleResponseDMs = async (
   user: User,
