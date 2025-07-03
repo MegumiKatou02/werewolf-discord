@@ -5,6 +5,7 @@ import {
   ActionRowBuilder,
   type Interaction,
   MessageFlags,
+  Client,
 } from 'discord.js';
 
 import type { GameRoom } from '../../../../core/room.js';
@@ -46,6 +47,7 @@ class PuppeteerInteraction {
     interaction: Interaction,
     gameRoom: GameRoom,
     sender: Player,
+    client: Client,
   ) => {
     if (!interaction.isModalSubmit()) {
       return;
@@ -95,7 +97,7 @@ class PuppeteerInteraction {
       }
 
       // khác null
-      if (sender.role.targetWolf) {
+      if (sender.role.targetCount <= 0) {
         return interaction.editReply({
           content: 'Bạn đã hết lượt dùng chức năng',
         });
@@ -107,7 +109,15 @@ class PuppeteerInteraction {
         });
       }
 
+      sender.role.targetCount -= 1;
       sender.role.targetWolf = targetPlayer.userId;
+
+      try {
+        const user = await client.users.fetch(playerId);
+        await user.send(`🐕‍🦺 Bạn chỉ định mục tiêu của sói là ${targetPlayer.name}`);
+      } catch (err) {
+        console.error(`Không thể gửi DM cho ${playerId}:`, err);
+      }
     }
 
     await interaction.editReply({

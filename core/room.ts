@@ -675,7 +675,7 @@ class GameRoom extends EventEmitter {
           '🐕‍🦺 Bạn là **Người Múa Rối**. Một lần duy nhất trong suốt ván chơi, bạn có thể chỉ định Sói ăn thịt một người. Người đó có thể là một người khác so với sự thống nhất ban đầu của Sói. Bạn cũng có thể buộc Sói ăn thịt một Sói khác.',
         );
         let puppetButton = null;
-        if (player.role.targetWolf === null) {
+        if (player.role.targetCount > 0) {
           puppetButton = new ButtonBuilder()
             .setCustomId(`puppet_target_puppeteer_${player.userId}`)
             .setLabel('🎭 Chỉ định mục tiêu')

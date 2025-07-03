@@ -546,7 +546,7 @@ client.on('interactionCreate', async (interaction) => {
       if (!sender) {
         return;
       }
-      await puppeteerInteraction.isModalSubmit(interaction, gameRoom, sender);
+      await puppeteerInteraction.isModalSubmit(interaction, gameRoom, sender, client);
     }
   }
 
