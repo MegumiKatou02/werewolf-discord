@@ -1,12 +1,14 @@
 {
   "name": "werewwolf-discord",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npx tsc",
-    "dev:deploy": "node dist/deploy-commands.js && node dist/index.js",
-    "dev": "node dist/index.js",
+    "start": "npm run build && node --expose-gc --trace-warnings dist/index.js",
+    "dev": "npx tsc && node --expose-gc dist/index.js",
+    "deploy": "node dist/deploy-commands.js",
+    "deploy:guild": "node dist/deploy-guild-commands.js",
     "dev:watch": "npx tsx watch index.ts",
     "dev:ts": "npx tsx index.ts",
     "format": "npx prettier --write .",

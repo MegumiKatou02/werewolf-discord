@@ -11,6 +11,15 @@ import {
   ActivityType,
   SlashCommandBuilder,
   type Interaction,
+  User,
+  Attachment,
+  type InteractionReplyOptions,
+  type ChatInputCommandInteraction,
+  type ButtonInteraction,
+  type ModalSubmitInteraction,
+  type InteractionEditReplyOptions,
+  type MessageContextMenuCommandInteraction,
+  type UserContextMenuCommandInteraction,
 } from 'discord.js';
 import { MessageFlags } from 'discord.js';
 import { config } from 'dotenv';
@@ -98,12 +107,139 @@ client.once('ready', () => {
   });
 });
 
+// User Cache và Performance Optimization
+const userCache = new Map<string, { user: User; timestamp: number }>();
+const CACHE_TTL = 10 * 60 * 1000; // 10 phút
+
+async function getCachedUser(userId: string) {
+  const cached = userCache.get(userId);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.user;
+  }
+
+  const user = await client.users.fetch(userId);
+  userCache.set(userId, { user, timestamp: Date.now() });
+  return user;
+}
+
+function isInteractionValid(interaction: Interaction): boolean {
+  // 15 phút (900000ms)
+  const INTERACTION_TIMEOUT = 15 * 60 * 1000;
+  const createdTimestamp = interaction.createdTimestamp;
+  const now = Date.now();
+
+  return (now - createdTimestamp) < INTERACTION_TIMEOUT;
+}
+
+// Helper function để safely reply interaction
+async function safeReply(
+  interaction: ChatInputCommandInteraction | ButtonInteraction | ModalSubmitInteraction | MessageContextMenuCommandInteraction | UserContextMenuCommandInteraction,
+  options: InteractionReplyOptions,
+): Promise<boolean> {
+  try {
+    if (!isInteractionValid(interaction)) {
+      console.warn('Interaction đã hết hạn, bỏ qua reply');
+      return false;
+    }
+
+    if (!interaction.replied && !interaction.deferred) {
+      await interaction.reply(options);
+      return true;
+    } else if (interaction.deferred) {
+      const editOptions: InteractionEditReplyOptions = {
+        content: options.content,
+        embeds: options.embeds,
+        components: options.components,
+        files: options.files,
+        allowedMentions: options.allowedMentions,
+      };
+      await interaction.editReply(editOptions);
+      return true;
+    } else {
+      await interaction.followUp(options);
+      return true;
+    }
+  } catch (error) {
+    console.error('Lỗi khi reply interaction:', error);
+    return false;
+  }
+}
+
+// eslint-disable-next-line no-unused-vars
+async function sendSyncMessages(players: Player[], messageContent: string, formatMessage: (player: Player, content: string) => string | { content: string; files?: Attachment[] } | null) {
+  const MAX_RETRIES = 2;
+  const results = new Map<string, boolean>();
+
+  const getDelay = (index: number, playerCount: number): number => {
+    if (playerCount <= 6) {
+      return 0; // Không delay cho nhóm nhỏ
+    }
+    if (playerCount <= 12) {
+      return index * 15; // 15ms
+    }
+    return index * 25; // 25ms
+  };
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const failedPlayers = attempt === 0 ? players :
+      players.filter(p => !results.get(p.userId));
+
+    if (failedPlayers.length === 0) {
+      break;
+    }
+
+    const promises = failedPlayers.map(async (player: Player, index: number) => {
+      try {
+        // Smart micro-delay
+        const delay = getDelay(index, players.length);
+        if (delay > 0 && attempt === 0) {
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+
+        const user = await getCachedUser(player.userId);
+        const message = formatMessage(player, messageContent);
+
+        if (message === null) {
+          results.set(player.userId, true);
+          return;
+        }
+
+        if (typeof message === 'string') {
+          await user.send(message);
+        } else {
+          await user.send(message);
+        }
+        results.set(player.userId, true);
+      } catch (err) {
+        console.error(`Attempt ${attempt + 1} failed for ${player.userId}:`, err);
+        results.set(player.userId, false);
+      }
+    });
+
+    await Promise.allSettled(promises);
+
+    if (attempt < MAX_RETRIES) {
+      const backoffDelay = Math.min(Math.pow(2, attempt) * 500, 1000); // Max 1s
+      await new Promise(resolve => setTimeout(resolve, backoffDelay));
+    }
+  }
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [userId, cached] of userCache.entries()) {
+    if (now - cached.timestamp > CACHE_TTL) {
+      userCache.delete(userId);
+    }
+  }
+}, 5 * 60 * 1000); // Cleanup mỗi 5 phút
+
 client.on('messageCreate', async (message) => {
   // Bất kể DM hay server đều dùng được
   commandHandler(message);
 
   if (message.channel.type === ChannelType.DM) {
-    console.log(`Tin nhắn DM từ ${message.author.tag}: ${message.content}`);
+    // console.log(`Tin nhắn DM từ ${message.author.tag}: ${message.content}`);
 
     const gameRoom = Array.from(gameRooms.values()).find(
       (room: GameRoom) =>
@@ -129,7 +265,7 @@ client.on('messageCreate', async (message) => {
         return;
       }
 
-      const user = await client.users.fetch(sender.userId);
+      const user = await getCachedUser(sender.userId);
 
       const roleKey = roleId.toString() as keyof typeof rolesData;
       return await RoleResponseDMs(
@@ -144,7 +280,7 @@ client.on('messageCreate', async (message) => {
       // Gửi tin nhắn cho các sói khác
       if (sender.role?.id === WEREROLE.WOLFSEER) {
         try {
-          const user = await client.users.fetch(sender.userId);
+          const user = await getCachedUser(sender.userId);
           await user.send('_⚠️ Những sói khác sẽ không thấy bạn nhắn gì_');
         } catch (err) {
           console.error('Không gửi được tin nhắn cho Sói khác', err);
@@ -164,15 +300,9 @@ client.on('messageCreate', async (message) => {
           (p: Player) =>
             p.role?.faction === 0 && p.alive && p.userId !== sender.userId,
         );
-        const notifyPromises = wolves.map(async (wolf: Player) => {
-          try {
-            const user = await client.users.fetch(wolf.userId);
-            await user.send(`🐺 **${sender.name}**: ${message.content}`);
-          } catch (err) {
-            console.error('Không gửi được tin nhắn cho Sói khác', err);
-          }
-        });
-        await Promise.allSettled(notifyPromises);
+
+        // High sync với smart staggering
+        await sendSyncMessages(wolves, `🐺 **${sender.name}**: ${message.content}`, () => `🐺 **${sender.name}**: ${message.content}`);
       }
 
       if (sender.role?.id === WEREROLE.MEDIUM || sender.alive === false) {
@@ -184,19 +314,13 @@ client.on('messageCreate', async (message) => {
           );
         });
 
-        const notifyPromises = playersDead.map(async (player: Player) => {
-          try {
-            const user = await client.users.fetch(player.userId);
-            if (sender.role?.id === WEREROLE.MEDIUM && sender.alive) {
-              await user.send(`_🔮 **Thầy Đồng**: ${message.content}_`);
-            } else {
-              await user.send(`_💀 **${sender.name}**: ${message.content}_`);
-            }
-          } catch (err) {
-            console.error('Không gửi được tin nhắn cho người chơi', err);
+        await sendSyncMessages(playersDead, message.content, (player: Player, content: string) => {
+          if (sender.role?.id === WEREROLE.MEDIUM && sender.alive) {
+            return `_🔮 **Thầy Đồng**: ${content}_`;
+          } else {
+            return `_💀 **${sender.name}**: ${content}_`;
           }
         });
-        await Promise.allSettled(notifyPromises);
       }
     }
     if (
@@ -208,345 +332,355 @@ client.on('messageCreate', async (message) => {
         (p: Player) => p.userId !== sender.userId,
       );
 
-      const notifyPromises = playersInGame.map(async (player: Player) => {
-        try {
-          const user = await client.users.fetch(player.userId);
-          if (!sender.alive) {
-            if (!player.alive) {
-              await user.send(`_💀 **${sender.name}**: ${message.content}_`);
-            }
-          } else {
-            const validAttachments = Array.from(
-              message.attachments.values(),
-            ).filter((attachment) => attachment.size <= MAX_FILE_SIZE);
-            if (sender.userId === process.env.DEVELOPER) {
-              await user.send({
-                content: `🔧 **${sender.name}**: ${message.content}`,
-                files: validAttachments,
-              });
-            } else {
-              await user.send({
-                content: `🗣️ **${sender.name}**: ${message.content}`,
-                files: validAttachments,
-              });
-            }
-          }
-        } catch (err) {
-          console.error('Không gửi được tin nhắn cho người chơi', err);
+      // Filter những người cần nhận tin nhắn
+      const eligiblePlayers = playersInGame.filter((player: Player) => {
+        if (!sender.alive) {
+          return !player.alive; // Chỉ gửi cho người chết nếu sender đã chết
         }
+        return true; // Gửi cho tất cả nếu sender còn sống
       });
-      await Promise.allSettled(notifyPromises);
+
+      if (eligiblePlayers.length > 0) {
+        await sendSyncMessages(eligiblePlayers, message.content, (player: Player, content: string) => {
+          const validAttachments = Array.from(
+            message.attachments.values(),
+          ).filter((attachment) => attachment.size <= MAX_FILE_SIZE);
+
+          if (!sender.alive) {
+            return `_💀 **${sender.name}**: ${content}_`;
+          } else if (sender.userId === process.env.DEVELOPER) {
+            return {
+              content: `🔧 **${sender.name}**: ${content}`,
+              files: validAttachments,
+            };
+          } else {
+            return {
+              content: `🗣️ **${sender.name}**: ${content}`,
+              files: validAttachments,
+            };
+          }
+        });
+      }
     }
   }
 });
 
 client.on('interactionCreate', async (interaction) => {
   if (interaction.isButton()) {
-    const guildId = interaction.guild?.id || store.get(interaction.user.id);
+    try {
+      const guildId = interaction.guild?.id || store.get(interaction.user.id);
 
-    if (!guildId) {
-      return interaction.reply({
-        content: 'Không tìm thấy guild liên kết với người dùng này.',
+      if (!guildId) {
+        return interaction.reply({
+          content: 'Không tìm thấy guild liên kết với người dùng này.',
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+
+      const gameRoom: GameRoom | undefined = gameRooms.get(guildId);
+
+      /**
+       * @description Button mà không bắt buộc phải tạo phòng trước
+       */
+      if (interaction.customId === 'edit_settings') {
+        await settingsModel.handleButtonClick(interaction);
+        return;
+      }
+
+      if (!gameRoom) {
+        return interaction.reply({
+          content: 'Không tìm thấy phòng chơi ma sói trong server này.',
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+
+      /**
+       * @description Button bắt buộc phải tạo phòng mới dùng được
+       */
+      if (interaction.customId === 'use_default_roles') {
+        await defaultRoles.isButton(interaction, gameRooms);
+      }
+      if (interaction.customId === 'customize_roles_json') {
+        await customizeRolesJson.isButton(interaction);
+      }
+      if (interaction.customId === 'customize_roles_name') {
+        await customizeRolesName.isButton(interaction);
+      }
+      if (interaction.customId.startsWith('vote_target_wolf_')) {
+        await wolfInteraction.isButton(interaction);
+      }
+      if (interaction.customId.startsWith('view_target_wolfseer_')) {
+        await wolfSeerInteraction.isButton(interaction);
+      }
+      if (interaction.customId.startsWith('mask_target_alphawerewolf_')) {
+        await alphawerewolfInteraction.isButton(interaction);
+      }
+      if (interaction.customId.startsWith('protect_target_bodyguard_')) {
+        await bodyguardInteraction.isButton(interaction);
+      }
+      if (interaction.customId.startsWith('view_target_seer_')) {
+        await seerInteraction.isButton(interaction);
+      }
+      if (interaction.customId.startsWith('investigate_target_detective_')) {
+        await detectiveInteraction.isButton(interaction);
+      }
+      if (interaction.customId.startsWith('poison_target_witch_')) {
+        await witchInteraction.isButtonPoison(interaction, gameRoom);
+      }
+      if (interaction.customId.startsWith('heal_target_witch_')) {
+        await witchInteraction.isButtonHeal(interaction, gameRoom);
+      }
+      if (interaction.customId.startsWith('vote_hanged_')) {
+        await votingInteraction.isButtonVoteHanged(interaction);
+      }
+      if (interaction.customId.startsWith('revive_target_medium_')) {
+        await mediumInteraction.isButton(interaction);
+      }
+      if (interaction.customId.startsWith('choose_master_maid_')) {
+        await maidInteraction.isButton(interaction);
+      }
+      if (interaction.customId.startsWith('view_target_foxspirit_')) {
+        await foxSpiritInteraction.isButton(interaction, gameRoom);
+      }
+      if (interaction.customId.startsWith('stalk_target_stalker_')) {
+        await stalkerInteraction.isButtonStalker(interaction, gameRoom);
+      }
+      if (interaction.customId.startsWith('kill_target_stalker_')) {
+        await stalkerInteraction.isButtonKill(interaction, gameRoom);
+      }
+      if (interaction.customId.startsWith('gunner_shoot_')) {
+        await gunnerInteraction.isButtonGunner(interaction);
+      }
+      if (interaction.customId.startsWith('puppet_target_puppeteer_')) {
+        await puppeteerInteraction.isButton(interaction);
+      }
+    } catch (error) {
+      console.error('Lỗi xử lý button interaction:', error);
+      console.error('Button customId:', interaction.customId);
+      console.error('User:', interaction.user?.tag);
+      console.error('Guild:', interaction.guild?.name);
+
+      await safeReply(interaction, {
+        content: 'Có lỗi xảy ra khi xử lý button!',
         flags: MessageFlags.Ephemeral,
       });
-    }
-
-    const gameRoom: GameRoom | undefined = gameRooms.get(guildId);
-
-    /**
-     * @description Button mà không bắt buộc phải tạo phòng trước
-     */
-    if (interaction.customId === 'edit_settings') {
-      await settingsModel.handleButtonClick(interaction);
-      return;
-    }
-
-    if (!gameRoom) {
-      return interaction.reply({
-        content: 'Không tìm thấy phòng chơi ma sói trong server này.',
-        flags: MessageFlags.Ephemeral,
-      });
-    }
-
-    /**
-     * @description Button bắt buộc phải tạo phòng mới dùng được
-     */
-    if (interaction.customId === 'use_default_roles') {
-      await defaultRoles.isButton(interaction, gameRooms);
-    }
-    if (interaction.customId === 'customize_roles_json') {
-      await customizeRolesJson.isButton(interaction);
-    }
-    if (interaction.customId === 'customize_roles_name') {
-      await customizeRolesName.isButton(interaction);
-    }
-    if (interaction.customId.startsWith('vote_target_wolf_')) {
-      await wolfInteraction.isButton(interaction);
-    }
-    if (interaction.customId.startsWith('view_target_wolfseer_')) {
-      await wolfSeerInteraction.isButton(interaction);
-    }
-    if (interaction.customId.startsWith('mask_target_alphawerewolf_')) {
-      await alphawerewolfInteraction.isButton(interaction);
-    }
-    if (interaction.customId.startsWith('protect_target_bodyguard_')) {
-      await bodyguardInteraction.isButton(interaction);
-    }
-    if (interaction.customId.startsWith('view_target_seer_')) {
-      await seerInteraction.isButton(interaction);
-    }
-    if (interaction.customId.startsWith('investigate_target_detective_')) {
-      await detectiveInteraction.isButton(interaction);
-    }
-    if (interaction.customId.startsWith('poison_target_witch_')) {
-      await witchInteraction.isButtonPoison(interaction, gameRoom);
-    }
-    if (interaction.customId.startsWith('heal_target_witch_')) {
-      await witchInteraction.isButtonHeal(interaction, gameRoom);
-    }
-    if (interaction.customId.startsWith('vote_hanged_')) {
-      await votingInteraction.isButtonVoteHanged(interaction);
-    }
-    if (interaction.customId.startsWith('revive_target_medium_')) {
-      await mediumInteraction.isButton(interaction);
-    }
-    if (interaction.customId.startsWith('choose_master_maid_')) {
-      await maidInteraction.isButton(interaction);
-    }
-    if (interaction.customId.startsWith('view_target_foxspirit_')) {
-      await foxSpiritInteraction.isButton(interaction, gameRoom);
-    }
-    if (interaction.customId.startsWith('stalk_target_stalker_')) {
-      await stalkerInteraction.isButtonStalker(interaction, gameRoom);
-    }
-    if (interaction.customId.startsWith('kill_target_stalker_')) {
-      await stalkerInteraction.isButtonKill(interaction, gameRoom);
-    }
-    if (interaction.customId.startsWith('gunner_shoot_')) {
-      await gunnerInteraction.isButtonGunner(interaction);
-    }
-    if (interaction.customId.startsWith('puppet_target_puppeteer_')) {
-      await puppeteerInteraction.isButton(interaction);
     }
   }
 
   if (interaction.isModalSubmit()) {
-    const guildId = interaction.guild?.id || store.get(interaction.user.id);
+    try {
+      const guildId = interaction.guild?.id || store.get(interaction.user.id);
 
-    if (!guildId) {
-      return interaction.reply({
-        content: 'Không tìm thấy guild liên kết với người dùng này.',
+      if (!guildId) {
+        return interaction.reply({
+          content: 'Không tìm thấy guild liên kết với người dùng này.',
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+
+      const gameRoom: GameRoom | undefined = gameRooms.get(guildId);
+
+      /**
+       * @description Button mà không bắt buộc phải tạo phòng trước
+       */
+      if (interaction.customId === 'settings_modal') {
+        await settingsModel.isModalSubmit(interaction);
+        return;
+      }
+
+      if (!gameRoom) {
+        return interaction.reply({
+          content: 'Không tìm thấy phòng chơi ma sói trong server này.',
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+
+      let sender: Player | null | undefined = null;
+      if (gameRoom) {
+        sender = gameRoom.players.find(
+          (p: Player) => p.userId === interaction.user.id,
+        ); // player
+        if (!sender) {
+          return;
+        }
+      }
+
+      /**
+       * @description Button bắt buộc phải tạo phòng mới dùng được
+       */
+      if (interaction.customId.startsWith('submit_vote_wolf_')) {
+        if (!sender) {
+          return;
+        }
+        await wolfInteraction.isModalSubmit(
+          interaction,
+          gameRoom,
+          sender,
+        );
+      }
+      if (interaction.customId.startsWith('submit_view_wolfseer_')) {
+        if (!sender) {
+          return;
+        }
+        await wolfSeerInteraction.isModalSubmit(
+          interaction,
+          gameRoom,
+          sender,
+        );
+      }
+      if (interaction.customId.startsWith('submit_mask_alphawerewolf_')) {
+        if (!sender) {
+          return;
+        }
+        await alphawerewolfInteraction.isModalSubmit(
+          interaction,
+          gameRoom,
+          sender,
+        );
+      }
+      if (interaction.customId.startsWith('submit_protect_bodyguard_')) {
+        if (!sender) {
+          return;
+        }
+        await bodyguardInteraction.isModalSubmit(
+          interaction,
+          gameRoom,
+          sender,
+        );
+      }
+
+      if (interaction.customId.startsWith('submit_view_seer_')) {
+        if (!sender) {
+          return;
+        }
+        await seerInteraction.isModalSubmit(
+          interaction,
+          gameRoom,
+          sender,
+        );
+      }
+      if (interaction.customId.startsWith('submit_investigate_detective_')) {
+        if (!sender) {
+          return;
+        }
+        await detectiveInteraction.isModalSubmit(
+          interaction,
+          gameRoom,
+          sender,
+        );
+      }
+      if (interaction.customId.startsWith('submit_poison_witch_')) {
+        if (!sender) {
+          return;
+        }
+        await witchInteraction.isModalSubmitPoison(
+          interaction,
+          gameRoom,
+          sender,
+        );
+      }
+      if (interaction.customId.startsWith('submit_heal_witch_')) {
+        if (!sender) {
+          return;
+        }
+        await witchInteraction.isModalSubmitHeal(
+          interaction,
+          gameRoom,
+          sender,
+        );
+      }
+      if (interaction.customId.startsWith('submit_vote_hanged_')) {
+        if (!sender) {
+          return;
+        }
+        await votingInteraction.isModalSubmitVoteHanged(
+          interaction,
+          gameRoom,
+          sender,
+        );
+      }
+      if (interaction.customId.startsWith('submit_revive_medium_')) {
+        if (!sender) {
+          return;
+        }
+        await mediumInteraction.isModalSubmit(
+          interaction,
+          gameRoom,
+          sender,
+        );
+      }
+      if (interaction.customId.startsWith('submit_choose_master_maid_')) {
+        if (!sender) {
+          return;
+        }
+        await maidInteraction.isModalSubmit(
+          interaction,
+          gameRoom,
+          sender,
+        );
+      }
+      if (interaction.customId === 'customize_roles_json_modal') {
+        await customizeRolesJson.isModalSubmit(interaction, gameRooms);
+      }
+      if (interaction.customId === 'customize_roles_name_modal') {
+        await customizeRolesName.isModalSubmit(interaction, gameRooms);
+      }
+      if (interaction.customId.startsWith('submit_view_foxspirit_')) {
+        if (!sender) {
+          return;
+        }
+        await foxSpiritInteraction.isModalSubmit(
+          interaction,
+          gameRoom,
+          sender,
+        );
+      }
+      if (interaction.customId.startsWith('submit_stalk_stalker_')) {
+        if (!sender) {
+          return;
+        }
+        await stalkerInteraction.isModalSubmitStalker(
+          interaction,
+          gameRoom,
+          sender,
+        );
+      }
+      if (interaction.customId.startsWith('submit_kill_stalker_')) {
+        if (!sender) {
+          return;
+        }
+        await stalkerInteraction.isModalSubmitKill(
+          interaction,
+          gameRoom,
+          sender,
+        );
+      }
+      if (interaction.customId.startsWith('submit_gunner_shoot_')) {
+        if (!sender) {
+          return;
+        }
+        await gunnerInteraction.isModalSubmitGunner(
+          interaction,
+          gameRoom,
+          sender,
+        );
+      }
+      if (interaction.customId.startsWith('submit_puppeteer_')) {
+        if (!sender) {
+          return;
+        }
+        await puppeteerInteraction.isModalSubmit(interaction, gameRoom, sender);
+      }
+    } catch (error) {
+      console.error('Lỗi xử lý modal interaction:', error);
+      console.error('Modal customId:', interaction.customId);
+      console.error('User:', interaction.user?.tag);
+      console.error('Guild:', interaction.guild?.name);
+
+      await safeReply(interaction, {
+        content: 'Có lỗi xảy ra khi xử lý modal!',
         flags: MessageFlags.Ephemeral,
       });
-    }
-
-    const gameRoom: GameRoom | undefined = gameRooms.get(guildId);
-
-    /**
-     * @description Button mà không bắt buộc phải tạo phòng trước
-     */
-    if (interaction.customId === 'settings_modal') {
-      await settingsModel.isModalSubmit(interaction);
-      return;
-    }
-
-    if (!gameRoom) {
-      return interaction.reply({
-        content: 'Không tìm thấy phòng chơi ma sói trong server này.',
-        flags: MessageFlags.Ephemeral,
-      });
-    }
-
-    let sender: Player | null | undefined = null;
-    if (gameRoom) {
-      sender = gameRoom.players.find(
-        (p: Player) => p.userId === interaction.user.id,
-      ); // player
-      if (!sender) {
-        return;
-      }
-    }
-
-    /**
-     * @description Button bắt buộc phải tạo phòng mới dùng được
-     */
-    if (interaction.customId.startsWith('submit_vote_wolf_')) {
-      if (!sender) {
-        return;
-      }
-      await wolfInteraction.isModalSubmit(
-        interaction,
-        gameRoom,
-        sender,
-        client,
-      );
-    }
-    if (interaction.customId.startsWith('submit_view_wolfseer_')) {
-      if (!sender) {
-        return;
-      }
-      await wolfSeerInteraction.isModalSubmit(
-        interaction,
-        gameRoom,
-        sender,
-        client,
-      );
-    }
-    if (interaction.customId.startsWith('submit_mask_alphawerewolf_')) {
-      if (!sender) {
-        return;
-      }
-      await alphawerewolfInteraction.isModalSubmit(
-        interaction,
-        gameRoom,
-        sender,
-        client,
-      );
-    }
-    if (interaction.customId.startsWith('submit_protect_bodyguard_')) {
-      if (!sender) {
-        return;
-      }
-      await bodyguardInteraction.isModalSubmit(
-        interaction,
-        gameRoom,
-        sender,
-        client,
-      );
-    }
-
-    if (interaction.customId.startsWith('submit_view_seer_')) {
-      if (!sender) {
-        return;
-      }
-      await seerInteraction.isModalSubmit(
-        interaction,
-        gameRoom,
-        sender,
-        client,
-      );
-    }
-    if (interaction.customId.startsWith('submit_investigate_detective_')) {
-      if (!sender) {
-        return;
-      }
-      await detectiveInteraction.isModalSubmit(
-        interaction,
-        gameRoom,
-        sender,
-        client,
-      );
-    }
-    if (interaction.customId.startsWith('submit_poison_witch_')) {
-      if (!sender) {
-        return;
-      }
-      await witchInteraction.isModalSubmitPoison(
-        interaction,
-        gameRoom,
-        sender,
-        client,
-      );
-    }
-    if (interaction.customId.startsWith('submit_heal_witch_')) {
-      if (!sender) {
-        return;
-      }
-      await witchInteraction.isModalSubmitHeal(
-        interaction,
-        gameRoom,
-        sender,
-        client,
-      );
-    }
-    if (interaction.customId.startsWith('submit_vote_hanged_')) {
-      if (!sender) {
-        return;
-      }
-      await votingInteraction.isModalSubmitVoteHanged(
-        interaction,
-        gameRoom,
-        sender,
-        client,
-      );
-    }
-    if (interaction.customId.startsWith('submit_revive_medium_')) {
-      if (!sender) {
-        return;
-      }
-      await mediumInteraction.isModalSubmit(
-        interaction,
-        gameRoom,
-        sender,
-        client,
-      );
-    }
-    if (interaction.customId.startsWith('submit_choose_master_maid_')) {
-      if (!sender) {
-        return;
-      }
-      await maidInteraction.isModalSubmit(
-        interaction,
-        gameRoom,
-        sender,
-        client,
-      );
-    }
-    if (interaction.customId === 'customize_roles_json_modal') {
-      await customizeRolesJson.isModalSubmit(interaction, gameRooms);
-    }
-    if (interaction.customId === 'customize_roles_name_modal') {
-      await customizeRolesName.isModalSubmit(interaction, gameRooms);
-    }
-    if (interaction.customId.startsWith('submit_view_foxspirit_')) {
-      if (!sender) {
-        return;
-      }
-      await foxSpiritInteraction.isModalSubmit(
-        interaction,
-        gameRoom,
-        sender,
-        client,
-      );
-    }
-    if (interaction.customId.startsWith('submit_stalk_stalker_')) {
-      if (!sender) {
-        return;
-      }
-      await stalkerInteraction.isModalSubmitStalker(
-        interaction,
-        gameRoom,
-        sender,
-        client,
-      );
-    }
-    if (interaction.customId.startsWith('submit_kill_stalker_')) {
-      if (!sender) {
-        return;
-      }
-      await stalkerInteraction.isModalSubmitKill(
-        interaction,
-        gameRoom,
-        sender,
-        client,
-      );
-    }
-    if (interaction.customId.startsWith('submit_gunner_shoot_')) {
-      if (!sender) {
-        return;
-      }
-      await gunnerInteraction.isModalSubmitGunner(
-        interaction,
-        gameRoom,
-        sender,
-        client,
-      );
-    }
-    if (interaction.customId.startsWith('submit_puppeteer_')) {
-      if (!sender) {
-        return;
-      }
-      await puppeteerInteraction.isModalSubmit(interaction, gameRoom, sender, client);
     }
   }
 
@@ -566,8 +700,12 @@ client.on('interactionCreate', async (interaction) => {
   try {
     await command.execute(interaction);
   } catch (error) {
-    console.error(error);
-    await interaction.reply({
+    console.error('Lỗi thực thi command:', error);
+    console.error('Command name:', interaction.commandName);
+    console.error('User:', interaction.user?.tag);
+    console.error('Guild:', interaction.guild?.name);
+
+    await safeReply(interaction, {
       content: 'Có lỗi xảy ra khi thực thi lệnh!',
       flags: MessageFlags.Ephemeral,
     });
@@ -575,3 +713,66 @@ client.on('interactionCreate', async (interaction) => {
 });
 
 client.login(process.env.TOKEN);
+
+process.on('SIGINT', async () => {
+  console.log('🛑 Bot đang shutdown...');
+
+  for (const [guildId, gameRoom] of gameRooms.entries()) {
+    console.log(`Cleaning up game room ${guildId}`);
+    try {
+      await gameRoom.cleanup();
+    } catch (err) {
+      console.error(`Failed to cleanup game room ${guildId}:`, err);
+    }
+  }
+  gameRooms.clear();
+
+  // Clear user cache
+  userCache.clear();
+
+  // Remove event listeners
+  client.removeAllListeners();
+
+  // Destroy client connection
+  await client.destroy();
+
+  console.log('✅ Bot đã cleanup xong và thoát.');
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  console.log('🛑 Bot nhận SIGTERM, đang shutdown...');
+
+  for (const [guildId, gameRoom] of gameRooms.entries()) {
+    console.log(`Cleaning up game room ${guildId}`);
+    try {
+      await gameRoom.cleanup();
+    } catch (err) {
+      console.error(`Failed to cleanup game room ${guildId}:`, err);
+    }
+  }
+  gameRooms.clear();
+
+  userCache.clear();
+
+  client.removeAllListeners();
+
+  await client.destroy();
+
+  console.log('✅ Bot đã cleanup xong và thoát.');
+  process.exit(0);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  for (const gameRoom of gameRooms.values()) {
+    gameRoom.cleanup().catch(err => console.error('Cleanup error:', err));
+  }
+  gameRooms.clear();
+  userCache.clear();
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+});

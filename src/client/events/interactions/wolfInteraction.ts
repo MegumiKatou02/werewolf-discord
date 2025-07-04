@@ -4,11 +4,11 @@ import {
   TextInputStyle,
   ActionRowBuilder,
   type Interaction,
-  Client,
   MessageFlags,
 } from 'discord.js';
 
 import type { GameRoom } from '../../../../core/room.js';
+import { Faction } from '../../../../types/faction.js';
 import type Player from '../../../../types/player.js';
 import Werewolf from '../../../../types/roles/WereWolf.js';
 import { WEREROLE } from '../../../../utils/role.js';
@@ -59,7 +59,6 @@ class WolfInteraction {
     interaction: Interaction,
     gameRoom: GameRoom,
     sender: Player,
-    client: Client,
   ) => {
     if (!interaction.isModalSubmit()) {
       return;
@@ -123,19 +122,17 @@ class WolfInteraction {
     }
 
     try {
-      const user = await client.users.fetch(playerId);
-      for (const player of gameRoom.players) {
-        if (player.role.id === 0) {
-          if (player.userId !== playerId) {
-            const targetUser = await client.users.fetch(player.userId);
-            await targetUser.send(
-              `🐺 **${sender.name}** đã vote giết **${targetPlayer.name}**.`,
-            );
-          } else {
-            await user.send(`🔪 Bạn đã vote giết: **${targetPlayer.name}**.`);
-          }
-        }
+      const user = await gameRoom.fetchUser(playerId);
+      if (user) {
+        await user.send(`🔪 Bạn đã vote giết: **${targetPlayer.name}**.`);
       }
+
+      const notifyMessages = gameRoom.players
+        .filter(player => player.role.faction === Faction.WEREWOLF && player.alive && player.userId !== sender.userId).map((player: Player) => ({
+          userId: player.userId,
+          content: `🐺 **${sender.name}** đã vote giết: **${targetPlayer.name}**.`,
+        }));
+      await gameRoom.batchSendMessages(notifyMessages);
     } catch (err) {
       console.error(`Không thể gửi DM cho ${playerId}:`, err);
     }

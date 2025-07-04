@@ -4,14 +4,15 @@ import {
   ActionRowBuilder,
   TextInputStyle,
   type Interaction,
-  Client,
 } from 'discord.js';
 import { MessageFlags } from 'discord.js';
 
 import type { GameRoom } from '../../../../core/room.js';
+import { Faction } from '../../../../types/faction.js';
 import type Player from '../../../../types/player.js';
 import Dead from '../../../../types/roles/Dead.js';
 import Gunner from '../../../../types/roles/Gunner.js';
+import Villager from '../../../../types/roles/Villager.js';
 import { WEREROLE } from '../../../../utils/role.js';
 
 class GunnerInteraction {
@@ -61,7 +62,6 @@ class GunnerInteraction {
     interaction: Interaction,
     gameRoom: GameRoom,
     sender: Player,
-    client: Client,
   ) => {
     if (!interaction.isModalSubmit()) {
       return;
@@ -127,35 +127,30 @@ class GunnerInteraction {
         targetPlayer.role.id,
       );
 
-      const notifyPromises = gameRoom.players.map(async (player: Player) => {
-        const user = await client.users.fetch(player.userId);
-        if (!user) {
-          return;
+      const notifyMessages = gameRoom.players.map((player: Player) => {
+        let content = '';
+        if (player.userId === targetPlayer.userId) {
+          content = '💀 Bạn đã bị Xạ thủ bắn chết.';
         }
 
-        if (player.userId === targetPlayer.userId) {
-          await user.send('💀 Bạn đã bị Xạ thủ bắn chết.');
-        }
-        if (
-          sender.role &&
-          sender.role instanceof Gunner &&
-          sender.role.bullets === 1
-        ) {
-          await user.send(
-            `🔫 **${sender.name}** đã bắn chết **${targetPlayer.name}**!`,
-          );
+        const gunnerName = sender.role && sender.role instanceof Gunner && sender.role.bullets === 1
+          ? sender.name
+          : 'Xạ Thủ';
+
+        if (content) {
+          content += `\n🔫 **${gunnerName}** đã bắn chết **${targetPlayer.name}**!`;
         } else {
-          await user.send(
-            `🔫 **Xạ Thủ** đã bắn chết **${targetPlayer.name}**!`,
-          );
+          content = `🔫 **${gunnerName}** đã bắn chết **${targetPlayer.name}**!`;
         }
+
+        return { userId: player.userId, content };
       });
 
-      await Promise.allSettled(notifyPromises);
+      await gameRoom.batchSendMessages(notifyMessages);
 
       await gameRoom.updateAllPlayerList();
 
-      gameRoom.gameState.log.push(
+      gameRoom.gameState.addLog(
         `🔫 **${sender.name}** đã bắn chết **${targetPlayer.name}`,
       );
 
@@ -163,17 +158,40 @@ class GunnerInteraction {
       const maidNewRole = await gameRoom.checkIfMasterIsDead(targetPlayer);
 
       if (maidNewRole) {
-        const notifyPromises = gameRoom.players.map(async (player: Player) => {
-          const user = await client.users.fetch(player.userId);
-          if (!user) {
-            return;
-          }
+        const maidMessages = gameRoom.players.map((player: Player) => ({
+          userId: player.userId,
+          content: `### 👒 Hầu gái đã lên thay vai trò **${maidNewRole}** của chủ vì chủ đã bị bắn.\n`,
+        }));
 
-          await user.send(
-            `### 👒 Hầu gái đã lên thay vai trò **${maidNewRole}** của chủ vì chủ đã bị bắn.\n`,
-          );
-        });
-        await Promise.allSettled(notifyPromises);
+        await gameRoom.batchSendMessages(maidMessages);
+      }
+
+      const giaLang = gameRoom.players.find(
+        (p) =>
+          !p.alive &&
+          p.role instanceof Dead &&
+          p.role.originalRoleId === WEREROLE.ELDER,
+      );
+      if (giaLang) {
+        gameRoom.gameState.addLog(
+          '👴 Già làng đã chết, tất cả những người thuộc phe dân làng đều sẽ bị mất chức năng.',
+        );
+
+        const elderMessages = gameRoom.players
+          .filter((p) =>
+            (p.alive && p.role.faction === Faction.VILLAGER) ||
+            (p.role instanceof Dead && p.role.originalRoleId === WEREROLE.ELDER),
+          )
+          .map((player) => {
+            // Reset role to Villager
+            player.role = new Villager();
+            return {
+              userId: player.userId,
+              content: '### 👴 Già làng đã chết, tất cả những người thuộc phe dân làng đều sẽ bị mất chức năng.',
+            };
+          });
+
+        await gameRoom.batchSendMessages(elderMessages);
       }
       await gameRoom.checkEndGame();
     }

@@ -4,7 +4,6 @@ import {
   ActionRowBuilder,
   TextInputStyle,
   type Interaction,
-  Client,
 } from 'discord.js';
 import { MessageFlags } from 'discord.js';
 
@@ -100,7 +99,6 @@ class FoxSpiritInteraction {
     interaction: Interaction,
     gameRoom: GameRoom,
     sender: Player,
-    client: Client,
   ) => {
     if (!interaction.isModalSubmit()) {
       return;
@@ -199,16 +197,17 @@ class FoxSpiritInteraction {
         return false;
       };
       try {
-        const user = await client.users.fetch(playerId);
-
-        await user.send(
-          `🔎 Trong 3 người bạn chọn: **${targetPlayers[0].name}**, **${targetPlayers[1].name}** và **${targetPlayers[2].name}** ${isHaveWolf() ? 'có Sói' : 'không có Sói'}.`,
-        );
-        if (!isHaveWolf()) {
+        const user = await gameRoom.fetchUser(playerId);
+        if (user) {
           await user.send(
-            'Bạn bị mất chức năng vì không có Sói trong 3 người bạn chọn.',
+            `🔎 Trong 3 người bạn chọn: **${targetPlayers[0].name}**, **${targetPlayers[1].name}** và **${targetPlayers[2].name}** ${isHaveWolf() ? 'có Sói' : 'không có Sói'}.`,
           );
-          sender.role.isHaveSkill = false;
+          if (!isHaveWolf()) {
+            await user.send(
+              'Bạn bị mất chức năng vì không có Sói trong 3 người bạn chọn.',
+            );
+            sender.role.isHaveSkill = false;
+          }
         }
       } catch (err) {
         console.error(`Không thể gửi DM cho ${playerId}:`, err);

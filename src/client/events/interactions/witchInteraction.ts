@@ -4,7 +4,6 @@ import {
   ActionRowBuilder,
   TextInputStyle,
   type Interaction,
-  Client,
 } from 'discord.js';
 import { MessageFlags } from 'discord.js';
 
@@ -139,7 +138,6 @@ class WitchInteraction {
     interaction: Interaction,
     gameRoom: GameRoom,
     sender: Player,
-    client: Client,
   ) => {
     if (!interaction.isModalSubmit()) {
       return;
@@ -205,10 +203,10 @@ class WitchInteraction {
     }
 
     try {
-      const user = await client.users.fetch(playerId);
-      await user.send(
-        `💉 Bạn đã chọn người chơi để dùng thuốc: **${targetPlayer.name}**.`,
-      );
+      const user = await gameRoom.fetchUser(playerId);
+      if (user) {
+        await user.send(`💉 Bạn đã chọn người chơi để dùng thuốc: **${targetPlayer.name}**.`);
+      }
     } catch (err) {
       console.error(`Không thể gửi DM cho ${playerId}:`, err);
     }
@@ -222,7 +220,6 @@ class WitchInteraction {
     interaction: Interaction,
     gameRoom: GameRoom,
     sender: Player,
-    client: Client,
   ) => {
     if (!interaction.isModalSubmit()) {
       return;
@@ -294,10 +291,10 @@ class WitchInteraction {
     }
 
     try {
-      const user = await client.users.fetch(playerId);
-      await user.send(
-        `💫 Bạn đã chọn người chơi để cứu: **${targetPlayer.name}**.`,
-      );
+      const user = await gameRoom.fetchUser(playerId);
+      if (user) {
+        await user.send(`💫 Bạn đã chọn người chơi để cứu: **${targetPlayer.name}**.`);
+      }
     } catch (err) {
       console.error(`Không thể gửi DM cho ${playerId}:`, err);
     }

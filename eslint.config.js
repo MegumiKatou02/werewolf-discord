@@ -18,6 +18,7 @@ export default [
         project: './tsconfig.json',
       },
       globals: {
+        "NodeJS": true,
         ...globals.node,
       },
     },

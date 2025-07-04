@@ -4,7 +4,6 @@ import {
   TextInputStyle,
   ActionRowBuilder,
   type Interaction,
-  Client,
   MessageFlags,
 } from 'discord.js';
 
@@ -48,7 +47,6 @@ class BodyguardInteraction {
     interaction: Interaction,
     gameRoom: GameRoom,
     sender: Player,
-    client: Client,
   ) => {
     if (!interaction.isModalSubmit()) {
       return;
@@ -115,8 +113,10 @@ class BodyguardInteraction {
     }
 
     try {
-      const user = await client.users.fetch(playerId);
-      await user.send(`🥋 Bạn đã bảo vệ: **${targetPlayer.name}**.`);
+      const user = await gameRoom.fetchUser(playerId);
+      if (user) {
+        await user.send(`🥋 Bạn đã bảo vệ: **${targetPlayer.name}**.`);
+      }
     } catch (err) {
       console.error(`Không thể gửi DM cho ${playerId}:`, err);
     }

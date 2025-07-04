@@ -4,7 +4,6 @@ import {
   ActionRowBuilder,
   TextInputStyle,
   type Interaction,
-  Client,
 } from 'discord.js';
 import { MessageFlags } from 'discord.js';
 
@@ -41,7 +40,9 @@ class VotingInteraction {
     modal.addComponents(row);
 
     try {
-      await interaction.showModal(modal);
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.showModal(modal).catch(console.error);
+      }
     } catch (err) {
       console.error('❌ Lỗi khi showModal:', err);
 
@@ -58,7 +59,6 @@ class VotingInteraction {
     interaction: Interaction,
     gameRoom: GameRoom,
     sender: Player,
-    client: Client,
   ) => {
     if (!gameRoom || !interaction.isModalSubmit()) {
       return;
@@ -128,23 +128,16 @@ class VotingInteraction {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     try {
-      const notifyPromises = gameRoom.players.map(async (player: Player) => {
-        const targetUser = await client.users.fetch(player.userId);
-        if (player.userId !== playerId) {
-          return targetUser.send(`✅ **${sender.name}** đã vote.`);
-        } else {
-          if (voteIndex === 0 || voteIndex === 36) {
-            return targetUser.send('✅ Bạn đã chọn bỏ qua vote.');
-          } else {
-            const targetPlayer = gameRoom.players[voteIndex - 1];
-            return targetUser.send(
-              `✅ Bạn đã vote treo cổ: **${targetPlayer.name}**.`,
-            );
-          }
-        }
-      });
+      const notifyMessages = gameRoom.players.map((player: Player) => ({
+        userId: player.userId,
+        content: player.userId !== playerId
+          ? `✅ **${sender.name}** đã vote.`
+          : voteIndex === 0 || voteIndex === 36
+            ? '✅ Bạn đã chọn bỏ qua vote.'
+            : `✅ Bạn đã vote treo cổ: **${gameRoom.players[voteIndex - 1].name}**.`,
+      }));
 
-      await Promise.allSettled(notifyPromises);
+      await gameRoom.batchSendMessages(notifyMessages);
 
       const alivePlayers = gameRoom.players.filter((p: Player) => p.alive);
       const allVoted = alivePlayers.every(
@@ -152,14 +145,12 @@ class VotingInteraction {
       );
 
       if (allVoted) {
-        const notifyEndVote = gameRoom.players.map(async (player: Player) => {
-          const user = await client.users.fetch(player.userId);
-          return user.send(
-            '### ⚡ Tất cả mọi người đã vote xong! Kết quả sẽ được công bố ngay lập tức.',
-          );
-        });
-        await Promise.allSettled(notifyEndVote);
+        const endVoteMessages = gameRoom.players.map((player: Player) => ({
+          userId: player.userId,
+          content: '### ⚡ Tất cả mọi người đã vote xong! Kết quả sẽ được công bố ngay lập tức.',
+        }));
 
+        await gameRoom.batchSendMessages(endVoteMessages);
         gameRoom.emit('voteComplete');
       }
     } catch (err) {

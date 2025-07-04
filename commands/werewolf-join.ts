@@ -1,7 +1,6 @@
 import { MessageFlags, SlashCommandBuilder, type Interaction } from 'discord.js';
 
 import { gameRooms } from '../core/room.js';
-import { store } from '../core/store.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -54,9 +53,9 @@ export default {
       });
     }
 
-    if (store.has(userId)) {
+    if (room.players.length > 18) {
       return interaction.reply({
-        content: 'Bạn đã tham gia trò chơi ở server khác rồi',
+        content: 'Đã quá giới hạn số lượng người tham gia trò chơi, hi vọng bạn có thể tham gia vào lượt sau.',
         flags: MessageFlags.Ephemeral,
       });
     }

@@ -4,7 +4,6 @@ import {
   TextInputStyle,
   ActionRowBuilder,
   type Interaction,
-  Client,
 } from 'discord.js';
 import { MessageFlags } from 'discord.js';
 
@@ -58,7 +57,6 @@ class WolfSeerInteraction {
     interaction: Interaction,
     gameRoom: GameRoom,
     sender: Player,
-    client: Client,
   ) => {
     if (!interaction.isModalSubmit()) {
       return;
@@ -119,35 +117,26 @@ class WolfSeerInteraction {
           return targetPlayer.role.id === WEREROLE.SEER;
         };
 
-        const user = await client.users.fetch(playerId);
-        await user.send(
-          `🔍 Vai trò của: **${targetPlayer.name}** là ${checkSeer() ? 'Tiên Tri' : 'Không phải Tiên Tri'}.`,
-        );
+        const user = await gameRoom.fetchUser(playerId);
+        if (user) {
+          await user.send(
+            `🔍 Vai trò của: **${targetPlayer.name}** là ${checkSeer() ? 'Tiên Tri' : 'Không phải Tiên Tri'}.`,
+          );
+        }
 
         sender.role.seerCount -= 1;
-        const notifyMessage = gameRoom.players.map(async (player: Player) => {
-          try {
-            if (
-              player.role &&
-              player.role.id === WEREROLE.WEREWOLF &&
-              player.userId !== sender.userId
-            ) {
-              const wolfUser = await client.users.fetch(player.userId);
-              await wolfUser.send(
-                `**Thông báo:** 🐺🔍 **Sói Tiên Tri** đã soi **${targetPlayer.name}** và phát hiện người này **${checkSeer() ? 'LÀ' : 'KHÔNG PHẢI'}** Tiên Tri.`,
-              );
-            } else {
-              // Những người còn lại (dân làng/solo/...)
-              const user = await client.users.fetch(player.userId);
-              await user.send(
-                `**Thông báo:** 🐺🔍 **Sói Tiên Tri** đã soi **${targetPlayer.name}**.`,
-              );
-            }
-          } catch (err) {
-            console.error('Không gửi được tin nhắn', err);
+
+        const notifyMessages = gameRoom.players.map((player: Player) => {
+          let content = '';
+          if (player.role && player.role.id === WEREROLE.WEREWOLF && player.userId !== sender.userId) {
+            content = `**Thông báo:** 🐺🔍 **Sói Tiên Tri** đã soi **${targetPlayer.name}** và phát hiện người này **${checkSeer() ? 'LÀ' : 'KHÔNG PHẢI'}** Tiên Tri.`;
+          } else {
+            content = `**Thông báo:** 🐺🔍 **Sói Tiên Tri** đã soi **${targetPlayer.name}**.`;
           }
+          return { userId: player.userId, content };
         });
-        await Promise.allSettled(notifyMessage);
+
+        await gameRoom.batchSendMessages(notifyMessages);
       } catch (err) {
         console.error(`Không thể gửi DM cho ${playerId}:`, err);
       }
