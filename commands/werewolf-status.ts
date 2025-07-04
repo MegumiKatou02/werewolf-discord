@@ -183,36 +183,49 @@ export default {
       });
 
       collector.on('collect', async (i) => {
-        if (i.customId === 'view_game_log') {
-          const isAdmin =
-            (i.member?.permissions instanceof PermissionsBitField &&
-              i.member.permissions.has(PermissionFlagsBits.Administrator)) ??
-            false;
-          const isHost = gameRoom.hostId === i.user.id;
-
-          if (!isAdmin && !isHost) {
-            await i.reply({
-              content: '❌ Chỉ Admin hoặc Host mới có thể xem log game.',
-              flags: MessageFlags.Ephemeral,
-            });
+        try {
+          const INTERACTION_TIMEOUT = 15 * 60 * 1000;
+          const now = Date.now();
+          if ((now - i.createdTimestamp) > INTERACTION_TIMEOUT) {
+            console.warn('Interaction đã hết hạn, bỏ qua xử lý');
             return;
           }
 
-          const logEmbed = new EmbedBuilder()
-            .setColor(statusColors.ended)
-            .setTitle('📜 LOG GAME MA SÓI')
-            .setDescription(
-              gameRoom.gameState.log.join('\n') ||
-                '*Không có log nào được ghi lại*',
-            )
-            .setTimestamp()
-            .setFooter({
-              text: '⚠️ Log game sẽ bị xóa khi phòng bị xóa',
-            });
+          if (i.customId === 'view_game_log') {
+            const isAdmin =
+              (i.member?.permissions instanceof PermissionsBitField &&
+                i.member.permissions.has(PermissionFlagsBits.Administrator)) ??
+              false;
+            const isHost = gameRoom.hostId === i.user.id;
 
-          await i.reply({
-            embeds: [logEmbed],
-          });
+            if (!isAdmin && !isHost) {
+              await i.reply({
+                content: '❌ Chỉ Admin hoặc Host mới có thể xem log game.',
+                flags: MessageFlags.Ephemeral,
+              });
+              return;
+            }
+
+            const logEmbed = new EmbedBuilder()
+              .setColor(statusColors.ended)
+              .setTitle('📜 LOG GAME MA SÓI')
+              .setDescription(
+                gameRoom.gameState.log.join('\n') ||
+                  '*Không có log nào được ghi lại*',
+              )
+              .setTimestamp()
+              .setFooter({
+                text: '⚠️ Log game sẽ bị xóa khi phòng bị xóa',
+              });
+
+            await i.reply({
+              embeds: [logEmbed],
+            });
+          }
+        } catch (error) {
+          console.error('Lỗi xử lý status interaction:', error);
+          console.error('CustomId:', i.customId);
+          console.error('User:', i.user?.tag);
         }
       });
 

@@ -4,7 +4,6 @@ import {
   TextInputStyle,
   ActionRowBuilder,
   type Interaction,
-  Client,
 } from 'discord.js';
 import { MessageFlags } from 'discord.js';
 
@@ -57,7 +56,6 @@ class DetectiveInteraction {
     interaction: Interaction,
     gameRoom: GameRoom,
     sender: Player,
-    client: Client,
   ) => {
     if (
       !gameRoom ||
@@ -167,10 +165,12 @@ class DetectiveInteraction {
       };
 
       try {
-        const user = await client.users.fetch(playerId);
-        await user.send(
-          `🔎 Bạn đã điều tra: **${targetPlayer1.name}** và **${targetPlayer2.name}**. Họ ${checkFaction() ? 'cùng phe' : 'khác phe'}.`,
-        );
+        const user = await gameRoom.fetchUser(playerId);
+        if (user) {
+          await user.send(
+            `🔎 Bạn đã điều tra: **${targetPlayer1.name}** và **${targetPlayer2.name}**. Họ ${checkFaction() ? 'cùng phe' : 'khác phe'}.`,
+          );
+        }
       } catch (err) {
         console.error(`Không thể gửi DM cho ${playerId}:`, err);
       }

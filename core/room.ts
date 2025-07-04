@@ -11,6 +11,8 @@ import {
   type Interaction,
   type APIActionRowComponent,
   type APIButtonComponent,
+  User,
+  type MessageCreateOptions,
 } from 'discord.js';
 import { MessageFlags } from 'discord.js';
 
@@ -59,6 +61,11 @@ class GameRoom extends EventEmitter {
   nightMessages: Map<string, Message>;
   voteMessages: Map<string, Message>;
   kittenWolfDeathNight: number;
+  private timeoutIds: NodeJS.Timeout[] = [];
+  private userCache: Map<string, { user: User, timestamp: number  }> = new Map();
+  private isCleaningUp = false;
+  private activePromises: Set<Promise<unknown>> = new Set();
+  private periodicCleanupInterval?: NodeJS.Timeout;
   settings: {
     wolfVoteTime: number;
     nightTime: number;
@@ -80,21 +87,271 @@ class GameRoom extends EventEmitter {
     this.nightMessages = new Map(); // message ban đêm
     this.voteMessages = new Map(); // message vote treo cổ
     this.kittenWolfDeathNight = 0;
+    this.timeoutIds = [];
     this.settings = {
       wolfVoteTime: 40,
       nightTime: 70,
       discussTime: 90,
       voteTime: 30,
     };
+
+    this.periodicCleanupInterval = setInterval(() => {
+      this.performPeriodicCleanup();
+    }, 60000); // 1p
   }
 
-  async fetchUser(userId: string) {
+  async testSafePromiseAllSettled<T>(promises: Promise<T>[]) {
+    return this.safePromiseAllSettled(promises);
+  }
+
+  private trackPromise<T>(promise: Promise<T>): Promise<T> {
+    this.activePromises.add(promise);
+    const cleanup = () => {
+      this.activePromises.delete(promise);
+    };
+    promise.then(cleanup).catch(cleanup);
+    return promise;
+  }
+
+  private async safePromiseAllSettled<T>(promises: Promise<T>[]) {
+    const trackedPromise = Promise.allSettled(promises);
+    this.trackPromise(trackedPromise);
+    return trackedPromise;
+  }
+
+  // eslint-disable-next-line no-unused-vars
+  private addTimeout(callback: (...args: unknown[]) => void | Promise<void>, delay: number): NodeJS.Timeout {
+    if (this.isCleaningUp) {
+      return setTimeout(() => {}, 0); // Trả về dummy timeout if cleaning up
+    }
+    const timeoutId = setTimeout(async () => {
+      try {
+        await callback();
+      } catch (error) {
+        console.error('Error in timeout callback:', error);
+      } finally {
+        this.timeoutIds = this.timeoutIds.filter(id => id !== timeoutId);
+      }
+    }, delay);
+
+    this.timeoutIds.push(timeoutId);
+    return timeoutId;
+  }
+
+  async fetchUser(userId: string): Promise<User | null> {
+    // Check cache first
+    if (this.userCache.has(userId)) {
+      const cached = this.userCache.get(userId);
+      if (cached && (Date.now() - cached.timestamp < 300000)) { // 5 minutes cache
+        return cached.user;
+      }
+    }
+
     try {
-      return await this.client.users.fetch(userId);
+      const user = await this.client.users.fetch(userId);
+      // Cache with timestamp
+      this.userCache.set(userId, {
+        user,
+        timestamp: Date.now(),
+      });
+
+      // ✅ FIX: Always cleanup expired entries, not just when size > 100
+      this.cleanupExpiredCache();
+
+      return user;
     } catch (err) {
       console.error(`Không thể fetch user ${userId}`, err);
       return null;
     }
+  }
+
+  private cleanupExpiredCache() {
+    const now = Date.now();
+    const expiredKeys: string[] = [];
+
+    for (const [id, cached] of this.userCache) {
+      if (now - cached.timestamp > 300000) { // 5 minutes
+        expiredKeys.push(id);
+      }
+    }
+
+    expiredKeys.forEach(key => this.userCache.delete(key));
+
+    if (this.userCache.size > 100) {
+      console.warn(`GameRoom ${this.guildId}: Large user cache size: ${this.userCache.size}`);
+    }
+  }
+
+  async batchSendMessages(
+    messages: Array<{userId: string, content: string | MessageCreateOptions}>,
+  ) {
+    let BATCH_SIZE: number;
+    let DELAY_MS: number;
+    if (messages.length <= 6) {
+      // Nhóm nhỏ: Gửi tất cả cùng lúc
+      BATCH_SIZE = messages.length;
+      DELAY_MS = 0;
+    } else if (messages.length <= 12) {
+      // Nhóm trung bình: Batch size 6, delay ngắn
+      BATCH_SIZE = 6;
+      DELAY_MS = 200;
+    } else {
+      // Nhóm lớn (13-18): Batch size 5, delay tối ưu
+      BATCH_SIZE = 5;
+      DELAY_MS = 300;
+    }
+
+    for (let i = 0; i < messages.length; i += BATCH_SIZE) {
+      const batch = messages.slice(i, i + BATCH_SIZE);
+      const batchPromises = batch.map(async ({userId, content}) => {
+        try {
+          const user = await this.fetchUser(userId);
+          if (user) {
+            return await user.send(content);
+          }
+          return null;
+        } catch (error) {
+          console.error(`Error sending message to ${userId}:`, error);
+          return null;
+        }
+      });
+
+      await this.safePromiseAllSettled(batchPromises);
+
+      if (i + BATCH_SIZE < messages.length) {
+        await new Promise(resolve => setTimeout(resolve, DELAY_MS));
+      }
+    }
+  };
+
+  private clearAllTimeouts() {
+    this.timeoutIds.forEach(timeoutId => {
+      clearTimeout(timeoutId);
+    });
+    this.timeoutIds = [];
+  }
+
+  private async sendGameLogToChannel() {
+    if (!this.gameState.log || this.gameState.log.length === 0) {
+      return;
+    }
+
+    try {
+      const channel = await this.client.channels.fetch(this.channelId);
+      if (!channel?.isSendable()) {
+        console.warn(`Channel ${this.channelId} not found or not sendable`);
+        return;
+      }
+
+      const logEmbed = new EmbedBuilder()
+        .setColor(0x2ecc71)
+        .setTitle('📜 LOG GAME MA SÓI')
+        .setDescription(
+          this.gameState.log.join('\n').slice(0, 4000) || // Discord embed description limit
+            '*Không có log nào được ghi lại*',
+        )
+        .setTimestamp()
+        .setFooter({
+          text: `Game đã kết thúc • ${this.players.length} người chơi`,
+        });
+
+      // Nếu log quá dài, chia thành nhiều embed
+      if (this.gameState.log.join('\n').length > 4000) {
+        const logText = this.gameState.log.join('\n');
+        const chunks = [];
+        for (let i = 0; i < logText.length; i += 4000) {
+          chunks.push(logText.slice(i, i + 4000));
+        }
+
+        for (let i = 0; i < chunks.length; i++) {
+          const chunkEmbed = new EmbedBuilder()
+            .setColor(0x2ecc71)
+            .setTitle(i === 0 ? '📜 LOG GAME MA SÓI' : `📜 LOG GAME MA SÓI (Phần ${i + 1})`)
+            .setDescription(chunks[i])
+            .setTimestamp()
+            .setFooter({
+              text: `Game đã kết thúc • ${this.players.length} người chơi • Phần ${i + 1}/${chunks.length}`,
+            });
+
+          await channel.send({ embeds: [chunkEmbed] });
+          if (i < chunks.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+      } else {
+        await channel.send({ embeds: [logEmbed] });
+      }
+
+      console.log(`Game log sent to channel ${this.channelId} for guild ${this.guildId}`);
+    } catch (error) {
+      console.error(`Failed to send game log to channel ${this.channelId}:`, error);
+    }
+  }
+
+  async cleanup() {
+    this.isCleaningUp = true;
+
+    if (this.status === 'ended' && this.gameState.log.length > 0) {
+      await this.sendGameLogToChannel();
+    }
+
+    if (this.periodicCleanupInterval) {
+      clearInterval(this.periodicCleanupInterval);
+      this.periodicCleanupInterval = undefined;
+    }
+
+    this.clearAllTimeouts();
+
+    this.activePromises.clear();
+
+    this.userCache.clear();
+
+    this.witchMessages.clear();
+    this.nightMessages.clear();
+    this.voteMessages.clear();
+
+    this.gameState.reset();
+
+    this.removeAllListeners();
+
+    for (const player of this.players) {
+      store.delete(player.userId);
+    }
+
+    this.players = [];
+  }
+
+  private performPeriodicCleanup() {
+    if (this.isCleaningUp) {
+      return;
+    }
+
+    this.logMemoryStats();
+
+    this.cleanupExpiredCache();
+
+    if (this.activePromises.size > 20) {
+      console.warn(`GameRoom ${this.guildId}: High active promises: ${this.activePromises.size}`);
+    }
+
+    if (this.timeoutIds.length > 10) {
+      console.warn(`GameRoom ${this.guildId}: High active timeouts: ${this.timeoutIds.length}`);
+    }
+
+    if (global.gc && (this.activePromises.size > 50 || this.timeoutIds.length > 20)) {
+      console.log(`GameRoom ${this.guildId}: Forcing garbage collection`);
+      global.gc();
+    }
+  }
+
+  private logMemoryStats() {
+    console.log(`GameRoom ${this.guildId} Memory Stats:`, {
+      activePromises: this.activePromises.size,
+      activeTimeouts: this.timeoutIds.length,
+      userCacheSize: this.userCache.size,
+      gameStatus: this.status,
+      isCleaningUp: this.isCleaningUp,
+    });
   }
 
   async addPlayer(userId: string) {
@@ -248,7 +505,7 @@ class GameRoom extends EventEmitter {
         }
       }
     });
-    await Promise.allSettled(dmPromises);
+    await this.safePromiseAllSettled(dmPromises);
 
     const woPromises = this.players
       .filter((p) => p.role.faction === 0)
@@ -261,7 +518,7 @@ class GameRoom extends EventEmitter {
                 .filter((id) => id !== player.userId)
                 .map((id) => {
                   const teammate = this.players.find((p) => p.userId === id);
-                  return `**${teammate?.name}**`;
+                  return `**${teammate?.name}** (${teammate?.role.name})`;
                 })
                 .join(', ') || 'Không có đồng đội.'
             }`,
@@ -277,7 +534,7 @@ class GameRoom extends EventEmitter {
           }
         }
       });
-    await Promise.allSettled(woPromises);
+    await this.safePromiseAllSettled(woPromises);
 
     this.status = 'starting';
 
@@ -290,7 +547,7 @@ class GameRoom extends EventEmitter {
 
   endGame() {
     this.status = 'ended';
-    this.players = [];
+    this.cleanup().catch(err => console.error('Cleanup error:', err));
   }
 
   totalVotedWolvesSolve() {
@@ -503,7 +760,7 @@ class GameRoom extends EventEmitter {
         );
 
         await user.send(
-          `🌙 Bạn là **Phù Thuỷ**. Bạn có hai bình thuốc: một để đầu độc và một để cứu người. Bình cứu chỉ có tác dụng nếu người đó bị tấn công.\n (Bình độc: ${player.role.poisonCount}, Bình cứu: ${player.role.healCount}).`,
+          `🌙 Bạn là **Phù Thuỷ**. Bạn có hai bình thuốc: một để đầu độc và một để cứu người. Bình cứu chỉ có tác dụng nếu người đó bị tấn công.\n (Bình độc: ${player.role.poisonCount}, Bình cứu: (${Math.max(0, player.role.healCount)}).`,
         );
         message = await user.send({
           embeds: [embed],
@@ -706,28 +963,23 @@ class GameRoom extends EventEmitter {
       }
     });
 
-    await Promise.allSettled(dmPromises);
+    await this.safePromiseAllSettled(dmPromises);
 
-    setTimeout(
+    this.addTimeout(
       async () => {
-        const notifyWolves = this.players
+        const wolfMessages = this.players
           .filter((p) => p.role.id === WEREROLE.WEREWOLF)
-          .map(async (wolf) => {
-            try {
-              const user = await this.fetchUser(wolf.userId);
-              if (user) {
-                await user.send('### ⚠️ Thông báo: còn **10** giây để vote!');
-              }
-            } catch (err) {
-              console.error(`Không thể gửi tin nhắn cho ${wolf.userId}`, err);
-            }
-          });
-        await Promise.allSettled(notifyWolves);
+          .map(wolf => ({
+            userId: wolf.userId,
+            content: '### ⚠️ Thông báo: còn **10** giây để vote!',
+          }));
+
+        await this.batchSendMessages(wolfMessages);
       },
       this.settings.wolfVoteTime * 1000 - 10000,
     );
 
-    setTimeout(async () => {
+    this.addTimeout(async () => {
       for (const message of wolfMessages) {
         try {
           const row = ActionRowBuilder.from(
@@ -778,26 +1030,19 @@ class GameRoom extends EventEmitter {
       }
     }, this.settings.wolfVoteTime * 1000);
 
-    setTimeout(
+    this.addTimeout(
       async () => {
-        const notifyPlayers = this.players.map(async (player) => {
-          try {
-            const user = await this.fetchUser(player.userId);
-            if (user) {
-              await user.send(
-                '### ⚠️ Thông báo: còn **10** giây nữa trời sẽ sáng!',
-              );
-            }
-          } catch (err) {
-            console.error(`Không thể gửi tin nhắn cho ${player.userId}`, err);
-          }
-        });
-        await Promise.allSettled(notifyPlayers);
+        const playerMessages = this.players.map(player => ({
+          userId: player.userId,
+          content: '### ⚠️ Thông báo: còn **10** giây nữa trời sẽ sáng!',
+        }));
+
+        await this.batchSendMessages(playerMessages);
       },
       this.settings.nightTime * 1000 - 10000,
     );
 
-    setTimeout(async () => {
+    this.addTimeout(async () => {
       for (const [playerId, message] of this.nightMessages) {
         try {
           if (message.components && message.components.length > 0) {
@@ -830,7 +1075,7 @@ class GameRoom extends EventEmitter {
     }, this.settings.nightTime * 1000);
 
     await new Promise((resolve) =>
-      setTimeout(resolve, this.settings.nightTime * 1000),
+      this.addTimeout(() => resolve(undefined), this.settings.nightTime * 1000),
     );
   }
 
@@ -838,7 +1083,7 @@ class GameRoom extends EventEmitter {
    * @description Đoạn này xin được phép comment nhiều vì sợ đọc lại không hiểu <(")
    */
   async solvePhase2() {
-    this.gameState.log.push(`## Đêm thứ ${this.gameState.nightCount}`);
+    this.gameState.addLog(`## Đêm thứ ${this.gameState.nightCount}`);
 
     let mostVotedUserId = this.totalVotedWolvesSolve();
     const killedPlayers = new Set(); // vẫn có thể cứu được
@@ -858,14 +1103,14 @@ class GameRoom extends EventEmitter {
       puppeteer.role.targetWolf
     ) {
       mostVotedUserId = puppeteer.role.targetWolf;
-      this.gameState.log.push(
+      this.gameState.addLog(
         `Người múa rối đã chỉ định sói ăn thịt **${this.players.find((p) => p.userId === mostVotedUserId)?.name}**`,
       );
     }
 
     const witch = this.players.find((p) => p.role.id === WEREROLE.WITCH);
     if (mostVotedUserId) {
-      this.gameState.log.push(
+      this.gameState.addLog(
         `Sói đã chọn cắn **${this.players.find((p) => p.userId === mostVotedUserId)?.name}**`,
       );
       const nguoiBiChoCan = this.players.find(
@@ -878,7 +1123,7 @@ class GameRoom extends EventEmitter {
         this.gameState.nightCount === 1
       ) {
         // Đêm đầu tiên phù thuỷ không bị sao cả
-        this.gameState.log.push(
+        this.gameState.addLog(
           'Vì là đêm đầu tiên nên phù thuỷ không bị sao cả',
         );
       } else if (
@@ -903,7 +1148,7 @@ class GameRoom extends EventEmitter {
         (p) => p.userId === witchRole.poisonedPerson,
       );
       if (nguoiBiDinhDoc) {
-        this.gameState.log.push(
+        this.gameState.addLog(
           `Phù thuỷ đã đầu độc **${nguoiBiDinhDoc.name}**`,
         );
         sureDieInTheNight.add(nguoiBiDinhDoc.userId);
@@ -972,7 +1217,7 @@ class GameRoom extends EventEmitter {
           await user.send(
             `**Thông báo:** Vì **${player.name}** không hành động nên bạn đã giết được người này.`,
           );
-          this.gameState.log.push(`Stalker đã giết **${player.name}**`);
+          this.gameState.addLog(`Stalker đã giết **${player.name}**`);
           sureDieInTheNight.add(player.userId);
           killedPlayers.delete(player.userId);
         }
@@ -991,7 +1236,7 @@ class GameRoom extends EventEmitter {
         (killedId === guard.role.protectedPerson || killedId === guard.userId)
       ) {
         const hp = (guard.role.hp -= 1);
-        this.gameState.log.push(
+        this.gameState.addLog(
           `Bảo vệ đã bảo vệ **${this.players.find((p) => p.userId === killedId)?.name}**, anh ấy còn ${hp} máu`,
         );
         // được bảo vệ đỡ đạn
@@ -999,7 +1244,7 @@ class GameRoom extends EventEmitter {
         if (hp <= 0) {
           // sureDieInTheNight.add(guard.userId);
           killedPlayers.add(guard.userId);
-          this.gameState.log.push('Bảo vệ đã chết do chịu 2 lần cắn của sói');
+          this.gameState.addLog('Bảo vệ đã chết do chịu 2 lần cắn của sói');
         }
 
         if (
@@ -1019,13 +1264,13 @@ class GameRoom extends EventEmitter {
         (p) => p.userId === witchRole.healedPerson,
       );
       // chưa được ai bảo vệ trước đó
-      this.gameState.log.push(`Phù thuỷ đã chọn cứu **${saved?.name}**`);
+      this.gameState.addLog(`Phù thuỷ đã chọn cứu **${saved?.name}**`);
       if (
         saved &&
         killedPlayers.has(saved.userId) &&
         killedPlayers.has(witch.role.healedPerson)
       ) {
-        this.gameState.log.push(`Phù thuỷ cứu được **${saved.name}**`);
+        this.gameState.addLog(`Phù thuỷ cứu được **${saved.name}**`);
 
         witch.role.healCount -= 1;
         killedPlayers.delete(saved.userId);
@@ -1039,7 +1284,7 @@ class GameRoom extends EventEmitter {
         (p) => p.userId === mediumRole.revivedPerson && !p.alive,
       );
       if (saved && saved.role instanceof Dead) {
-        this.gameState.log.push(
+        this.gameState.addLog(
           `Thầy đồng đã hồi sinh thành công **${saved.name}**`,
         );
 
@@ -1060,7 +1305,7 @@ class GameRoom extends EventEmitter {
         mostVotedUserId &&
         killed.userId === mostVotedUserId
       ) {
-        this.gameState.log.push(`Bán sói **${killed.name}** đã biến thành sói`);
+        this.gameState.addLog(`Bán sói **${killed.name}** đã biến thành sói`);
         const user = await this.fetchUser(killed.userId);
         if (user) {
           await user.send('### Bạn đã bị sói cắn và biến thành sói');
@@ -1106,16 +1351,16 @@ class GameRoom extends EventEmitter {
           await user.send(
             '### 👴 Già làng đã chết, tất cả những người thuộc phe dân làng đều sẽ bị mất chức năng.',
           );
-          this.gameState.log.push(
+          this.gameState.addLog(
             '👴 Già làng đã chết, tất cả những người thuộc phe dân làng đều sẽ bị mất chức năng.',
           );
           player.role = new Villager();
         });
-      await Promise.allSettled(dmVillagerPromise);
+      await this.safePromiseAllSettled(dmVillagerPromise);
     }
 
     if (allDeadTonight.size !== 0) {
-      this.gameState.log.push(
+      this.gameState.addLog(
         `${Array.from(allDeadTonight)
           .map((id) => {
             const player = this.players.find((p) => p.userId === id);
@@ -1126,7 +1371,7 @@ class GameRoom extends EventEmitter {
     }
 
     if (allDeadTonight.size === 0) {
-      this.gameState.log.push('Không có ai thiệt mạng\n');
+      this.gameState.addLog('Không có ai thiệt mạng\n');
     }
 
     const dmPromises = this.players.map(async (player) => {
@@ -1180,7 +1425,7 @@ class GameRoom extends EventEmitter {
       }
     });
 
-    await Promise.allSettled(dmPromises);
+    await this.safePromiseAllSettled(dmPromises);
 
     for (const player of this.players) {
       player.role.resetDay();
@@ -1243,29 +1488,22 @@ class GameRoom extends EventEmitter {
       }
     });
 
-    await Promise.allSettled(dmPromises);
+    await this.safePromiseAllSettled(dmPromises);
 
-    setTimeout(
+    this.addTimeout(
       async () => {
-        const notifyPlayers = this.players.map(async (player) => {
-          try {
-            const user = await this.fetchUser(player.userId);
-            if (user) {
-              await user.send(
-                '### ⚠️ Thông báo: còn **10** giây để thảo luận!',
-              );
-            }
-          } catch (err) {
-            console.error(`Không thể gửi tin nhắn cho ${player.userId}`, err);
-          }
-        });
-        await Promise.allSettled(notifyPlayers);
+        const playerMessages = this.players.map(player => ({
+          userId: player.userId,
+          content: '### ⚠️ Thông báo: còn **10** giây để thảo luận!',
+        }));
+
+        await this.batchSendMessages(playerMessages);
       },
       this.settings.discussTime * 1000 - 10000,
     );
 
     await new Promise((resolve) =>
-      setTimeout(resolve, this.settings.discussTime * 1000),
+      this.addTimeout(() => resolve(undefined), this.settings.discussTime * 1000),
     );
   }
 
@@ -1310,38 +1548,45 @@ class GameRoom extends EventEmitter {
       this.voteMessages.set(player.userId, message);
     });
 
-    await Promise.allSettled(dmPromises);
+    await this.safePromiseAllSettled(dmPromises);
 
     const timeoutPromise = new Promise((resolve) =>
-      setTimeout(resolve, this.settings.voteTime * 1000),
+      this.addTimeout(() => resolve('timeout'), this.settings.voteTime * 1000),
     );
 
+    // eslint-disable-next-line no-unused-vars
+    let voteCompleteResolve: ((value: unknown) => void) | undefined;
     const voteCompletePromise = new Promise((resolve) => {
+      voteCompleteResolve = resolve;
       this.once('voteComplete', resolve);
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
     const notificationPromise = new Promise<void>((resolve) => {
-      setTimeout(
+      this.addTimeout(
         async () => {
-          const notifyPlayers = this.players.map(async (player) => {
-            try {
-              const user = await this.fetchUser(player.userId);
-              if (user) {
-                await user.send('### ⚠️ Thông báo: còn **10** giây để vote!');
-              }
-            } catch (err) {
-              console.error(`Không thể gửi tin nhắn cho ${player.userId}`, err);
-            }
-          });
-          await Promise.allSettled(notifyPlayers);
+          const playerMessages = this.players.map(player => ({
+            userId: player.userId,
+            content: '### ⚠️ Thông báo: còn **10** giây nữa hết thời gian vote!',
+          }));
+
+          await this.batchSendMessages(playerMessages);
           resolve();
         },
         this.settings.voteTime * 1000 - 10000,
       );
     });
 
-    await Promise.race([timeoutPromise, voteCompletePromise]);
+    this.trackPromise(timeoutPromise);
+    this.trackPromise(voteCompletePromise);
+    this.trackPromise(notificationPromise);
+
+    try {
+      await Promise.race([timeoutPromise, voteCompletePromise]);
+    } finally {
+      if (voteCompleteResolve) {
+        this.removeListener('voteComplete', voteCompleteResolve);
+      }
+    }
 
     for (const [playerId, message] of this.voteMessages) {
       try {
@@ -1363,7 +1608,7 @@ class GameRoom extends EventEmitter {
     const hangedPlayer = this.processVote();
 
     if (!hangedPlayer) {
-      this.gameState.log.push('Không ai bị treo cổ do không đủ phiếu bầu\n');
+      this.gameState.addLog('Không ai bị treo cổ do không đủ phiếu bầu\n');
       const noHangPromises = this.players.map(async (player) => {
         const user = await this.fetchUser(player.userId);
         if (!user) {
@@ -1373,13 +1618,13 @@ class GameRoom extends EventEmitter {
           '🎭 Không đủ số phiếu hoặc có nhiều người cùng số phiếu cao nhất, không ai bị treo cổ trong ngày hôm nay.',
         );
       });
-      await Promise.allSettled(noHangPromises);
+      await this.safePromiseAllSettled(noHangPromises);
     } else {
-      this.gameState.log.push(
+      this.gameState.addLog(
         `**${hangedPlayer.name}** đã bị dân làng treo cổ`,
       );
       if (hangedPlayer.role.id === WEREROLE.FOOL) {
-        this.gameState.log.push(
+        this.gameState.addLog(
           `**${hangedPlayer.name}** là Thằng Ngố - Thằng Ngố thắng!`,
         );
         this.status = 'ended';
@@ -1394,7 +1639,7 @@ class GameRoom extends EventEmitter {
           const roleRevealEmbed = this.revealRoles();
           await user.send({ embeds: [roleRevealEmbed] });
         });
-        await Promise.allSettled(foolMessages);
+        await this.safePromiseAllSettled(foolMessages);
         return;
       }
 
@@ -1424,7 +1669,7 @@ class GameRoom extends EventEmitter {
         }
       });
 
-      await Promise.allSettled(hangMessages);
+      await this.safePromiseAllSettled(hangMessages);
     }
 
     const normalWolvesAlive = this.players.filter(
@@ -1445,9 +1690,9 @@ class GameRoom extends EventEmitter {
         }
       });
 
-      await Promise.allSettled(wolfTransformPromises);
+      await this.safePromiseAllSettled(wolfTransformPromises);
 
-      this.gameState.log.push(
+      this.gameState.addLog(
         `🐺 **${otherWolvesAlive.length}** Sói chức năng đã biến thành **Sói thường** vì không còn Sói thường nào sống sót.`,
       );
     }
@@ -1474,12 +1719,12 @@ class GameRoom extends EventEmitter {
           await user.send(
             '### 👴 Già làng đã chết, tất cả những người thuộc phe dân làng đều sẽ bị mất chức năng.',
           );
-          this.gameState.log.push(
+          this.gameState.addLog(
             '👴 Già làng đã chết, tất cả những người thuộc phe dân làng đều sẽ bị mất chức năng.',
           );
           player.role = new Villager();
         });
-      await Promise.allSettled(dmVillagerPromise);
+      await this.safePromiseAllSettled(dmVillagerPromise);
     }
 
     // Reset vote
@@ -1493,7 +1738,7 @@ class GameRoom extends EventEmitter {
   revealRoles() {
     const roleRevealEmbed = new EmbedBuilder()
       .setColor(0x2ecc71)
-      .setTitle('🎭 Tiết Lộ Vai Trò')
+      .setTitle('Tiết Lộ Vai Trò')
       .setDescription('```Danh sách vai trò của tất cả người chơi:```')
       .addFields(
         this.players.map((player) => {
@@ -1657,7 +1902,7 @@ class GameRoom extends EventEmitter {
         ]);
       });
 
-      await Promise.allSettled(endGameMessages);
+      await this.safePromiseAllSettled(endGameMessages);
 
       console.log(this.gameState.log);
       this.status = 'ended';
@@ -1665,6 +1910,8 @@ class GameRoom extends EventEmitter {
       for (const player of this.players) {
         store.delete(player.userId);
       }
+      this.cleanup().catch(err => console.error('Cleanup error:', err));
+
       return true;
     }
 
@@ -1672,15 +1919,24 @@ class GameRoom extends EventEmitter {
   }
 
   async gameLoop() {
-    while (this.status === 'starting') {
-      await this.nightPhase();
-      await this.solvePhase2();
-      if (await this.checkEndGame()) {
-        console.log('END GAME');
-        break;
+    try {
+      while (this.status === 'starting') {
+        await this.nightPhase();
+        await this.solvePhase2();
+        if (await this.checkEndGame()) {
+          console.log('END GAME');
+          break;
+        }
+        await this.dayPhase();
+        await this.votePhase();
       }
-      await this.dayPhase();
-      await this.votePhase();
+    } catch (error) {
+      console.error(`GameRoom ${this.guildId} error in gameLoop:`, error);
+      await this.cleanup();
+    } finally {
+      if (!this.isCleaningUp) {
+        await this.cleanup();
+      }
     }
   }
 
@@ -1820,7 +2076,7 @@ class GameRoom extends EventEmitter {
       }
 
       // phần log
-      this.gameState.log.push(
+      this.gameState.addLog(
         `### 👒 Hầu gái đã lên thay vai trò **${maid.role.name}** của chủ vì chủ đã bị chết.`,
       );
     }
@@ -1849,7 +2105,7 @@ class GameRoom extends EventEmitter {
       });
     });
 
-    await Promise.allSettled(dmPromises);
+    await this.safePromiseAllSettled(dmPromises);
   }
 }
 

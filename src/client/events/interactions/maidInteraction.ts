@@ -4,7 +4,6 @@ import {
   ActionRowBuilder,
   TextInputStyle,
   type Interaction,
-  Client,
   MessageFlags,
 } from 'discord.js';
 
@@ -60,7 +59,6 @@ class MaidInteraction {
     interaction: Interaction,
     gameRoom: GameRoom,
     sender: Player,
-    client: Client,
   ) => {
     if (!interaction.isModalSubmit()) {
       return;
@@ -117,10 +115,10 @@ class MaidInteraction {
     }
 
     try {
-      const user = await client.users.fetch(playerId);
-      await user.send(
-        `👑 Bạn đã chọn **${targetPlayer.name}** làm chủ của mình.`,
-      );
+      const user = await gameRoom.fetchUser(playerId);
+      if (user) {
+        await user.send(`👑 Bạn đã chọn **${targetPlayer.name}** làm chủ của mình.`);
+      }
     } catch (err) {
       console.error(`Không thể gửi DM cho ${playerId}:`, err);
     }

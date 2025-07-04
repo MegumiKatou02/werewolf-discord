@@ -5,7 +5,7 @@ class WolfSeer extends Role {
   seerCount: number;
 
   constructor() {
-    super('Ma Sói', 0);
+    super('Sói Tiên Tri', 0);
     this.id = 12;
     this.voteBite = null; // id của người chơi bị cắn
     this.seerCount = 1;

@@ -87,38 +87,51 @@ export default {
     });
 
     collector.on('collect', async (i: MessageComponentInteraction) => {
-      if (
-        i.user.id !== interaction.user.id &&
-        i.user.id !== process.env.DEVELOPER
-      ) {
-        await i.reply({
-          content:
-            'Bạn không thể sử dụng menu này! Hãy gõ `/role` để tạo menu riêng cho bạn :v',
-          flags: MessageFlags.Ephemeral,
-        });
-        return;
-      }
+      try {
+        if (
+          i.user.id !== interaction.user.id &&
+          i.user.id !== process.env.DEVELOPER
+        ) {
+          await i.reply({
+            content:
+              'Bạn không thể sử dụng menu này! Hãy gõ `/role` để tạo menu riêng cho bạn :v',
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
 
-      if (i.customId === 'role_select' && i.isStringSelectMenu()) {
-        const selectedRoleId = i.values[0];
-        const selectedRole =
-          rolesData[selectedRoleId as keyof typeof rolesData];
+        const INTERACTION_TIMEOUT = 15 * 60 * 1000;
+        const now = Date.now();
+        if ((now - i.createdTimestamp) > INTERACTION_TIMEOUT) {
+          console.warn('Interaction đã hết hạn, bỏ qua xử lý');
+          return;
+        }
 
-        const factionRole = convertFactionRoles(selectedRole.faction);
+        if (i.customId === 'role_select' && i.isStringSelectMenu()) {
+          const selectedRoleId = i.values[0];
+          const selectedRole =
+            rolesData[selectedRoleId as keyof typeof rolesData];
 
-        const fileName = `${selectedRole.eName.toLowerCase().replace(/\s+/g, '_')}.png`;
-        const { embed, file } = EmbedBuilderWerewolf(fileName, {
-          title: `${selectedRole.title} (${selectedRole.eName})`,
-          description: `${selectedRole.description}\n\n**Phe:** ${factionRole}`,
-        });
+          const factionRole = convertFactionRoles(selectedRole.faction);
 
-        embed.setDescription(embed.data.description || null);
+          const fileName = `${selectedRole.eName.toLowerCase().replace(/\s+/g, '_')}.png`;
+          const { embed, file } = EmbedBuilderWerewolf(fileName, {
+            title: `${selectedRole.title} (${selectedRole.eName})`,
+            description: `${selectedRole.description}\n\n**Phe:** ${factionRole}`,
+          });
 
-        await i.update({
-          embeds: [embed],
-          files: [file],
-          components: [row],
-        });
+          embed.setDescription(embed.data.description || null);
+
+          await i.update({
+            embeds: [embed],
+            files: [file],
+            components: [row],
+          });
+        }
+      } catch (error) {
+        console.error('Lỗi xử lý role interaction:', error);
+        console.error('CustomId:', i.customId);
+        console.error('User:', i.user?.tag);
       }
     });
 

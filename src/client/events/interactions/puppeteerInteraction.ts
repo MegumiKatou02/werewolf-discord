@@ -5,7 +5,6 @@ import {
   ActionRowBuilder,
   type Interaction,
   MessageFlags,
-  Client,
 } from 'discord.js';
 
 import type { GameRoom } from '../../../../core/room.js';
@@ -47,7 +46,6 @@ class PuppeteerInteraction {
     interaction: Interaction,
     gameRoom: GameRoom,
     sender: Player,
-    client: Client,
   ) => {
     if (!interaction.isModalSubmit()) {
       return;
@@ -113,8 +111,10 @@ class PuppeteerInteraction {
       sender.role.targetWolf = targetPlayer.userId;
 
       try {
-        const user = await client.users.fetch(playerId);
-        await user.send(`🐕‍🦺 Bạn chỉ định mục tiêu của sói là ${targetPlayer.name}`);
+        const user = await gameRoom.fetchUser(playerId);
+        if (user) {
+          await user.send(`🐕‍🦺 Bạn chỉ định mục tiêu của sói là **${targetPlayer.name}**.`);
+        }
       } catch (err) {
         console.error(`Không thể gửi DM cho ${playerId}:`, err);
       }

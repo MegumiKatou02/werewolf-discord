@@ -111,37 +111,50 @@ export default {
     });
 
     collector.on('collect', async (i: MessageComponentInteraction) => {
-      if (i.user.id !== interaction.user.id) {
-        await i.reply({
-          content: '❌ Bạn không thể sử dụng nút này.',
-          flags: MessageFlags.Ephemeral,
-        });
-        return;
-      }
-
-      if (i.customId === 'confirm_clear_room') {
-        gameRooms.delete(guildId);
-        await i.update({
-          content: '✅ Đã xóa phòng chơi thành công.',
-          embeds: [],
-          components: [],
-        });
-
-        const channel = interaction.channel;
-        if (channel) {
-          channel.send(
-            `✅ Phòng chơi trong server đã bị xóa bởi <@${i.user.id}>.`,
-          );
+      try {
+        if (i.user.id !== interaction.user.id) {
+          await i.reply({
+            content: '❌ Bạn không thể sử dụng nút này.',
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
         }
-      } else if (i.customId === 'cancel_clear_room') {
-        await i.update({
-          content: '❌ Đã hủy xóa phòng.',
-          embeds: [],
-          components: [],
-        });
-      }
 
-      collector.stop();
+        const INTERACTION_TIMEOUT = 15 * 60 * 1000;
+        const now = Date.now();
+        if ((now - i.createdTimestamp) > INTERACTION_TIMEOUT) {
+          console.warn('Interaction đã hết hạn, bỏ qua xử lý');
+          return;
+        }
+
+        if (i.customId === 'confirm_clear_room') {
+          gameRooms.delete(guildId);
+          await i.update({
+            content: '✅ Đã xóa phòng chơi thành công.',
+            embeds: [],
+            components: [],
+          });
+
+          const channel = interaction.channel;
+          if (channel) {
+            channel.send(
+              `✅ Phòng chơi trong server đã bị xóa bởi <@${i.user.id}>.`,
+            );
+          }
+        } else if (i.customId === 'cancel_clear_room') {
+          await i.update({
+            content: '❌ Đã hủy xóa phòng.',
+            embeds: [],
+            components: [],
+          });
+        }
+
+        collector.stop();
+      } catch (error) {
+        console.error('Lỗi xử lý clear interaction:', error);
+        console.error('CustomId:', i.customId);
+        console.error('User:', i.user?.tag);
+      }
     });
 
     collector.on('end', async (_, reason: string) => {

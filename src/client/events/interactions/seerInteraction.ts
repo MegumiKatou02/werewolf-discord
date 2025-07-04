@@ -4,7 +4,6 @@ import {
   TextInputStyle,
   ActionRowBuilder,
   type Interaction,
-  Client,
   MessageFlags,
 } from 'discord.js';
 
@@ -49,7 +48,6 @@ class SeerInteraction {
     interaction: Interaction,
     gameRoom: GameRoom,
     sender: Player,
-    client: Client,
   ) => {
     if (!interaction.isModalSubmit()) {
       return;
@@ -113,40 +111,42 @@ class SeerInteraction {
       sender.role.viewCount -= 1; // soi rồi không chọn lại được nữa
 
       try {
-        const user = await client.users.fetch(playerId);
-        const alphaWerewolf = gameRoom.players.find(
-          (player: Player) => player.role?.id === WEREROLE.ALPHAWEREWOLF,
-        );
-        if (
-          alphaWerewolf &&
-          alphaWerewolf.role instanceof AlphaWerewolf &&
-          alphaWerewolf.role.maskWolf &&
-          alphaWerewolf.role.maskWolf === targetPlayer.userId
-        ) {
-          await user.send(
-            `👁️ Phe của **${targetPlayer.name}** là: **Dân Làng**.`,
+        const user = await gameRoom.fetchUser(playerId);
+        if (user) {
+          const alphaWerewolf = gameRoom.players.find(
+            (player: Player) => player.role?.id === WEREROLE.ALPHAWEREWOLF,
           );
-        } else {
-          if (targetPlayer.role.id === WEREROLE.LYCAN) {
+          if (
+            alphaWerewolf &&
+            alphaWerewolf.role instanceof AlphaWerewolf &&
+            alphaWerewolf.role.maskWolf &&
+            alphaWerewolf.role.maskWolf === targetPlayer.userId
+          ) {
             await user.send(
-              `👁️ Phe của **${targetPlayer.name}** là: **Ma Sói**.`,
+              `👁️ Phe của **${targetPlayer.name}** là: **Dân Làng**.`,
             );
           } else {
-            const seerFaction = () => {
-              if (targetPlayer.role.faction === 0) {
-                return 'Ma Sói';
-              }
-              if (
-                targetPlayer.role.faction === 1 ||
-                targetPlayer.role.faction === 3
-              ) {
-                return 'Dân Làng';
-              }
-              return 'Không xác định';
-            };
-            await user.send(
-              `👁️ Phe của **${targetPlayer.name}** là: **${seerFaction()}**.`,
-            );
+            if (targetPlayer.role.id === WEREROLE.LYCAN) {
+              await user.send(
+                `👁️ Phe của **${targetPlayer.name}** là: **Ma Sói**.`,
+              );
+            } else {
+              const seerFaction = () => {
+                if (targetPlayer.role.faction === 0) {
+                  return 'Ma Sói';
+                }
+                if (
+                  targetPlayer.role.faction === 1 ||
+                  targetPlayer.role.faction === 3
+                ) {
+                  return 'Dân Làng';
+                }
+                return 'Không xác định';
+              };
+              await user.send(
+                `👁️ Phe của **${targetPlayer.name}** là: **${seerFaction()}**.`,
+              );
+            }
           }
         }
       } catch (err) {
