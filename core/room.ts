@@ -124,6 +124,11 @@ class GameRoom extends EventEmitter {
     if (this.isCleaningUp) {
       return setTimeout(() => {}, 0); // Trả về dummy timeout if cleaning up
     }
+    if (this.timeoutIds.length > 20) {
+      console.warn(`GameRoom ${this.guildId}: Too many timeouts (${this.timeoutIds.length}), clearing oldest ones`);
+      const oldTimeouts = this.timeoutIds.splice(0, 10);
+      oldTimeouts.forEach(id => clearTimeout(id));
+    }
     const timeoutId = setTimeout(async () => {
       try {
         await callback();
@@ -292,7 +297,14 @@ class GameRoom extends EventEmitter {
     this.isCleaningUp = true;
 
     if (this.status === 'ended' && this.gameState.log.length > 0) {
-      await this.sendGameLogToChannel();
+      try {
+        await Promise.race([
+          this.sendGameLogToChannel(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Game log timeout')), 5000)),
+        ]);
+      } catch (error) {
+        console.error(`Failed to send game log for room ${this.guildId}:`, error);
+      }
     }
 
     if (this.periodicCleanupInterval) {
@@ -302,6 +314,17 @@ class GameRoom extends EventEmitter {
 
     this.clearAllTimeouts();
 
+    if (this.activePromises.size > 0) {
+      console.log(`GameRoom ${this.guildId}: Waiting for ${this.activePromises.size} active promises`);
+      try {
+        await Promise.race([
+          Promise.allSettled(Array.from(this.activePromises)),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Active promises timeout')), 3000)),
+        ]);
+      } catch (error) {
+        console.warn(`GameRoom ${this.guildId}: Active promises cleanup timeout:`, error);
+      }
+    }
     this.activePromises.clear();
 
     this.userCache.clear();
@@ -319,6 +342,9 @@ class GameRoom extends EventEmitter {
     }
 
     this.players = [];
+    if (global.gc && (process.memoryUsage().heapUsed > 100 * 1024 * 1024)) { // 100MB threshold
+      global.gc();
+    }
   }
 
   private performPeriodicCleanup() {
@@ -326,7 +352,9 @@ class GameRoom extends EventEmitter {
       return;
     }
 
-    this.logMemoryStats();
+    if (this.activePromises.size > 10 || this.timeoutIds.length > 5 || this.userCache.size > 50) {
+      this.logMemoryStats();
+    }
 
     this.cleanupExpiredCache();
 
@@ -338,13 +366,24 @@ class GameRoom extends EventEmitter {
       console.warn(`GameRoom ${this.guildId}: High active timeouts: ${this.timeoutIds.length}`);
     }
 
-    if (global.gc && (this.activePromises.size > 50 || this.timeoutIds.length > 20)) {
-      console.log(`GameRoom ${this.guildId}: Forcing garbage collection`);
-      global.gc();
+    const memUsage = process.memoryUsage();
+    if (memUsage.heapUsed > 150 * 1024 * 1024) { // 150MB threshold
+      console.warn(`GameRoom ${this.guildId}: High memory usage: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`);
+      if (this.userCache.size > 20) {
+        const entries = Array.from(this.userCache.entries());
+        entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+        const toRemove = entries.slice(0, Math.floor(this.userCache.size / 2));
+        toRemove.forEach(([key]) => this.userCache.delete(key));
+      }
+      if (global.gc) {
+        console.log(`GameRoom ${this.guildId}: Forcing garbage collection due to memory pressure`);
+        global.gc();
+      }
     }
   }
 
   private logMemoryStats() {
+    /**
     console.log(`GameRoom ${this.guildId} Memory Stats:`, {
       activePromises: this.activePromises.size,
       activeTimeouts: this.timeoutIds.length,
@@ -352,6 +391,7 @@ class GameRoom extends EventEmitter {
       gameStatus: this.status,
       isCleaningUp: this.isCleaningUp,
     });
+     */
   }
 
   async addPlayer(userId: string) {
@@ -1890,19 +1930,24 @@ class GameRoom extends EventEmitter {
       }
 
       const roleRevealEmbed = this.revealRoles();
-      const endGameMessages = this.players.map(async (player) => {
-        const user = await this.fetchUser(player.userId);
-        if (!user) {
-          return;
-        }
+      const endGameMessages = this.players.map(player => ({
+        userId: player.userId,
+        content: {
+          content: winMessage,
+          embeds: [roleRevealEmbed],
+        },
+      }));
 
-        return Promise.all([
-          user.send(winMessage),
-          user.send({ embeds: [roleRevealEmbed] }),
+      try {
+        await Promise.race([
+          this.batchSendMessages(endGameMessages).catch((error) => console.error('Loi roi', error)),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('End game messages timeout')), 10000),
+          ),
         ]);
-      });
-
-      await this.safePromiseAllSettled(endGameMessages);
+      } catch (error) {
+        console.error(`GameRoom ${this.guildId}: Failed to send end game messages:`, error);
+      }
 
       console.log(this.gameState.log);
       this.status = 'ended';
@@ -1910,7 +1955,16 @@ class GameRoom extends EventEmitter {
       for (const player of this.players) {
         store.delete(player.userId);
       }
-      this.cleanup().catch(err => console.error('Cleanup error:', err));
+      try {
+        await Promise.race([
+          this.cleanup(),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Cleanup timeout')), 5000),
+          ),
+        ]);
+      } catch (error) {
+        console.error(`GameRoom ${this.guildId}: Cleanup timeout in checkEndGame:`, error);
+      }
 
       return true;
     }

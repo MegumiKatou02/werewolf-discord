@@ -107,9 +107,10 @@ client.once('ready', () => {
   });
 });
 
-// User Cache và Performance Optimization
 const userCache = new Map<string, { user: User; timestamp: number }>();
 const CACHE_TTL = 10 * 60 * 1000; // 10 phút
+
+let userCacheCleanupInterval: NodeJS.Timeout | null = null;
 
 async function getCachedUser(userId: string) {
   const cached = userCache.get(userId);
@@ -117,9 +118,14 @@ async function getCachedUser(userId: string) {
     return cached.user;
   }
 
-  const user = await client.users.fetch(userId);
-  userCache.set(userId, { user, timestamp: Date.now() });
-  return user;
+  try {
+    const user = await client.users.fetch(userId);
+    userCache.set(userId, { user, timestamp: Date.now() });
+    return user;
+  } catch (error) {
+    console.error(`Failed to fetch user ${userId}:`, error);
+    return null;
+  }
 }
 
 function isInteractionValid(interaction: Interaction): boolean {
@@ -168,6 +174,7 @@ async function safeReply(
 // eslint-disable-next-line no-unused-vars
 async function sendSyncMessages(players: Player[], messageContent: string, formatMessage: (player: Player, content: string) => string | { content: string; files?: Attachment[] } | null) {
   const MAX_RETRIES = 2;
+  const MAX_CONCURRENT = 5;
   const results = new Map<string, boolean>();
 
   const getDelay = (index: number, playerCount: number): number => {
@@ -188,44 +195,54 @@ async function sendSyncMessages(players: Player[], messageContent: string, forma
       break;
     }
 
-    const promises = failedPlayers.map(async (player: Player, index: number) => {
-      try {
-        // Smart micro-delay
-        const delay = getDelay(index, players.length);
-        if (delay > 0 && attempt === 0) {
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
+    for (let i = 0; i < failedPlayers.length; i += MAX_CONCURRENT) {
+      const batch = failedPlayers.slice(i, i + MAX_CONCURRENT);
+      const promises = batch.map(async (player: Player, batchIndex: number) => {
+        try {
+          // Smart micro-delay
+          const delay = getDelay(i + batchIndex, players.length);
+          if (delay > 0 && attempt === 0) {
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
 
-        const user = await getCachedUser(player.userId);
-        const message = formatMessage(player, messageContent);
+          const user = await getCachedUser(player.userId);
+          if (!user) {
+            results.set(player.userId, false);
+            return;
+          }
+          const message = formatMessage(player, messageContent);
 
-        if (message === null) {
+          if (message === null) {
+            results.set(player.userId, true);
+            return;
+          }
+
+          if (typeof message === 'string') {
+            await user.send(message);
+          } else {
+            await user.send(message);
+          }
           results.set(player.userId, true);
-          return;
+        } catch (err) {
+          console.error(`Attempt ${attempt + 1} failed for ${player.userId}:`, err);
+          results.set(player.userId, false);
         }
+      });
 
-        if (typeof message === 'string') {
-          await user.send(message);
-        } else {
-          await user.send(message);
-        }
-        results.set(player.userId, true);
-      } catch (err) {
-        console.error(`Attempt ${attempt + 1} failed for ${player.userId}:`, err);
-        results.set(player.userId, false);
+      await Promise.allSettled(promises);
+      if (i + MAX_CONCURRENT < failedPlayers.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
-    });
-
-    await Promise.allSettled(promises);
+    }
 
     if (attempt < MAX_RETRIES) {
-      const backoffDelay = Math.min(Math.pow(2, attempt) * 500, 1000); // Max 1s
+      const backoffDelay = Math.min(Math.pow(2, attempt) * 1000, 2000); // Max 2s
       await new Promise(resolve => setTimeout(resolve, backoffDelay));
     }
   }
 }
 
-setInterval(() => {
+userCacheCleanupInterval = setInterval(() => {
   const now = Date.now();
   for (const [userId, cached] of userCache.entries()) {
     if (now - cached.timestamp > CACHE_TTL) {
@@ -266,6 +283,9 @@ client.on('messageCreate', async (message) => {
       }
 
       const user = await getCachedUser(sender.userId);
+      if (!user) {
+        return;
+      }
 
       const roleKey = roleId.toString() as keyof typeof rolesData;
       return await RoleResponseDMs(
@@ -281,7 +301,9 @@ client.on('messageCreate', async (message) => {
       if (sender.role?.id === WEREROLE.WOLFSEER) {
         try {
           const user = await getCachedUser(sender.userId);
-          await user.send('_⚠️ Những sói khác sẽ không thấy bạn nhắn gì_');
+          if (user) {
+            await user.send('_⚠️ Những sói khác sẽ không thấy bạn nhắn gì_');
+          }
         } catch (err) {
           console.error('Không gửi được tin nhắn cho Sói khác', err);
         }
@@ -717,13 +739,32 @@ client.login(process.env.TOKEN);
 process.on('SIGINT', async () => {
   console.log('🛑 Bot đang shutdown...');
 
-  for (const [guildId, gameRoom] of gameRooms.entries()) {
+
+  if (userCacheCleanupInterval) {
+    clearInterval(userCacheCleanupInterval);
+    userCacheCleanupInterval = null;
+  }
+
+  const cleanupPromises = Array.from(gameRooms.entries()).map(async ([guildId, gameRoom]) => {
     console.log(`Cleaning up game room ${guildId}`);
     try {
-      await gameRoom.cleanup();
+      const cleanupPromise = gameRoom.cleanup();
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Cleanup timeout')), 5000),
+      );
+      await Promise.race([cleanupPromise, timeoutPromise]);
     } catch (err) {
       console.error(`Failed to cleanup game room ${guildId}:`, err);
     }
+  });
+
+  try {
+    await Promise.race([
+      Promise.allSettled(cleanupPromises),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Overall cleanup timeout')), 10000)),
+    ]);
+  } catch (err) {
+    console.error('Cleanup timeout reached, forcing shutdown:', err);
   }
   gameRooms.clear();
 
@@ -733,8 +774,15 @@ process.on('SIGINT', async () => {
   // Remove event listeners
   client.removeAllListeners();
 
-  // Destroy client connection
-  await client.destroy();
+  // Destroy client connection with timeout
+  try {
+    await Promise.race([
+      client.destroy(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Client destroy timeout')), 3000)),
+    ]);
+  } catch (err) {
+    console.error('Client destroy timeout:', err);
+  }
 
   console.log('✅ Bot đã cleanup xong và thoát.');
   process.exit(0);
@@ -743,21 +791,46 @@ process.on('SIGINT', async () => {
 process.on('SIGTERM', async () => {
   console.log('🛑 Bot nhận SIGTERM, đang shutdown...');
 
-  for (const [guildId, gameRoom] of gameRooms.entries()) {
+
+  if (userCacheCleanupInterval) {
+    clearInterval(userCacheCleanupInterval);
+    userCacheCleanupInterval = null;
+  }
+
+  const cleanupPromises = Array.from(gameRooms.entries()).map(async ([guildId, gameRoom]) => {
     console.log(`Cleaning up game room ${guildId}`);
     try {
-      await gameRoom.cleanup();
+      const cleanupPromise = gameRoom.cleanup();
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Cleanup timeout')), 5000),
+      );
+      await Promise.race([cleanupPromise, timeoutPromise]);
     } catch (err) {
       console.error(`Failed to cleanup game room ${guildId}:`, err);
     }
+  });
+
+  try {
+    await Promise.race([
+      Promise.allSettled(cleanupPromises),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Overall cleanup timeout')), 10000)),
+    ]);
+  } catch (err) {
+    console.error('Cleanup timeout reached, forcing shutdown:', err);
   }
+
   gameRooms.clear();
-
   userCache.clear();
-
   client.removeAllListeners();
 
-  await client.destroy();
+  try {
+    await Promise.race([
+      client.destroy(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Client destroy timeout')), 3000)),
+    ]);
+  } catch (err) {
+    console.error('Client destroy timeout:', err);
+  }
 
   console.log('✅ Bot đã cleanup xong và thoát.');
   process.exit(0);
@@ -765,12 +838,43 @@ process.on('SIGTERM', async () => {
 
 process.on('uncaughtException', (error) => {
   console.error('❌ Uncaught Exception:', error);
-  for (const gameRoom of gameRooms.values()) {
-    gameRoom.cleanup().catch(err => console.error('Cleanup error:', err));
-  }
-  gameRooms.clear();
-  userCache.clear();
-  process.exit(1);
+  const forceCleanup = async () => {
+    try {
+      if (userCacheCleanupInterval) {
+        clearInterval(userCacheCleanupInterval);
+        userCacheCleanupInterval = null;
+      }
+      const cleanupPromise = Promise.all(
+        Array.from(gameRooms.values()).map(async (gameRoom) => {
+          try {
+            await Promise.race([
+              gameRoom.cleanup(),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Force cleanup timeout')), 2000)),
+            ]);
+          } catch (err) {
+            console.error('Force cleanup error:', err);
+          }
+        }),
+      );
+      await Promise.race([
+        cleanupPromise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Overall force cleanup timeout')), 5000)),
+      ]);
+      gameRooms.clear();
+      userCache.clear();
+    } catch (err) {
+      console.error('Force cleanup failed:', err);
+    } finally {
+      process.exit(1);
+    }
+  };
+  const timeoutId = setTimeout(() => {
+    console.error('Force cleanup timeout reached, exiting immediately');
+    process.exit(1);
+  }, 10000);
+  forceCleanup().finally(() => {
+    clearTimeout(timeoutId);
+  });
 });
 
 process.on('unhandledRejection', (reason, promise) => {

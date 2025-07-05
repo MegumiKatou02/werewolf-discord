@@ -6,6 +6,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npx tsc",
     "start": "npm run build && node --expose-gc --trace-warnings dist/index.js",
+    "start:production": "npm run build && node --expose-gc --trace-warnings --max-old-space-size=512 dist/index.js",
     "dev": "npx tsc && node --expose-gc dist/index.js",
     "deploy": "node dist/deploy-commands.js",
     "deploy:guild": "node dist/deploy-guild-commands.js",

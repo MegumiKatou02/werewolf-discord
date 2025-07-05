@@ -2,7 +2,7 @@ import Role from './role.js';
 
 class Fool extends Role {
   constructor() {
-    super('Thằng Ngố', 3);
+    super('Thằng Ngố', 2);
     this.id = 7;
   }
 
