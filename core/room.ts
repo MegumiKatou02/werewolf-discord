@@ -1645,9 +1645,9 @@ class GameRoom extends EventEmitter {
     }
     this.voteMessages.clear();
 
-    const hangedPlayer = this.processVote();
+    const resultHangedPlayer = this.processVote();
 
-    if (!hangedPlayer) {
+    if (!resultHangedPlayer) {
       this.gameState.addLog('Không ai bị treo cổ do không đủ phiếu bầu\n');
       const noHangPromises = this.players.map(async (player) => {
         const user = await this.fetchUser(player.userId);
@@ -1661,11 +1661,11 @@ class GameRoom extends EventEmitter {
       await this.safePromiseAllSettled(noHangPromises);
     } else {
       this.gameState.addLog(
-        `**${hangedPlayer.name}** đã bị dân làng treo cổ`,
+        `**${resultHangedPlayer.hangedPlayer.name}** đã bị dân làng treo cổ`,
       );
-      if (hangedPlayer.role.id === WEREROLE.FOOL) {
+      if (resultHangedPlayer.hangedPlayer.role.id === WEREROLE.FOOL) {
         this.gameState.addLog(
-          `**${hangedPlayer.name}** là Thằng Ngố - Thằng Ngố thắng!`,
+          `**${resultHangedPlayer.hangedPlayer.name}** là Thằng Ngố - Thằng Ngố thắng!`,
         );
         this.status = 'ended';
         const foolMessages = this.players.map(async (player) => {
@@ -1674,7 +1674,7 @@ class GameRoom extends EventEmitter {
             return;
           }
           await user.send(
-            `🎭 **${hangedPlayer.name}** là **Ngố** và đã bị treo cổ. \n🎉 **Ngố** thắng !!.`,
+            `🎭 **${resultHangedPlayer.hangedPlayer.name}** là **Ngố** và đã bị treo cổ. \n🎉 **Ngố** thắng !!.`,
           );
           const roleRevealEmbed = this.revealRoles();
           await user.send({ embeds: [roleRevealEmbed] });
@@ -1683,13 +1683,13 @@ class GameRoom extends EventEmitter {
         return;
       }
 
-      hangedPlayer.alive = false;
-      hangedPlayer.role = new Dead(
-        hangedPlayer.role.faction,
-        hangedPlayer.role.id,
+      resultHangedPlayer.hangedPlayer.alive = false;
+      resultHangedPlayer.hangedPlayer.role = new Dead(
+        resultHangedPlayer.hangedPlayer.role.faction,
+        resultHangedPlayer.hangedPlayer.role.id,
       );
 
-      const maidNewRole = await this.checkIfMasterIsDead(hangedPlayer);
+      const maidNewRole = await this.checkIfMasterIsDead(resultHangedPlayer.hangedPlayer);
 
       const hangMessages = this.players.map(async (player) => {
         const user = await this.fetchUser(player.userId);
@@ -1697,9 +1697,9 @@ class GameRoom extends EventEmitter {
           return;
         }
         await user.send(
-          `🎭 **${hangedPlayer.name}** đã bị dân làng treo cổ vì có số phiếu cao nhất.`,
+          `🎭 **${resultHangedPlayer.hangedPlayer.name}** đã bị dân làng treo cổ vì có số phiếu cao nhất (${resultHangedPlayer.maxVotes} phiếu).`,
         );
-        if (hangedPlayer.userId === player.userId) {
+        if (resultHangedPlayer.hangedPlayer.userId === player.userId) {
           await user.send('💀 Bạn đã bị dân làng treo cổ.');
         }
         if (maidNewRole) {
@@ -1904,7 +1904,10 @@ class GameRoom extends EventEmitter {
       const hangedPlayer = this.players.find((p) => p.userId === candidates[0]);
       if (hangedPlayer && hangedPlayer.alive) {
         hangedPlayer.alive = false;
-        return hangedPlayer;
+        return {
+          hangedPlayer,
+          maxVotes,
+        };
       }
     }
 
