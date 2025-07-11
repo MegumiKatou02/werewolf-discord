@@ -207,10 +207,8 @@ async function handleSpamAction(userId: string, action: { isSpam: boolean; shoul
     if (action.shouldMute) {
       const muteMinutes = Math.round((record.muteEndTime - Date.now()) / (60 * 1000));
       await user.send(`🔇 **BẠN ĐÃ BỊ TẠM KHÓA CHAT** do spam tin nhắn!\n⏰ Thời gian: ${muteMinutes} phút\n⚠️ Tiếp tục spam sẽ bị khóa lâu hơn.`);
-      console.log(`🔇 User ${user.tag} đã bị mute ${muteMinutes} phút do spam`);
     } else if (action.shouldWarn) {
-      await user.send(`⚠️ **CẢNH BÁO**: Bạn đang gửi tin nhắn quá nhanh!\n📝 Tối đa ${RATE_LIMIT_CONFIG.MAX_MESSAGES_PER_WINDOW} tin nhắn trong ${RATE_LIMIT_CONFIG.TIME_WINDOW/1000} giây.\n🔇 Tiếp tục spam sẽ bị tạm khóa chat.`);
-      console.log(`⚠️ User ${user.tag} nhận cảnh báo spam (lần ${record.warningCount})`);
+      await user.send(`⚠️ **CẢNH BÁO**: Bạn đang gửi tin nhắn quá nhanh!\n📝 Tối đa ${RATE_LIMIT_CONFIG.MAX_MESSAGES_PER_WINDOW} tin nhắn trong ${RATE_LIMIT_CONFIG.TIME_WINDOW/1000} giây.\n🔇 Tiếp tục spam sẽ bị tạm khóa chat (Chờ ${RATE_LIMIT_CONFIG.TIME_WINDOW/1000} giây để nhắn tiếp).`);
     }
 
     return true;

@@ -1,12 +1,7 @@
 import {
   SlashCommandBuilder,
   EmbedBuilder,
-  ButtonBuilder,
-  ActionRowBuilder,
-  ButtonStyle,
-  PermissionFlagsBits,
   type Interaction,
-  PermissionsBitField,
   MessageFlags,
 } from 'discord.js';
 
@@ -148,101 +143,8 @@ export default {
 
     statusEmbed.setTimestamp();
 
-    const components: ActionRowBuilder<ButtonBuilder>[] = [];
-
-    if (gameRoom.status === 'ended') {
-      const isAdmin =
-        (interaction.member?.permissions instanceof PermissionsBitField &&
-          interaction.member.permissions.has(
-            PermissionFlagsBits.Administrator,
-          )) ??
-        false;
-      const isHost = gameRoom.hostId === interaction.user.id;
-      const isDev = interaction.user.id === process.env.DEVELOPER;
-
-      if (isAdmin || isHost || isDev) {
-        const viewLogButton = new ButtonBuilder()
-          .setCustomId('view_game_log')
-          .setLabel('📜 Xem Log Game')
-          .setStyle(ButtonStyle.Primary);
-
-        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-          viewLogButton,
-        );
-        components.push(row);
-      }
-    }
-
-    const response = await interaction.reply({
+    await interaction.reply({
       embeds: [statusEmbed],
-      components,
     });
-
-    if (components.length > 0) {
-      const collector = response.createMessageComponentCollector({
-        time: 60000,
-      });
-
-      collector.on('collect', async (i) => {
-        try {
-          const INTERACTION_TIMEOUT = 15 * 60 * 1000;
-          const now = Date.now();
-          if ((now - i.createdTimestamp) > INTERACTION_TIMEOUT) {
-            console.warn('Interaction đã hết hạn, bỏ qua xử lý');
-            return;
-          }
-
-          if (i.customId === 'view_game_log') {
-            const isAdmin =
-              (i.member?.permissions instanceof PermissionsBitField &&
-                i.member.permissions.has(PermissionFlagsBits.Administrator)) ??
-              false;
-            const isHost = gameRoom.hostId === i.user.id;
-
-            if (!isAdmin && !isHost) {
-              await i.reply({
-                content: '❌ Chỉ Admin hoặc Host mới có thể xem log game.',
-                flags: MessageFlags.Ephemeral,
-              });
-              return;
-            }
-
-            const logEmbed = new EmbedBuilder()
-              .setColor(statusColors.ended)
-              .setTitle('📜 LOG GAME MA SÓI')
-              .setDescription(
-                gameRoom.gameState.log.join('\n') ||
-                  '*Không có log nào được ghi lại*',
-              )
-              .setTimestamp()
-              .setFooter({
-                text: '⚠️ Log game sẽ bị xóa khi phòng bị xóa',
-              });
-
-            await i.reply({
-              embeds: [logEmbed],
-            });
-          }
-        } catch (error) {
-          console.error('Lỗi xử lý status interaction:', error);
-          console.error('CustomId:', i.customId);
-          console.error('User:', i.user?.tag);
-        }
-      });
-
-      collector.on('end', async (_, reason) => {
-        if (reason === 'time') {
-          const disabledRow =
-            new ActionRowBuilder<ButtonBuilder>().addComponents(
-              ButtonBuilder.from(components[0].components[0])
-                .setDisabled(true)
-                .setLabel('📜 Log Game (Hết hạn)'),
-            );
-          await interaction.editReply({
-            components: [disabledRow],
-          });
-        }
-      });
-    }
   },
 };

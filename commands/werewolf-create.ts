@@ -29,6 +29,7 @@ export default {
 
     if (existingRoom) {
       if (existingRoom.status === 'ended') {
+        existingRoom.players = [];
         gameRooms.delete(guildId);
       } else if (existingRoom.status === 'waiting') {
         await interaction.reply({
