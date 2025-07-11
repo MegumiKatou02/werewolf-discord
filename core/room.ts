@@ -343,7 +343,7 @@ class GameRoom extends EventEmitter {
       store.delete(player.userId);
     }
 
-    this.players = [];
+    // this.players = [];
     if (global.gc && (process.memoryUsage().heapUsed > 100 * 1024 * 1024)) { // 100MB threshold
       global.gc();
     }
@@ -2120,7 +2120,7 @@ class GameRoom extends EventEmitter {
     }
 
     const nonWolves = alivePlayers.length - aliveWolves.length;
-    if (aliveWolves.length >= nonWolves + 100) {
+    if (aliveWolves.length >= nonWolves) {
       return { winner: 'werewolf', faction: 0 };
     }
 
