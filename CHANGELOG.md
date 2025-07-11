@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.0] - 2025-07-11
+
+### Added
+
+- Thêm role **Sói Tà Thuật**
+
 ## [2.0.0] - 2025-06-30
 
 ### Added
