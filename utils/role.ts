@@ -75,7 +75,7 @@ const assignRolesGame = (roleId: number) => {
   case 20:
     return new VoodooWerewolf();
   default:
-    throw new Error('Role id không hợp lệ');
+    throw new Error(`Role id không hợp lệ: ${roleId}`);
   }
 };
 
