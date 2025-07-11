@@ -53,6 +53,7 @@ import { MAX_FILE_SIZE } from './src/constants/constants.js';
 import type Player from './types/player.js';
 import { RoleResponseDMs } from './utils/response.js';
 import { WEREROLE, convertFactionRoles } from './utils/role.js';
+import type { DiscordAPIError } from 'discord.js';
 config();
 
 interface SlashCommand {
@@ -112,6 +113,157 @@ client.once('ready', () => {
 const userCache = new Map<string, { user: User; timestamp: number }>();
 const CACHE_TTL = 10 * 60 * 1000; // 10 phút
 
+// ===== HỆ THỐNG CHỐNG SPAM =====
+interface UserMessageRecord {
+  messageCount: number;
+  lastMessageTime: number;
+  warningCount: number;
+  isMuted: boolean;
+  muteEndTime: number;
+}
+
+const userMessageTracker = new Map<string, UserMessageRecord>();
+let spamCleanupInterval: NodeJS.Timeout | null = null;
+
+const RATE_LIMIT_CONFIG = {
+  MAX_MESSAGES_PER_WINDOW: 5, // max 5 tin nhắn
+  TIME_WINDOW: 5 * 1000, // trong 5 giây
+  WARNING_THRESHOLD: 3, // Cảnh báo sau 3 lần vi phạm
+  MUTE_DURATION: 30 * 1000, // Tạm mute 30 giây
+  MAX_MUTE_DURATION: 5 * 60 * 1000, // max 5 phút
+};
+
+function isUserSpamming(userId: string): { isSpam: boolean; shouldWarn: boolean; shouldMute: boolean } {
+  const now = Date.now();
+  const record = userMessageTracker.get(userId) || {
+    messageCount: 0,
+    lastMessageTime: now,
+    warningCount: 0,
+    isMuted: false,
+    muteEndTime: 0,
+  };
+
+  if (record.isMuted && now < record.muteEndTime) {
+    return { isSpam: true, shouldWarn: false, shouldMute: false };
+  }
+
+  if (record.isMuted && now >= record.muteEndTime) {
+    record.isMuted = false;
+    record.muteEndTime = 0;
+  }
+
+  if (now - record.lastMessageTime > RATE_LIMIT_CONFIG.TIME_WINDOW) {
+    record.messageCount = 1;
+    record.lastMessageTime = now;
+    userMessageTracker.set(userId, record);
+    return { isSpam: false, shouldWarn: false, shouldMute: false };
+  }
+
+  record.messageCount++;
+  record.lastMessageTime = now;
+
+  if (record.messageCount > RATE_LIMIT_CONFIG.MAX_MESSAGES_PER_WINDOW) {
+    record.warningCount++;
+    
+    const shouldMute = record.warningCount >= RATE_LIMIT_CONFIG.WARNING_THRESHOLD;
+    
+    if (shouldMute) {
+      record.isMuted = true;
+      const muteDuration = Math.min(
+        RATE_LIMIT_CONFIG.MUTE_DURATION * Math.pow(2, record.warningCount - RATE_LIMIT_CONFIG.WARNING_THRESHOLD),
+        RATE_LIMIT_CONFIG.MAX_MUTE_DURATION
+      );
+      record.muteEndTime = now + muteDuration;
+      record.messageCount = 0; // Reset counter
+    }
+
+    userMessageTracker.set(userId, record);
+    return { 
+      isSpam: true, 
+      shouldWarn: !shouldMute, 
+      shouldMute 
+    };
+  }
+
+  userMessageTracker.set(userId, record);
+  return { isSpam: false, shouldWarn: false, shouldMute: false };
+}
+
+async function handleSpamAction(userId: string, action: { isSpam: boolean; shouldWarn: boolean; shouldMute: boolean }) {
+  if (!action.isSpam) return false;
+
+  try {
+    const user = await getCachedUser(userId);
+    if (!user) return true;
+
+    const record = userMessageTracker.get(userId);
+    if (!record) return true;
+
+    if (action.shouldMute) {
+      const muteMinutes = Math.round((record.muteEndTime - Date.now()) / (60 * 1000));
+      await user.send(`🔇 **BẠN ĐÃ BỊ TẠM KHÓA CHAT** do spam tin nhắn!\n⏰ Thời gian: ${muteMinutes} phút\n⚠️ Tiếp tục spam sẽ bị khóa lâu hơn.`);
+      console.log(`🔇 User ${user.tag} đã bị mute ${muteMinutes} phút do spam`);
+    } else if (action.shouldWarn) {
+      await user.send(`⚠️ **CẢNH BÁO**: Bạn đang gửi tin nhắn quá nhanh!\n📝 Tối đa ${RATE_LIMIT_CONFIG.MAX_MESSAGES_PER_WINDOW} tin nhắn trong ${RATE_LIMIT_CONFIG.TIME_WINDOW/1000} giây.\n🔇 Tiếp tục spam sẽ bị tạm khóa chat.`);
+      console.log(`⚠️ User ${user.tag} nhận cảnh báo spam (lần ${record.warningCount})`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error(`Lỗi xử lý spam cho user ${userId}:`, error);
+    return true;
+  }
+}
+
+const cleanupSpamTracker = async () => {
+  const now = Date.now();
+  const threshold = 24 * 60 * 60 * 1000; // 24 giờ
+  
+  if (userMessageTracker.size === 0) {
+    return;
+  }
+  
+  let cleanedCount = 0;
+  const startTime = now;
+  
+  try {
+    const entries = Array.from(userMessageTracker.entries());
+    
+    for (let i = 0; i < entries.length; i += 100) {
+      const batch = entries.slice(i, i + 100);
+      
+      for (const [userId, record] of batch) {
+        if (now - record.lastMessageTime > threshold && !record.isMuted) {
+          userMessageTracker.delete(userId);
+          cleanedCount++;
+        }
+      }
+      
+      if (i + 100 < entries.length) {
+        await new Promise(resolve => setImmediate(resolve));
+      }
+    }
+    
+    const processingTime = Date.now() - startTime;
+    
+    if (cleanedCount > 0) {
+      console.log(`🧹 Spam cleanup: Removed ${cleanedCount} old records in ${processingTime}ms (${userMessageTracker.size} remaining)`);
+    }
+    
+    if (userMessageTracker.size > 1000) {
+      console.warn(`⚠️ Spam tracker has ${userMessageTracker.size} records. Consider lowering cleanup threshold.`);
+    }
+    
+  } catch (error) {
+    console.error('❌ Spam cleanup error:', error);
+  }
+};
+
+spamCleanupInterval = setInterval(() => {
+  cleanupSpamTracker().catch(error => {
+    console.error('❌ Spam cleanup async error:', error);
+  });
+}, 60 * 60 * 1000); 
 let userCacheCleanupInterval: NodeJS.Timeout | null = null;
 
 async function getCachedUser(userId: string) {
@@ -227,7 +379,17 @@ async function sendSyncMessages(players: Player[], messageContent: string, forma
           results.set(player.userId, true);
         } catch (err) {
           console.error(`Attempt ${attempt + 1} failed for ${player.userId}:`, err);
-          results.set(player.userId, false);
+          
+          // Xử lý rate limit đặc biệt
+          const error = err as DiscordAPIError;
+          if (error.code === 50007 || error.message?.includes('rate limit')) {
+            console.warn(`Rate limit hit for ${player.userId}, skipping...`);
+            results.set(player.userId, false);
+            // Thêm delay lớn hơn cho các message tiếp theo
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          } else {
+            results.set(player.userId, false);
+          }
         }
       });
 
@@ -258,6 +420,13 @@ client.on('messageCreate', async (message) => {
   commandHandler(message);
 
   if (message.channel.type === ChannelType.DM) {
+    // ===== KIỂM TRA SPAM TRƯỚC KHI XỬ LÝ =====
+    const spamCheck = isUserSpamming(message.author.id);
+    if (spamCheck.isSpam) {
+      await handleSpamAction(message.author.id, spamCheck);
+      return;
+    }
+
     // console.log(`Tin nhắn DM từ ${message.author.tag}: ${message.content}`);
 
     const gameRoom = Array.from(gameRooms.values()).find(
@@ -768,6 +937,10 @@ client.login(process.env.TOKEN);
 process.on('SIGINT', async () => {
   console.log('🛑 Bot đang shutdown...');
 
+  if (spamCleanupInterval) {
+    clearInterval(spamCleanupInterval);
+    spamCleanupInterval = null;
+  }
 
   if (userCacheCleanupInterval) {
     clearInterval(userCacheCleanupInterval);
@@ -800,6 +973,9 @@ process.on('SIGINT', async () => {
   // Clear user cache
   userCache.clear();
 
+  // Clear spam tracker
+  userMessageTracker.clear();
+
   // Remove event listeners
   client.removeAllListeners();
 
@@ -820,6 +996,10 @@ process.on('SIGINT', async () => {
 process.on('SIGTERM', async () => {
   console.log('🛑 Bot nhận SIGTERM, đang shutdown...');
 
+  if (spamCleanupInterval) {
+    clearInterval(spamCleanupInterval);
+    spamCleanupInterval = null;
+  }
 
   if (userCacheCleanupInterval) {
     clearInterval(userCacheCleanupInterval);
@@ -850,6 +1030,7 @@ process.on('SIGTERM', async () => {
 
   gameRooms.clear();
   userCache.clear();
+  userMessageTracker.clear();
   client.removeAllListeners();
 
   try {
@@ -869,10 +1050,16 @@ process.on('uncaughtException', (error) => {
   console.error('❌ Uncaught Exception:', error);
   const forceCleanup = async () => {
     try {
+      if (spamCleanupInterval) {
+        clearInterval(spamCleanupInterval);
+        spamCleanupInterval = null;
+      }
+      
       if (userCacheCleanupInterval) {
         clearInterval(userCacheCleanupInterval);
         userCacheCleanupInterval = null;
       }
+      
       const cleanupPromise = Promise.all(
         Array.from(gameRooms.values()).map(async (gameRoom) => {
           try {
@@ -891,6 +1078,7 @@ process.on('uncaughtException', (error) => {
       ]);
       gameRooms.clear();
       userCache.clear();
+      userMessageTracker.clear();
     } catch (err) {
       console.error('Force cleanup failed:', err);
     } finally {
