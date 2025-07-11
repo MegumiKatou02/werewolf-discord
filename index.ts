@@ -374,6 +374,7 @@ client.on('messageCreate', async (message) => {
 
       if (eligiblePlayers.length > 0) {
         await sendSyncMessages(eligiblePlayers, message.content, (player: Player, content: string) => {
+          // **check: giam kich thuoc anh xuong tranh rate limit Discord va RAM
           const validAttachments = Array.from(
             message.attachments.values(),
           ).filter((attachment) => attachment.size <= MAX_FILE_SIZE);

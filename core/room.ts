@@ -1011,7 +1011,7 @@ class GameRoom extends EventEmitter {
         const puppetButton = new ButtonBuilder()
           .setCustomId(`puppet_target_puppeteer_${player.userId}`)
           .setStyle(ButtonStyle.Secondary)
-          .setLabel('🎭 Chỉ định mục tiêu')
+          .setLabel('🎭 Chỉ định mục tiêu');
 
         if (!player.canUseSkill) {
           puppetButton.setDisabled(true);
@@ -1097,7 +1097,7 @@ class GameRoom extends EventEmitter {
                 .setLabel('🗳️ Hết thời gian vote');
             }
           });
-          
+
           await message.edit({ components: [row] });
           await message.reply('⏰ Đã hết thời gian vote!\n');
         } catch (err) {
@@ -1310,7 +1310,7 @@ class GameRoom extends EventEmitter {
         const user = await this.fetchUser(stalker.userId);
         if (user) {
           await user.send(
-            `**Thông báo:** Vì **${player.name}** đã hành động nên bạn không thể giết được người này.`,
+            `Vì **${player.name}** đã hành động nên bạn không thể giết được người này.`,
           );
         }
       }
@@ -1325,7 +1325,7 @@ class GameRoom extends EventEmitter {
         const user = await this.fetchUser(stalker.userId);
         if (user) {
           await user.send(
-            `**Thông báo:** Vì **${player.name}** không hành động nên bạn đã giết được người này.`,
+            `Vì **${player.name}** không hành động nên bạn đã giết được người này.`,
           );
           this.gameState.addLog(`Stalker đã giết **${player.name}**`);
           sureDieInTheNight.add(player.userId);
@@ -2240,7 +2240,8 @@ class GameRoom extends EventEmitter {
     let maidNewRole = null;
     if (maid) {
       maid.role = assignRolesGame(
-        (deadPlayer.role instanceof Dead && deadPlayer.role.originalRoleId) ||
+        deadPlayer.role instanceof Dead ? deadPlayer.role.originalRoleId ??
+        deadPlayer.role.id :
           deadPlayer.role.id,
       );
       maidNewRole = maid.role.name;

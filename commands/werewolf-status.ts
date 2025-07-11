@@ -10,7 +10,8 @@ import {
   MessageFlags,
 } from 'discord.js';
 
-import { gameRooms, Player } from '../core/room.js';
+import { gameRooms } from '../core/room.js';
+import type Player from '../types/player.js';
 export default {
   data: new SlashCommandBuilder()
     .setName('status')
