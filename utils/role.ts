@@ -15,6 +15,7 @@ import Puppeteer from '../types/roles/Puppeteer.js';
 import Seer from '../types/roles/Seer.js';
 import Stalker from '../types/roles/Stalker.js';
 import Villager from '../types/roles/Villager.js';
+import VoodooWerewolf from '../types/roles/VoodooWerewolf.js';
 import Werewolf from '../types/roles/WereWolf.js';
 import Witch from '../types/roles/Witch.js';
 import WolfSeer from '../types/roles/WolfSeer.js';
@@ -71,6 +72,8 @@ const assignRolesGame = (roleId: number) => {
     return new KittenWolf();
   case 19:
     return new Puppeteer();
+  case 20:
+    return new VoodooWerewolf();
   default:
     throw new Error('Role id không hợp lệ');
   }
@@ -112,6 +115,7 @@ const WEREROLE = Object.freeze({
   GUNNER: 17,
   KITTENWOLF: 18,
   PUPPETEER: 19,
+  VOODOO: 20,
 });
 
 const getRoleName = (roleId: number): string => {

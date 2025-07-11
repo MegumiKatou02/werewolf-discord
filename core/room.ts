@@ -18,6 +18,7 @@ import { MessageFlags } from 'discord.js';
 
 import rolesData from '../data/data.json' with { type: 'json' };
 import ServerSettings from '../models/ServerSettings.js';
+import { Faction } from '../types/faction.js';
 import Player from '../types/player.js';
 import AlphaWerewolf from '../types/roles/AlphaWerewolf.js';
 import Bodyguard from '../types/roles/Bodyguard.js';
@@ -32,6 +33,7 @@ import Puppeteer from '../types/roles/Puppeteer.js';
 import Seer from '../types/roles/Seer.js';
 import Stalker from '../types/roles/Stalker.js';
 import Villager from '../types/roles/Villager.js';
+import VoodooWerewolf from '../types/roles/VoodooWerewolf.js';
 import Werewolf from '../types/roles/WereWolf.js';
 import Witch from '../types/roles/Witch.js';
 import WolfSeer from '../types/roles/WolfSeer.js';
@@ -593,7 +595,7 @@ class GameRoom extends EventEmitter {
   totalVotedWolvesSolve() {
     const totalVotes = this.players.reduce(
       (acc: Record<string, number>, player) => {
-        if (player.role instanceof Werewolf && player.role.voteBite) {
+        if (player.role.faction === Faction.WEREWOLF && 'voteBite' in player.role && typeof player.role.voteBite === 'string') {
           acc[player.role.voteBite] = (acc[player.role.voteBite] || 0) + 1;
         }
         return acc;
@@ -723,7 +725,11 @@ class GameRoom extends EventEmitter {
         const protectButton = new ButtonBuilder()
           .setCustomId(`protect_target_bodyguard_${player.userId}`)
           .setLabel('🛡️ Bảo vệ người')
-          .setStyle(ButtonStyle.Primary);
+          .setStyle(ButtonStyle.Secondary);
+
+        if (!player.canUseSkill) {
+          protectButton.setDisabled(true);
+        }
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
           protectButton,
@@ -763,7 +769,11 @@ class GameRoom extends EventEmitter {
         const investigateButton = new ButtonBuilder()
           .setCustomId(`investigate_target_detective_${player.userId}`)
           .setLabel('🔎 Điều tra người')
-          .setStyle(ButtonStyle.Primary);
+          .setStyle(ButtonStyle.Secondary);
+
+        if (!player.canUseSkill) {
+          investigateButton.setDisabled(true);
+        }
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
           investigateButton,
@@ -794,13 +804,18 @@ class GameRoom extends EventEmitter {
           .setStyle(ButtonStyle.Primary)
           .setDisabled(true);
 
+        if (!player.canUseSkill) {
+          poisonButton.setDisabled(true);
+          healButton.setDisabled(true);
+        }
+
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
           poisonButton,
           healButton,
         );
 
         await user.send(
-          `🌙 Bạn là **Phù Thuỷ**. Bạn có hai bình thuốc: một để đầu độc và một để cứu người. Bình cứu chỉ có tác dụng nếu người đó bị tấn công.\n (Bình độc: ${player.role.poisonCount}, Bình cứu: (${Math.max(0, player.role.healCount)}).`,
+          `🌙 Bạn là **Phù Thuỷ**. Bạn có hai bình thuốc: một để đầu độc và một để cứu người. Bình cứu chỉ có tác dụng nếu người đó bị tấn công.\n (Bình độc: ${player.role.poisonCount}, Bình cứu: ${Math.max(0, player.role.healCount)}).`,
         );
         message = await user.send({
           embeds: [embed],
@@ -816,6 +831,10 @@ class GameRoom extends EventEmitter {
           .setCustomId(`revive_target_medium_${player.userId}`)
           .setLabel('🔮 Hồi sinh người')
           .setStyle(ButtonStyle.Primary);
+
+        if (!player.canUseSkill) {
+          reviveButton.setDisabled(true);
+        }
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
           reviveButton,
@@ -866,6 +885,10 @@ class GameRoom extends EventEmitter {
           .setLabel('🔍 Tìm sói')
           .setStyle(ButtonStyle.Primary);
 
+        if (!player.canUseSkill) {
+          viewButton.setDisabled(true);
+        }
+
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
           viewButton,
         );
@@ -889,6 +912,10 @@ class GameRoom extends EventEmitter {
             .setLabel('👑 Đã chọn chủ')
             .setStyle(ButtonStyle.Primary)
             .setDisabled(true);
+        }
+
+        if (!player.canUseSkill && chooseMasterButton) {
+          chooseMasterButton.setDisabled(true);
         }
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -936,6 +963,11 @@ class GameRoom extends EventEmitter {
           .setLabel('🔪 Ám sát')
           .setStyle(ButtonStyle.Primary);
 
+        if (!player.canUseSkill) {
+          stalkButton.setDisabled(true);
+          killButton.setDisabled(true);
+        }
+
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
           stalkButton,
           killButton,
@@ -976,13 +1008,16 @@ class GameRoom extends EventEmitter {
           puppetButton = new ButtonBuilder()
             .setCustomId(`puppet_target_puppeteer_${player.userId}`)
             .setLabel('🎭 Chỉ định mục tiêu')
-            .setStyle(ButtonStyle.Primary);
-        } else {
+            .setStyle(ButtonStyle.Secondary);
+        } else if (player.role.targetCount <=  0 || !player.canUseSkill) {
           puppetButton = new ButtonBuilder()
             .setCustomId(`puppet_target_puppeteer_${player.userId}`)
             .setLabel('🎭 Đã chỉ định mục tiêu')
-            .setStyle(ButtonStyle.Primary)
+            .setStyle(ButtonStyle.Secondary)
             .setDisabled(true);
+        } else {
+          // fallback
+          puppetButton = new ButtonBuilder();
         }
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -995,8 +1030,26 @@ class GameRoom extends EventEmitter {
           components: [row],
         });
         this.nightMessages.set(player.userId, message);
+      } else if (player.role.id === WEREROLE.VOODOO) {
+        const voteButton = new ButtonBuilder()
+          .setCustomId(`vote_target_wolf_${player.userId}`)
+          .setLabel('🗳️ Vote người cần giết')
+          .setStyle(ButtonStyle.Primary);
+
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+          voteButton,
+        );
+        await user.send(
+          '🐺 Bạn là **Sói Tà Thuật**. Bạn có thể làm câm lặng một người chơi, ngăn chặn họ nói chuyện và bỏ phiếu. Ngoài ra, một lần trong trò chơi, bạn có thể đưa một người chơi chìm vào cơn ác mộng, ngăn chặn mọi hành động ban đêm của họ.',
+        );
+        message = await user.send({
+          embeds: [embed],
+          files: [attachment],
+          components: [row],
+        });
+        wolfMessages.push(message);
       } else {
-        await user.send('🌙 Một đêm yên tĩnh trôi qua. Bạn hãy chờ đến sáng.');
+        await user.send('🌙 Bạn là dân làng, một đêm yên tĩnh trôi qua. Bạn hãy chờ đến sáng.');
 
         message = await user.send({ embeds: [embed], files: [attachment] });
         this.nightMessages.set(player.userId, message);
@@ -1008,10 +1061,10 @@ class GameRoom extends EventEmitter {
     this.addTimeout(
       async () => {
         const wolfMessages = this.players
-          .filter((p) => p.role.id === WEREROLE.WEREWOLF)
+          .filter((p) => p.role.faction === Faction.WEREWOLF)
           .map(wolf => ({
             userId: wolf.userId,
-            content: '### ⚠️ Thông báo: còn **10** giây để vote!',
+            content: '### ⚠️ Thông báo: sói còn **10** giây để vote!',
           }));
 
         await this.batchSendMessages(wolfMessages);
@@ -1520,6 +1573,29 @@ class GameRoom extends EventEmitter {
           files: [attachment],
           components: [row],
         });
+      } else if (player.role.id === WEREROLE.VOODOO &&
+        player.role instanceof VoodooWerewolf
+      ) {
+        const silentButton = new ButtonBuilder()
+          .setCustomId(`voodoo_silent_${player.userId}`)
+          .setLabel('🔇 Làm câm lặng')
+          .setStyle(ButtonStyle.Secondary);
+
+        const voodooButton = new ButtonBuilder()
+          .setCustomId(`voodoo_voodoo_${player.userId}`)
+          .setLabel('🌘 Ác mộng')
+          .setStyle(ButtonStyle.Secondary);
+
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+          silentButton,
+          voodooButton,
+        );
+
+        await user.send({
+          embeds: [embed],
+          files: [attachment],
+          components: [row],
+        });
       } else {
         await user.send({
           embeds: [embed],
@@ -1572,18 +1648,29 @@ class GameRoom extends EventEmitter {
         .setImage('attachment://avatars.png')
         .setTimestamp();
 
-      const voteButton = new ButtonBuilder()
-        .setCustomId(`vote_hanged_${player.userId}`)
-        .setLabel('🗳️ Vote người bị treo')
-        .setStyle(ButtonStyle.Primary);
+      /**
+       * @description Con song thi co button, khong du dung duoc thi disable, chet thi khong co button
+      */
+      const components = [];
+      if (player.alive) {
+        const voteButton = new ButtonBuilder()
+          .setCustomId(`vote_hanged_${player.userId}`)
+          .setLabel('🗳️ Vote người bị treo')
+          .setStyle(ButtonStyle.Primary);
 
-      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        voteButton,
-      );
+        if (!player.canVote) {
+          voteButton.setDisabled(true);
+        }
+
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+          voteButton,
+        );
+        components.push(row);
+      }
       const message = await user.send({
         embeds: [embed],
         files: [attachment],
-        components: [row],
+        components,
       });
       this.voteMessages.set(player.userId, message);
     });
@@ -1767,9 +1854,10 @@ class GameRoom extends EventEmitter {
       await this.safePromiseAllSettled(dmVillagerPromise);
     }
 
-    // Reset vote
+    // Reset vote and restrict
     for (const player of this.players) {
       player.role.voteHanged = null;
+      player.resetRestrict();
     }
 
     await this.checkEndGame();
@@ -1853,6 +1941,9 @@ class GameRoom extends EventEmitter {
             break;
           case 19:
             roleEmoji = '🐕‍🦺';
+            break;
+          case 20:
+            roleEmoji = '🐺';
             break;
           }
           return {
@@ -2031,13 +2122,16 @@ class GameRoom extends EventEmitter {
     if (!player) {
       return false;
     }
+    // **check: tinh ca soi thuong va soi co chuc nang vote
     if (
-      player.role.id === WEREROLE.WEREWOLF &&
-      player.role instanceof Werewolf &&
+      player.role.faction === Faction.WEREWOLF &&
+      'voteBite' in player.role &&
+      typeof player.role.voteBite === 'string' &&
       player.role.voteBite
     ) {
       return true;
     }
+    // **check
     if (
       player.role.id === WEREROLE.BODYGUARD &&
       player.role instanceof Bodyguard &&
@@ -2098,6 +2192,13 @@ class GameRoom extends EventEmitter {
       player.role.id === WEREROLE.FOXSPIRIT &&
       player.role instanceof FoxSpirit &&
       player.role.threeViewed.length > 0
+    ) {
+      return true;
+    }
+    if (
+      player.role.id === WEREROLE.PUPPETEER &&
+      player.role instanceof Puppeteer &&
+      player.role.targetWolf
     ) {
       return true;
     }
@@ -2171,4 +2272,4 @@ class GameRoom extends EventEmitter {
  */
 export const gameRooms = new Map<string, GameRoom>();
 
-export { GameRoom, Player };
+export { GameRoom };

@@ -118,5 +118,11 @@
     "eName": "The Puppeteer",
     "faction": 1,
     "description": "Một lần duy nhất trong suốt ván chơi, Người múa rối có thể chỉ định Sói ăn thịt một người. Người đó có thể là một người khác so với sự thống nhất ban đầu của Sói. Người múa rối cũng có thể buộc Sói ăn thịt một Sói khác."
+  },
+  "20": {
+    "title": "Sói Tà Thuật",
+    "eName": "Voodoo Werewolf",
+    "faction": 0,
+    "description": "Hai lần trong trò chơi bạn có thể làm câm lặng một người chơi, ngăn chặn họ nói chuyện và bỏ phiếu. Ngoài ra, một lần trong trò chơi, bạn có thể đưa một người chơi chìm vào cơn ác mộng, ngăn chặn mọi hành động ban đêm của họ."
   }
 }

@@ -25,7 +25,7 @@ import { MessageFlags } from 'discord.js';
 import { config } from 'dotenv';
 
 import connectDB from './config/database.js';
-import { gameRooms, Player } from './core/room.js';
+import { gameRooms } from './core/room.js';
 import type { GameRoom } from './core/room.js';
 import { store } from './core/store.js';
 import rolesData from './data/data.json' with { type: 'json' };
@@ -43,12 +43,14 @@ import puppeteerInteraction from './src/client/events/interactions/puppeteerInte
 import seerInteraction from './src/client/events/interactions/seerInteraction.js';
 import settingsModel from './src/client/events/interactions/settings.js';
 import stalkerInteraction from './src/client/events/interactions/stalkerInteraction.js';
+import voodooInteraction from './src/client/events/interactions/voodooInteraction.js';
 import votingInteraction from './src/client/events/interactions/votingInteraction.js';
 import witchInteraction from './src/client/events/interactions/witchInteraction.js';
 import wolfInteraction from './src/client/events/interactions/wolfInteraction.js';
 import wolfSeerInteraction from './src/client/events/interactions/wolfSeerInteraction.js';
 import commandHandler from './src/client/handlers/commandHandler.js';
 import { MAX_FILE_SIZE } from './src/constants/constants.js';
+import type Player from './types/player.js';
 import { RoleResponseDMs } from './utils/response.js';
 import { WEREROLE, convertFactionRoles } from './utils/role.js';
 config();
@@ -362,6 +364,14 @@ client.on('messageCreate', async (message) => {
         return true; // Gửi cho tất cả nếu sender còn sống
       });
 
+      if (sender.alive && !sender.canChat) {
+        const user = await gameRoom.fetchUser(sender.userId);
+        if (user) {
+          await user.send('⚠️ Bạn không thể chat trong hôm nay');
+        }
+        return;
+      }
+
       if (eligiblePlayers.length > 0) {
         await sendSyncMessages(eligiblePlayers, message.content, (player: Player, content: string) => {
           const validAttachments = Array.from(
@@ -475,6 +485,12 @@ client.on('interactionCreate', async (interaction) => {
       }
       if (interaction.customId.startsWith('puppet_target_puppeteer_')) {
         await puppeteerInteraction.isButton(interaction);
+      }
+      if (interaction.customId.startsWith('voodoo_silent_')) {
+        await voodooInteraction.isButtonSilent(interaction);
+      }
+      if (interaction.customId.startsWith('voodoo_voodoo_')) {
+        await voodooInteraction.isButtonVoodoo(interaction);
       }
     } catch (error) {
       console.error('Lỗi xử lý button interaction:', error);
@@ -692,6 +708,18 @@ client.on('interactionCreate', async (interaction) => {
           return;
         }
         await puppeteerInteraction.isModalSubmit(interaction, gameRoom, sender);
+      }
+      if (interaction.customId.startsWith('submit_voodoo_silent_')) {
+        if (!sender) {
+          return;
+        }
+        await voodooInteraction.isModalSubmitSilent(interaction, gameRoom, sender);
+      }
+      if (interaction.customId.startsWith('submit_voodoo_voodoo_')) {
+        if (!sender) {
+          return;
+        }
+        await voodooInteraction.isModalSubmitVoodoo(interaction, gameRoom, sender);
       }
     } catch (error) {
       console.error('Lỗi xử lý modal interaction:', error);

@@ -10,8 +10,6 @@ import {
 import type { GameRoom } from '../../../../core/room.js';
 import { Faction } from '../../../../types/faction.js';
 import type Player from '../../../../types/player.js';
-import Werewolf from '../../../../types/roles/WereWolf.js';
-import { WEREROLE } from '../../../../utils/role.js';
 
 class WolfInteraction {
   isButton = async (interaction: Interaction) => {
@@ -94,9 +92,15 @@ class WolfInteraction {
 
     const targetPlayer = gameRoom.players[voteIndex - 1];
 
+    /**
+     * Lí do không có check type sender.role.voteBite là string
+     * sender.role.voteBite chưa set nên bị null
+     */
     if (
-      sender.role?.id === WEREROLE.WEREWOLF &&
-      sender.role instanceof Werewolf
+      sender.role.faction === Faction.WEREWOLF &&
+      'voteBite' in sender.role &&
+      'biteCount' in sender.role &&
+      typeof sender.role.biteCount === 'number'
     ) {
       if (!targetPlayer.alive) {
         return interaction.editReply({
@@ -110,7 +114,7 @@ class WolfInteraction {
         });
       }
 
-      if (targetPlayer.role.faction === 0) {
+      if (targetPlayer.role.faction === Faction.WEREWOLF) {
         // FactionRole.Werewolf
         return interaction.editReply({
           content: 'Bạn không thể vote giết đồng minh của mình.',
@@ -118,7 +122,7 @@ class WolfInteraction {
       }
 
       // sender.role.biteCount -= 1; lỡ chọn lại
-      sender.role.voteBite = targetPlayer.userId;
+      (sender.role.voteBite as string | null) = targetPlayer.userId;
     }
 
     try {
