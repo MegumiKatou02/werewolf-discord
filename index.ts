@@ -20,7 +20,7 @@ import {
   type InteractionEditReplyOptions,
   type MessageContextMenuCommandInteraction,
   type UserContextMenuCommandInteraction,
-} from 'discord.js';
+  DiscordAPIError } from 'discord.js';
 import { MessageFlags } from 'discord.js';
 import { config } from 'dotenv';
 
@@ -53,7 +53,6 @@ import { MAX_FILE_SIZE } from './src/constants/constants.js';
 import type Player from './types/player.js';
 import { RoleResponseDMs } from './utils/response.js';
 import { WEREROLE, convertFactionRoles } from './utils/role.js';
-import type { DiscordAPIError } from 'discord.js';
 config();
 
 interface SlashCommand {
@@ -164,24 +163,24 @@ function isUserSpamming(userId: string): { isSpam: boolean; shouldWarn: boolean;
 
   if (record.messageCount > RATE_LIMIT_CONFIG.MAX_MESSAGES_PER_WINDOW) {
     record.warningCount++;
-    
+
     const shouldMute = record.warningCount >= RATE_LIMIT_CONFIG.WARNING_THRESHOLD;
-    
+
     if (shouldMute) {
       record.isMuted = true;
       const muteDuration = Math.min(
         RATE_LIMIT_CONFIG.MUTE_DURATION * Math.pow(2, record.warningCount - RATE_LIMIT_CONFIG.WARNING_THRESHOLD),
-        RATE_LIMIT_CONFIG.MAX_MUTE_DURATION
+        RATE_LIMIT_CONFIG.MAX_MUTE_DURATION,
       );
       record.muteEndTime = now + muteDuration;
       record.messageCount = 0; // Reset counter
     }
 
     userMessageTracker.set(userId, record);
-    return { 
-      isSpam: true, 
-      shouldWarn: !shouldMute, 
-      shouldMute 
+    return {
+      isSpam: true,
+      shouldWarn: !shouldMute,
+      shouldMute,
     };
   }
 
@@ -190,14 +189,20 @@ function isUserSpamming(userId: string): { isSpam: boolean; shouldWarn: boolean;
 }
 
 async function handleSpamAction(userId: string, action: { isSpam: boolean; shouldWarn: boolean; shouldMute: boolean }) {
-  if (!action.isSpam) return false;
+  if (!action.isSpam) {
+    return false;
+  }
 
   try {
     const user = await getCachedUser(userId);
-    if (!user) return true;
+    if (!user) {
+      return true;
+    }
 
     const record = userMessageTracker.get(userId);
-    if (!record) return true;
+    if (!record) {
+      return true;
+    }
 
     if (action.shouldMute) {
       const muteMinutes = Math.round((record.muteEndTime - Date.now()) / (60 * 1000));
@@ -218,42 +223,42 @@ async function handleSpamAction(userId: string, action: { isSpam: boolean; shoul
 const cleanupSpamTracker = async () => {
   const now = Date.now();
   const threshold = 24 * 60 * 60 * 1000; // 24 giờ
-  
+
   if (userMessageTracker.size === 0) {
     return;
   }
-  
+
   let cleanedCount = 0;
   const startTime = now;
-  
+
   try {
     const entries = Array.from(userMessageTracker.entries());
-    
+
     for (let i = 0; i < entries.length; i += 100) {
       const batch = entries.slice(i, i + 100);
-      
+
       for (const [userId, record] of batch) {
         if (now - record.lastMessageTime > threshold && !record.isMuted) {
           userMessageTracker.delete(userId);
           cleanedCount++;
         }
       }
-      
+
       if (i + 100 < entries.length) {
         await new Promise(resolve => setImmediate(resolve));
       }
     }
-    
+
     const processingTime = Date.now() - startTime;
-    
+
     if (cleanedCount > 0) {
       console.log(`🧹 Spam cleanup: Removed ${cleanedCount} old records in ${processingTime}ms (${userMessageTracker.size} remaining)`);
     }
-    
+
     if (userMessageTracker.size > 1000) {
       console.warn(`⚠️ Spam tracker has ${userMessageTracker.size} records. Consider lowering cleanup threshold.`);
     }
-    
+
   } catch (error) {
     console.error('❌ Spam cleanup error:', error);
   }
@@ -263,7 +268,7 @@ spamCleanupInterval = setInterval(() => {
   cleanupSpamTracker().catch(error => {
     console.error('❌ Spam cleanup async error:', error);
   });
-}, 60 * 60 * 1000); 
+}, 60 * 60 * 1000);
 let userCacheCleanupInterval: NodeJS.Timeout | null = null;
 
 async function getCachedUser(userId: string) {
@@ -379,7 +384,7 @@ async function sendSyncMessages(players: Player[], messageContent: string, forma
           results.set(player.userId, true);
         } catch (err) {
           console.error(`Attempt ${attempt + 1} failed for ${player.userId}:`, err);
-          
+
           // Xử lý rate limit đặc biệt
           const error = err as DiscordAPIError;
           if (error.code === 50007 || error.message?.includes('rate limit')) {
@@ -1054,12 +1059,12 @@ process.on('uncaughtException', (error) => {
         clearInterval(spamCleanupInterval);
         spamCleanupInterval = null;
       }
-      
+
       if (userCacheCleanupInterval) {
         clearInterval(userCacheCleanupInterval);
         userCacheCleanupInterval = null;
       }
-      
+
       const cleanupPromise = Promise.all(
         Array.from(gameRooms.values()).map(async (gameRoom) => {
           try {
