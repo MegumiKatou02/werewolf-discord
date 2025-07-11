@@ -64,7 +64,7 @@ class VoodooInteraction {
       return;
     }
 
-    if (!gameRoom || gameRoom.gameState.phase !== 'day') {
+    if (!gameRoom) {
       return;
     }
 
@@ -91,9 +91,15 @@ class VoodooInteraction {
 
     if (
       sender.role &&
-            sender.role.id === WEREROLE.VOODOO &&
-            sender.role instanceof VoodooWerewolf
+      sender.role.id === WEREROLE.VOODOO &&
+      sender.role instanceof VoodooWerewolf
     ) {
+      if (sender.role.silentPlayer) {
+        return interaction.editReply({
+          content: 'Bạn đã làm câm lặng người rồi.',
+        });
+      }
+
       if (!targetPlayer.alive) {
         return interaction.editReply({
           content: 'Không thể làm câm lặng người đã chết.',
@@ -180,7 +186,7 @@ class VoodooInteraction {
       return;
     }
 
-    if (!gameRoom || gameRoom.gameState.phase !== 'day') {
+    if (!gameRoom) {
       return;
     }
 
@@ -207,9 +213,15 @@ class VoodooInteraction {
 
     if (
       sender.role &&
-            sender.role.id === WEREROLE.VOODOO &&
-            sender.role instanceof VoodooWerewolf
+      sender.role.id === WEREROLE.VOODOO &&
+      sender.role instanceof VoodooWerewolf
     ) {
+      if (sender.role.voodooPlayer) {
+        return interaction.editReply({
+          content: 'Bạn đã ác mộng người rồi.',
+        });
+      }
+
       if (!targetPlayer.alive) {
         return interaction.editReply({
           content: 'Không thể ác mộng người đã chết.',
@@ -236,7 +248,7 @@ class VoodooInteraction {
 
       sender.role.voodooCount -= 1;
       sender.role.voodooPlayer = targetPlayer.userId;
-      sender.canUseSkill = false;
+      targetPlayer.canUseSkill = false;
     }
 
     try {

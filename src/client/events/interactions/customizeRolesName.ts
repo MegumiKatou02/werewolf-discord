@@ -114,6 +114,9 @@ class CustomizeRolesName {
       puppeteer: 19,
       nguoimuaroi: 19,
       'người múa rối': 19,
+      voodoo: 20,
+      'sói tà thuật': 20,
+      soitathuat: 20,
     };
 
     const customRoles: Record<string, number> = {};
