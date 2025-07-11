@@ -685,7 +685,7 @@ class GameRoom extends EventEmitter {
         const viewButton = new ButtonBuilder()
           .setCustomId(`view_target_wolfseer_${player.userId}`)
           .setLabel('🔍 Xem vai trò')
-          .setStyle(ButtonStyle.Primary);
+          .setStyle(ButtonStyle.Secondary);
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
           viewButton,
@@ -705,7 +705,7 @@ class GameRoom extends EventEmitter {
         const maskButton = new ButtonBuilder()
           .setCustomId(`mask_target_alphawerewolf_${player.userId}`)
           .setLabel('👤 Che sói')
-          .setStyle(ButtonStyle.Primary);
+          .setStyle(ButtonStyle.Secondary);
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
           maskButton,
@@ -749,7 +749,11 @@ class GameRoom extends EventEmitter {
         const viewButton = new ButtonBuilder()
           .setCustomId(`view_target_seer_${player.userId}`)
           .setLabel('🔍 Xem phe')
-          .setStyle(ButtonStyle.Primary);
+          .setStyle(ButtonStyle.Secondary);
+
+        if (!player.canUseSkill) {
+          viewButton.setDisabled(true);
+        }
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
           viewButton,
@@ -796,12 +800,12 @@ class GameRoom extends EventEmitter {
         const poisonButton = new ButtonBuilder()
           .setCustomId(`poison_target_witch_${player.userId}`)
           .setLabel('💊 Đầu độc người')
-          .setStyle(ButtonStyle.Primary);
+          .setStyle(ButtonStyle.Secondary);
 
         const healButton = new ButtonBuilder()
           .setCustomId(`heal_target_witch_${player.userId}`)
           .setLabel('💫 Cứu người')
-          .setStyle(ButtonStyle.Primary)
+          .setStyle(ButtonStyle.Secondary)
           .setDisabled(true);
 
         if (!player.canUseSkill) {
@@ -830,7 +834,7 @@ class GameRoom extends EventEmitter {
         const reviveButton = new ButtonBuilder()
           .setCustomId(`revive_target_medium_${player.userId}`)
           .setLabel('🔮 Hồi sinh người')
-          .setStyle(ButtonStyle.Primary);
+          .setStyle(ButtonStyle.Secondary);
 
         if (!player.canUseSkill) {
           reviveButton.setDisabled(true);
@@ -844,7 +848,8 @@ class GameRoom extends EventEmitter {
           .filter((player) => {
             return player.role.faction === 1 && !player.alive;
           })
-          .map((player) => `<@${player.userId}>`)
+          // .map((player) => `<@${player.userId}>`)
+          .map((player) => `**${player.name}**`)
           .join(', ');
         await user.send(
           '🌙 Bạn là **Thầy Đồng**. Bạn có thể hồi sinh một người phe dân đã chết trong đêm nay. Bạn chỉ có thể làm điều này một lần trong ván đấu.',
@@ -883,7 +888,7 @@ class GameRoom extends EventEmitter {
         const viewButton = new ButtonBuilder()
           .setCustomId(`view_target_foxspirit_${player.userId}`)
           .setLabel('🔍 Tìm sói')
-          .setStyle(ButtonStyle.Primary);
+          .setStyle(ButtonStyle.Secondary);
 
         if (!player.canUseSkill) {
           viewButton.setDisabled(true);
@@ -905,12 +910,12 @@ class GameRoom extends EventEmitter {
           chooseMasterButton = new ButtonBuilder()
             .setCustomId(`choose_master_maid_${player.userId}`)
             .setLabel('👑 Chọn chủ')
-            .setStyle(ButtonStyle.Primary);
+            .setStyle(ButtonStyle.Secondary);
         } else {
           chooseMasterButton = new ButtonBuilder()
             .setCustomId(`choose_master_maid_${player.userId}`)
             .setLabel('👑 Đã chọn chủ')
-            .setStyle(ButtonStyle.Primary)
+            .setStyle(ButtonStyle.Secondary)
             .setDisabled(true);
         }
 
@@ -956,12 +961,12 @@ class GameRoom extends EventEmitter {
         const stalkButton = new ButtonBuilder()
           .setCustomId(`stalk_target_stalker_${player.userId}`)
           .setLabel('👀 Theo dõi')
-          .setStyle(ButtonStyle.Primary);
+          .setStyle(ButtonStyle.Secondary);
 
         const killButton = new ButtonBuilder()
           .setCustomId(`kill_target_stalker_${player.userId}`)
           .setLabel('🔪 Ám sát')
-          .setStyle(ButtonStyle.Primary);
+          .setStyle(ButtonStyle.Secondary);
 
         if (!player.canUseSkill) {
           stalkButton.setDisabled(true);
@@ -1003,21 +1008,18 @@ class GameRoom extends EventEmitter {
         await user.send(
           '🐕‍🦺 Bạn là **Người Múa Rối**. Một lần duy nhất trong suốt ván chơi, bạn có thể chỉ định Sói ăn thịt một người. Người đó có thể là một người khác so với sự thống nhất ban đầu của Sói. Bạn cũng có thể buộc Sói ăn thịt một Sói khác.',
         );
-        let puppetButton = null;
-        if (player.role.targetCount > 0) {
-          puppetButton = new ButtonBuilder()
-            .setCustomId(`puppet_target_puppeteer_${player.userId}`)
-            .setLabel('🎭 Chỉ định mục tiêu')
-            .setStyle(ButtonStyle.Secondary);
-        } else if (player.role.targetCount <=  0 || !player.canUseSkill) {
-          puppetButton = new ButtonBuilder()
-            .setCustomId(`puppet_target_puppeteer_${player.userId}`)
-            .setLabel('🎭 Đã chỉ định mục tiêu')
-            .setStyle(ButtonStyle.Secondary)
-            .setDisabled(true);
-        } else {
-          // fallback
-          puppetButton = new ButtonBuilder();
+        const puppetButton = new ButtonBuilder()
+          .setCustomId(`puppet_target_puppeteer_${player.userId}`)
+          .setStyle(ButtonStyle.Secondary)
+          .setLabel('🎭 Chỉ định mục tiêu')
+
+        if (!player.canUseSkill) {
+          puppetButton.setDisabled(true);
+        }
+
+        if (player.role.targetCount <= 0) {
+          puppetButton.setLabel('🎭 Đã chỉ định mục tiêu');
+          puppetButton.setDisabled(true);
         }
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -1034,10 +1036,16 @@ class GameRoom extends EventEmitter {
         const voteButton = new ButtonBuilder()
           .setCustomId(`vote_target_wolf_${player.userId}`)
           .setLabel('🗳️ Vote người cần giết')
-          .setStyle(ButtonStyle.Primary);
+          .setStyle(ButtonStyle.Secondary);
+
+        const silentButton = new ButtonBuilder()
+          .setCustomId(`voodoo_silent_${player.userId}`)
+          .setLabel('🔇 Làm câm lặng')
+          .setStyle(ButtonStyle.Secondary);
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
           voteButton,
+          silentButton,
         );
         await user.send(
           '🐺 Bạn là **Sói Tà Thuật**. Bạn có thể làm câm lặng một người chơi, ngăn chặn họ nói chuyện và bỏ phiếu. Ngoài ra, một lần trong trò chơi, bạn có thể đưa một người chơi chìm vào cơn ác mộng, ngăn chặn mọi hành động ban đêm của họ.',
@@ -1047,9 +1055,11 @@ class GameRoom extends EventEmitter {
           files: [attachment],
           components: [row],
         });
+
         wolfMessages.push(message);
+        this.nightMessages.set(player.userId, message);
       } else {
-        await user.send('🌙 Bạn là dân làng, một đêm yên tĩnh trôi qua. Bạn hãy chờ đến sáng.');
+        await user.send(`🌙 Bạn là dân làng, một đêm yên tĩnh trôi qua. Bạn hãy chờ ${this.settings.nightTime} giây cho đến sáng.`);
 
         message = await user.send({ embeds: [embed], files: [attachment] });
         this.nightMessages.set(player.userId, message);
@@ -1078,9 +1088,16 @@ class GameRoom extends EventEmitter {
           const row = ActionRowBuilder.from(
             message.components[0] as APIActionRowComponent<APIButtonComponent>,
           ) as ActionRowBuilder<ButtonBuilder>;
-          (row.components[0] as ButtonBuilder)
-            .setDisabled(true)
-            .setLabel('🗳️ Hết thời gian vote');
+
+          row.components.forEach((component) => {
+            const data = (component as ButtonBuilder).data;
+            if ('custom_id' in data && data.custom_id?.startsWith('vote_target_wolf_')) {
+              (component as ButtonBuilder)
+                .setDisabled(true)
+                .setLabel('🗳️ Hết thời gian vote');
+            }
+          });
+          
           await message.edit({ components: [row] });
           await message.reply('⏰ Đã hết thời gian vote!\n');
         } catch (err) {
@@ -1431,6 +1448,9 @@ class GameRoom extends EventEmitter {
 
     // cần fix role id ELder vì Elder đã chết (new Dead())
     if (giaLang && !giaLang.alive) {
+      this.gameState.addLog(
+        '👴 Già làng đã chết, tất cả những người thuộc phe dân làng đều sẽ bị mất chức năng.',
+      );
       const dmVillagerPromise = this.players
         .filter(
           (p) =>
@@ -1443,9 +1463,6 @@ class GameRoom extends EventEmitter {
           }
           await user.send(
             '### 👴 Già làng đã chết, tất cả những người thuộc phe dân làng đều sẽ bị mất chức năng.',
-          );
-          this.gameState.addLog(
-            '👴 Già làng đã chết, tất cả những người thuộc phe dân làng đều sẽ bị mất chức năng.',
           );
           player.role = new Villager();
         });
@@ -1521,6 +1538,7 @@ class GameRoom extends EventEmitter {
     await this.safePromiseAllSettled(dmPromises);
 
     for (const player of this.players) {
+      player.resetDay();
       player.role.resetDay();
     }
 
@@ -1574,20 +1592,15 @@ class GameRoom extends EventEmitter {
           components: [row],
         });
       } else if (player.role.id === WEREROLE.VOODOO &&
-        player.role instanceof VoodooWerewolf
+        player.role instanceof VoodooWerewolf &&
+        player.role.voodooCount > 0
       ) {
-        const silentButton = new ButtonBuilder()
-          .setCustomId(`voodoo_silent_${player.userId}`)
-          .setLabel('🔇 Làm câm lặng')
-          .setStyle(ButtonStyle.Secondary);
-
         const voodooButton = new ButtonBuilder()
           .setCustomId(`voodoo_voodoo_${player.userId}`)
           .setLabel('🌘 Ác mộng')
           .setStyle(ButtonStyle.Secondary);
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-          silentButton,
           voodooButton,
         );
 
@@ -2107,7 +2120,7 @@ class GameRoom extends EventEmitter {
     }
 
     const nonWolves = alivePlayers.length - aliveWolves.length;
-    if (aliveWolves.length >= nonWolves) {
+    if (aliveWolves.length >= nonWolves + 100) {
       return { winner: 'werewolf', faction: 0 };
     }
 
@@ -2202,6 +2215,13 @@ class GameRoom extends EventEmitter {
     ) {
       return true;
     }
+    if (
+      player.role.id === WEREROLE.VOODOO &&
+      player.role instanceof VoodooWerewolf &&
+      player.role.silentPlayer
+    ) {
+      return true;
+    }
 
     return false;
   }
@@ -2235,7 +2255,7 @@ class GameRoom extends EventEmitter {
 
       // phần log
       this.gameState.addLog(
-        `### 👒 Hầu gái đã lên thay vai trò **${maid.role.name}** của chủ vì chủ đã bị chết.`,
+        `👒 **Hầu Gái** đã lên thay vai trò **${maid.role.name}** của chủ vì chủ đã bị chết.`,
       );
     }
     return maidNewRole;
