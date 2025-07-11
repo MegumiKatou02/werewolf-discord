@@ -802,6 +802,10 @@ class GameRoom extends EventEmitter {
           .setLabel('💊 Đầu độc người')
           .setStyle(ButtonStyle.Secondary);
 
+        if (player.role.poisonCount <= 0) {
+          poisonButton.setDisabled(true);
+        }
+
         const healButton = new ButtonBuilder()
           .setCustomId(`heal_target_witch_${player.userId}`)
           .setLabel('💫 Cứu người')
@@ -829,12 +833,19 @@ class GameRoom extends EventEmitter {
 
         this.witchMessages.set(player.userId, message);
         this.nightMessages.set(player.userId, message);
-      } else if (player.role.id === WEREROLE.MEDIUM) {
+      } else if (
+        player.role.id === WEREROLE.MEDIUM &&
+        player.role instanceof Medium
+      ) {
         // Thầy Đồng
         const reviveButton = new ButtonBuilder()
           .setCustomId(`revive_target_medium_${player.userId}`)
           .setLabel('🔮 Hồi sinh người')
           .setStyle(ButtonStyle.Secondary);
+
+        if (player.role.revivedCount <= 0) {
+          reviveButton.setDisabled(true);
+        }
 
         if (!player.canUseSkill) {
           reviveButton.setDisabled(true);
@@ -879,7 +890,10 @@ class GameRoom extends EventEmitter {
 
         message = await user.send({ embeds: [embed], files: [attachment] });
         this.nightMessages.set(player.userId, message);
-      } else if (player.role.id === WEREROLE.FOXSPIRIT) {
+      } else if (
+        player.role.id === WEREROLE.FOXSPIRIT &&
+        player.role instanceof FoxSpirit
+      ) {
         // Cáo
         await user.send(
           '🦊 Bạn là **Cáo**. Mỗi đêm dậy soi 3 người tự chọn trong danh sách, nếu 1 trong 3 người đó là sói thì được báo \\"Có sói\\", nếu đoán hụt thì mất chức năng.',
@@ -890,7 +904,7 @@ class GameRoom extends EventEmitter {
           .setLabel('🔍 Tìm sói')
           .setStyle(ButtonStyle.Secondary);
 
-        if (!player.canUseSkill) {
+        if (!player.canUseSkill || !player.role.isHaveSkill) {
           viewButton.setDisabled(true);
         }
 
@@ -928,7 +942,7 @@ class GameRoom extends EventEmitter {
         );
 
         await user.send(
-          '🌙 Bạn là **Hầu Gái**. Hãy chọn một người làm chủ của bạn.',
+          '🌙 Bạn là **Hầu Gái**. Hãy chọn một người làm chủ của bạn (chỉ được chọn trong đêm đầu tiên).',
         );
         message = await user.send({
           embeds: [embed],
@@ -963,10 +977,18 @@ class GameRoom extends EventEmitter {
           .setLabel('👀 Theo dõi')
           .setStyle(ButtonStyle.Secondary);
 
+        if (player.role.stalkCount <= 0) {
+          stalkButton.setDisabled(true);
+        }
+
         const killButton = new ButtonBuilder()
           .setCustomId(`kill_target_stalker_${player.userId}`)
           .setLabel('🔪 Ám sát')
           .setStyle(ButtonStyle.Secondary);
+
+        if (player.role.killCount <= 0) {
+          killButton.setDisabled(true);
+        }
 
         if (!player.canUseSkill) {
           stalkButton.setDisabled(true);
@@ -1032,7 +1054,10 @@ class GameRoom extends EventEmitter {
           components: [row],
         });
         this.nightMessages.set(player.userId, message);
-      } else if (player.role.id === WEREROLE.VOODOO) {
+      } else if (
+        player.role.id === WEREROLE.VOODOO &&
+        player.role instanceof VoodooWerewolf
+      ) {
         const voteButton = new ButtonBuilder()
           .setCustomId(`vote_target_wolf_${player.userId}`)
           .setLabel('🗳️ Vote người cần giết')
@@ -1042,6 +1067,10 @@ class GameRoom extends EventEmitter {
           .setCustomId(`voodoo_silent_${player.userId}`)
           .setLabel('🔇 Làm câm lặng')
           .setStyle(ButtonStyle.Secondary);
+
+        if (player.role.silentCount <= 0) {
+          silentButton.setDisabled(true);
+        }
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
           voteButton,
