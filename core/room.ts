@@ -1011,7 +1011,7 @@ class GameRoom extends EventEmitter {
         const puppetButton = new ButtonBuilder()
           .setCustomId(`puppet_target_puppeteer_${player.userId}`)
           .setStyle(ButtonStyle.Secondary)
-          .setLabel('🎭 Chỉ định mục tiêu')
+          .setLabel('🎭 Chỉ định mục tiêu');
 
         if (!player.canUseSkill) {
           puppetButton.setDisabled(true);
@@ -1097,7 +1097,7 @@ class GameRoom extends EventEmitter {
                 .setLabel('🗳️ Hết thời gian vote');
             }
           });
-          
+
           await message.edit({ components: [row] });
           await message.reply('⏰ Đã hết thời gian vote!\n');
         } catch (err) {
