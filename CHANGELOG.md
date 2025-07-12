@@ -5,7 +5,7 @@
 ### Fixed
 
 - **Phù Thuỷ**: chỉ được dùng 1 bình trong 1 đêm
-- **Già Làng**: chết mà bảo vệ chết được thì phù thuỷ không cần cứu nữa
+- **Già Làng**: chết mà Bảo vệ bảo vệ được thì Phù Thuỷ không cần cứu nữa
 
 ## [3.0.0] - 2025-07-11
 
