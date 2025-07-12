@@ -1019,7 +1019,21 @@ class GameRoom extends EventEmitter {
           '🐺 Bạn là **Sói Mèo Con**. Khi bạn bị giết, cuộc bỏ phiếu của sói tiếp theo sẽ biến đổi một dân làng thành ma sói thay vì giết chết họ.',
         );
 
-        message = await user.send({ embeds: [embed], files: [attachment] });
+        const voteButton = new ButtonBuilder()
+          .setCustomId(`vote_target_wolf_${player.userId}`)
+          .setLabel('🗳️ Vote người cần giết')
+          .setStyle(ButtonStyle.Primary);
+
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+          voteButton,
+        );
+
+        message = await user.send({
+          embeds: [embed],
+          files: [attachment],
+          components: [row],
+        });
+        wolfMessages.push(message);
         this.nightMessages.set(player.userId, message);
       } else if (
         player.role.id === WEREROLE.PUPPETEER &&
@@ -1246,7 +1260,19 @@ class GameRoom extends EventEmitter {
     }
 
     const witch = this.players.find((p) => p.role.id === WEREROLE.WITCH);
-    if (mostVotedUserId) {
+    const kittenWolfDead = this.players.find((p) => p.role instanceof Dead && p.role.originalRoleId === WEREROLE.KITTENWOLF);
+
+    if (
+      kittenWolfDead && mostVotedUserId &&
+      // Đêm chết = đêm hôm nay - 1
+      kittenWolfDead.role.deathNight === this.gameState.nightCount - 1
+    ) {
+      const deadPlayer = this.players.find((p) => p.userId === mostVotedUserId);
+      if (deadPlayer) {
+        deadPlayer.role = new Werewolf();
+        this.gameState.addLog(`Sói đã biến người chơi **${deadPlayer.name}** thành Sói Thường`);
+      }
+    } else if (mostVotedUserId) {
       this.gameState.addLog(
         `Sói đã chọn cắn **${this.players.find((p) => p.userId === mostVotedUserId)?.name}**`,
       );
@@ -1453,14 +1479,14 @@ class GameRoom extends EventEmitter {
         killed.alive = true;
         killedPlayers.delete(killedId);
       } else if (killed) {
-        killed.role = new Dead(killed.role.faction, killed.role.id);
+        killed.role = new Dead(killed.role.faction, killed.role.id, this.gameState.nightCount);
         killed.alive = false;
       }
     }
     for (const killedId of sureDieInTheNight) {
       const killed = this.players.find((p) => p.userId === killedId);
       if (killed) {
-        killed.role = new Dead(killed.role.faction, killed.role.id);
+        killed.role = new Dead(killed.role.faction, killed.role.id, this.gameState.nightCount);
         killed.alive = false;
       }
     }
@@ -1815,6 +1841,7 @@ class GameRoom extends EventEmitter {
       resultHangedPlayer.hangedPlayer.role = new Dead(
         resultHangedPlayer.hangedPlayer.role.faction,
         resultHangedPlayer.hangedPlayer.role.id,
+        this.gameState.nightCount,
       );
 
       const maidNewRole = await this.checkIfMasterIsDead(resultHangedPlayer.hangedPlayer);

@@ -423,6 +423,11 @@ client.on('messageCreate', async (message) => {
   commandHandler(message);
 
   if (message.channel.type === ChannelType.DM) {
+    // **check
+    if (message.author.bot) {
+      return;
+    }
+
     // ===== KIỂM TRA SPAM TRƯỚC KHI XỬ LÝ =====
     const spamCheck = isUserSpamming(message.author.id);
     if (spamCheck.isSpam) {
