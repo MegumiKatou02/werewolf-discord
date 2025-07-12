@@ -2,6 +2,10 @@
 
 ## [3.0.1] - 2025-07-12
 
+### Added
+
+- Thêm role **Sói Mèo Con**
+
 ### Fixed
 
 - **Phù Thuỷ**: chỉ được dùng 1 bình trong 1 đêm

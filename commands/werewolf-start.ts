@@ -82,9 +82,27 @@ export default {
         .setStyle(ButtonStyle.Secondary),
     );
 
-    return interaction.editReply({
+    const replyMessage = await interaction.editReply({
       content: '🎮 Chọn cách phân vai trò:',
       components: [row],
+    });
+
+    const collector = replyMessage.createMessageComponentCollector({
+      time: 60_000,
+    });
+
+    collector.on('end', async () => {
+      const disabledRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        ...(row.components.map((btn) =>
+          ButtonBuilder.from(btn).setDisabled(true),
+        )),
+      );
+
+      await interaction
+        .editReply({
+          components: [disabledRow],
+        })
+        .catch(() => {});
     });
   },
 };

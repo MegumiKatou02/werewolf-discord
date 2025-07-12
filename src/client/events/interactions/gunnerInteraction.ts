@@ -125,6 +125,7 @@ class GunnerInteraction {
       targetPlayer.role = new Dead(
         targetPlayer.role.faction,
         targetPlayer.role.id,
+        gameRoom.gameState.nightCount,
       );
 
       const notifyMessages = gameRoom.players.map((player: Player) => {
