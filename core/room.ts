@@ -62,7 +62,6 @@ class GameRoom extends EventEmitter {
   witchMessages: Map<string, Message>;
   nightMessages: Map<string, Message>;
   voteMessages: Map<string, Message>;
-  kittenWolfDeathNight: number;
   private timeoutIds: NodeJS.Timeout[] = [];
   private userCache: Map<string, { user: User, timestamp: number  }> = new Map();
   private isCleaningUp = false;
@@ -88,7 +87,6 @@ class GameRoom extends EventEmitter {
     this.witchMessages = new Map(); // message phù thuỷ
     this.nightMessages = new Map(); // message ban đêm
     this.voteMessages = new Map(); // message vote treo cổ
-    this.kittenWolfDeathNight = 0;
     this.timeoutIds = [];
     this.settings = {
       wolfVoteTime: 40,
@@ -1394,6 +1392,7 @@ class GameRoom extends EventEmitter {
         ) {
           giaLang.role.hp += 1;
           giaLangBiTanCong = false;
+          killedPlayers.delete(giaLang.userId);
         }
       }
     }

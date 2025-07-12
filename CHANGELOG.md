@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.1] - 2025-07-12
+
+### Fixed
+
+- **Phù Thuỷ**: chỉ được dùng 1 bình trong 1 đêm
+- **Già Làng**: chết mà bảo vệ chết được thì phù thuỷ không cần cứu nữa
+
 ## [3.0.0] - 2025-07-11
 
 ### Added

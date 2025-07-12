@@ -286,7 +286,11 @@ class WitchInteraction {
         });
       }
 
-      sender.role.healCount -= 1; // cứu rồi không cứu lại được nữa
+      /**
+       * @description
+       * Cứu được mới được trừ
+       */
+      // sender.role.healCount -= 1; // cứu rồi không cứu lại được nữa
       sender.role.healedPerson = targetPlayer.userId;
     }
 
