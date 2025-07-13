@@ -138,6 +138,13 @@ const commandHandler = async (message: Message) => {
     20,
     FactionRole.Werewolf,
   );
+  await RoleResponse(
+    message,
+    ['!wolffluencer', '!soithaotung'],
+    'wolffluencer.png',
+    21,
+    FactionRole.Werewolf,
+  );
 };
 
 export default commandHandler;
