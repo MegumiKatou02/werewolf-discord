@@ -19,6 +19,7 @@ class Role {
   resetDay() {
     this.voteHanged = null;
   }
+  resetRestrict() {}
 }
 
 export default Role;

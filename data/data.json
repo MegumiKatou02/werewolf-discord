@@ -124,5 +124,11 @@
     "eName": "Voodoo Werewolf",
     "faction": 0,
     "description": "Hai lần trong trò chơi bạn có thể làm câm lặng một người chơi, ngăn chặn họ nói chuyện và bỏ phiếu. Ngoài ra, một lần trong trò chơi, bạn có thể đưa một người chơi chìm vào cơn ác mộng, ngăn chặn mọi hành động ban đêm của họ."
+  },
+  "21": {
+    "title": "Sói Thao Túng",
+    "eName": "Wolffluencer",
+    "faction": 0,
+    "description": "Mỗi đêm, bạn có thể chọn một người chơi để thao túng họ. Ngày hôm sau, bạn sẽ điều khiển phiếu bầu của người chơi đó."
   }
 }

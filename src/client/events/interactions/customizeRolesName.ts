@@ -117,6 +117,9 @@ class CustomizeRolesName {
       voodoo: 20,
       'sói tà thuật': 20,
       soitathuat: 20,
+      'sói thao tung': 21,
+      wolffluencer: 21,
+      soithaotung: 21,
     };
 
     const customRoles: Record<string, number> = {};

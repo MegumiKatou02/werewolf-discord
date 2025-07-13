@@ -1926,6 +1926,7 @@ class GameRoom extends EventEmitter {
     for (const player of this.players) {
       player.role.voteHanged = null;
       player.resetRestrict();
+      player.role.resetRestrict();
     }
 
     await this.checkEndGame();
@@ -2011,6 +2012,9 @@ class GameRoom extends EventEmitter {
             roleEmoji = '🐕‍🦺';
             break;
           case 20:
+            roleEmoji = '🐺';
+            break;
+          case 21:
             roleEmoji = '🐺';
             break;
           }
