@@ -1073,7 +1073,7 @@ class GameRoom extends EventEmitter {
         const voteButton = new ButtonBuilder()
           .setCustomId(`vote_target_wolf_${player.userId}`)
           .setLabel('🗳️ Vote người cần giết')
-          .setStyle(ButtonStyle.Secondary);
+          .setStyle(ButtonStyle.Primary);
 
         const silentButton = new ButtonBuilder()
           .setCustomId(`voodoo_silent_${player.userId}`)
@@ -1091,6 +1091,36 @@ class GameRoom extends EventEmitter {
         await user.send(
           '🐺 Bạn là **Sói Tà Thuật**. Bạn có thể làm câm lặng một người chơi, ngăn chặn họ nói chuyện và bỏ phiếu. Ngoài ra, một lần trong trò chơi, bạn có thể đưa một người chơi chìm vào cơn ác mộng, ngăn chặn mọi hành động ban đêm của họ.',
         );
+        message = await user.send({
+          embeds: [embed],
+          files: [attachment],
+          components: [row],
+        });
+
+        wolfMessages.push(message);
+        this.nightMessages.set(player.userId, message);
+      } else if (
+        player.role.id === WEREROLE.WOLFFLUENCE
+      ) {
+        await user.send(
+          '🐺 Bạn là **Sói Thao Túng**. Bạn có thể điều khiển phiếu bầu của người chơi mỗi đêm.',
+        );
+
+        const voteButton = new ButtonBuilder()
+          .setCustomId(`vote_target_wolf_${player.userId}`)
+          .setLabel('🗳️ Vote người cần giết')
+          .setStyle(ButtonStyle.Primary);
+
+        const influenceButton = new ButtonBuilder()
+          .setCustomId(`influence_target_wolffluence_${player.userId}`)
+          .setLabel('🪡 Thao Túng')
+          .setStyle(ButtonStyle.Secondary);
+
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+          voteButton,
+          influenceButton,
+        );
+
         message = await user.send({
           embeds: [embed],
           files: [attachment],

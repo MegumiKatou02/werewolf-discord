@@ -46,6 +46,7 @@ import stalkerInteraction from './src/client/events/interactions/stalkerInteract
 import voodooInteraction from './src/client/events/interactions/voodooInteraction.js';
 import votingInteraction from './src/client/events/interactions/votingInteraction.js';
 import witchInteraction from './src/client/events/interactions/witchInteraction.js';
+import wolffluenceInteraction from './src/client/events/interactions/wolffluenceInteraction.js';
 import wolfInteraction from './src/client/events/interactions/wolfInteraction.js';
 import wolfSeerInteraction from './src/client/events/interactions/wolfSeerInteraction.js';
 import commandHandler from './src/client/handlers/commandHandler.js';
@@ -670,6 +671,9 @@ client.on('interactionCreate', async (interaction) => {
       if (interaction.customId.startsWith('voodoo_voodoo_')) {
         await voodooInteraction.isButtonVoodoo(interaction);
       }
+      if (interaction.customId.startsWith('influence_target_wolffluence_')) {
+        await wolffluenceInteraction.isButton(interaction);
+      }
     } catch (error) {
       console.error('Lỗi xử lý button interaction:', error);
       console.error('Button customId:', interaction.customId);
@@ -898,6 +902,12 @@ client.on('interactionCreate', async (interaction) => {
           return;
         }
         await voodooInteraction.isModalSubmitVoodoo(interaction, gameRoom, sender);
+      }
+      if (interaction.customId.startsWith('submit_ffluence_wolf_')) {
+        if (!sender) {
+          return;
+        }
+        await wolffluenceInteraction.isModalSubmit(interaction, gameRoom, sender);
       }
     } catch (error) {
       console.error('Lỗi xử lý modal interaction:', error);
