@@ -104,7 +104,7 @@ class VotingInteraction {
 
     if (voteIndex === 0 || voteIndex === 36) {
       // Chắc chắn ai cũng có role
-      sender.role!.voteHanged = 'skip';
+      sender.role.voteHanged = 'skip';
     } else {
       const targetPlayer = gameRoom.players[voteIndex - 1];
 
@@ -122,7 +122,7 @@ class VotingInteraction {
         });
       }
 
-      sender.role!.voteHanged = targetPlayer.userId;
+      sender.role.voteHanged = targetPlayer.userId;
     }
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -141,7 +141,7 @@ class VotingInteraction {
 
       const alivePlayers = gameRoom.players.filter((p: Player) => p.alive);
       const allVoted = alivePlayers.every(
-        (p: Player) => p.role?.voteHanged !== null,
+        (p: Player) => p.role.voteHanged !== null,
       );
 
       if (allVoted) {
