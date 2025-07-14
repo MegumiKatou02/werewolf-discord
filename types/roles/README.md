@@ -19,5 +19,6 @@
 18. Kitten Wolf (Sói Mèo Con)
 19. The Puppeteer (Người Múa Rối)
 20. Voodoo Werewolf (Sói Tà Thuật)
+21. Wolffluencer (Sói Thao Túng)
 
 - 0: sói, 1: dân, 2: solo, 3: dân làng hoặc ma sói

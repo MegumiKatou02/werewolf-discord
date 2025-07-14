@@ -36,6 +36,7 @@ import Villager from '../types/roles/Villager.js';
 import VoodooWerewolf from '../types/roles/VoodooWerewolf.js';
 import Werewolf from '../types/roles/WereWolf.js';
 import Witch from '../types/roles/Witch.js';
+import Wolffluence from '../types/roles/Wolffluencer.js';
 import WolfSeer from '../types/roles/WolfSeer.js';
 import { RoleResponseDMs } from '../utils/response.js';
 import {
@@ -1113,7 +1114,7 @@ class GameRoom extends EventEmitter {
 
         const influenceButton = new ButtonBuilder()
           .setCustomId(`influence_target_wolffluence_${player.userId}`)
-          .setLabel('🪡 Thao Túng')
+          .setLabel('🌘 Thao túng')
           .setStyle(ButtonStyle.Secondary);
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -2061,6 +2062,14 @@ class GameRoom extends EventEmitter {
   }
 
   processVote() {
+    let fluencePlayerId: null | string = null;;
+    this.players.forEach((player) => {
+      if (player.role instanceof Wolffluence && player.alive && player.role.influencePlayer) {
+        fluencePlayerId = player.role.influencePlayer;
+      }
+    });
+    // const fluencePlayer = this.players.find((p) => p.userId === fluencePlayerId);
+
     const totalVotes = this.players.reduce(
       (acc: Record<string, number>, player) => {
         if (
@@ -2068,7 +2077,15 @@ class GameRoom extends EventEmitter {
           player.role.voteHanged &&
           player.role.voteHanged !== 'skip'
         ) {
-          acc[player.role.voteHanged] = (acc[player.role.voteHanged] || 0) + 1;
+          if (player.role instanceof Wolffluence && fluencePlayerId) {
+            acc[player.role.voteHanged] = (acc[player.role.voteHanged] || 0) + 2;
+          } else {
+            if (player.userId === fluencePlayerId) {
+              acc[player.role.voteHanged] = 0;
+            } else {
+              acc[player.role.voteHanged] = (acc[player.role.voteHanged] || 0) + 1;
+            }
+          }
         }
         return acc;
       },
