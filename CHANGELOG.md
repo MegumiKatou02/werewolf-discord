@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.1] - 2025-07-14
+
+### Added
+
+- Thêm role **Sói Thao Túng**
+
 ## [3.0.1] - 2025-07-12
 
 ### Added
