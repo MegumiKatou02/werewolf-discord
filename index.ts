@@ -37,6 +37,7 @@ import defaultRoles from './src/client/events/interactions/defaultRoles.js';
 import detectiveInteraction from './src/client/events/interactions/detectiveInteraction.js';
 import foxSpiritInteraction from './src/client/events/interactions/foxSpiritInteraction.js';
 import gunnerInteraction from './src/client/events/interactions/gunnerInteraction.js';
+import loudmouthInteraction from './src/client/events/interactions/loudmouthInteraction.js';
 import maidInteraction from './src/client/events/interactions/maidInteraction.js';
 import mediumInteraction from './src/client/events/interactions/mediumInteraction.js';
 import puppeteerInteraction from './src/client/events/interactions/puppeteerInteraction.js';
@@ -674,6 +675,10 @@ client.on('interactionCreate', async (interaction) => {
       if (interaction.customId.startsWith('influence_target_wolffluence_')) {
         await wolffluenceInteraction.isButton(interaction);
       }
+      if (interaction.customId.startsWith('target_loudmouth_player_')) {
+        await loudmouthInteraction.isButton(interaction);
+      }
+
     } catch (error) {
       console.error('Lỗi xử lý button interaction:', error);
       console.error('Button customId:', interaction.customId);
@@ -908,6 +913,12 @@ client.on('interactionCreate', async (interaction) => {
           return;
         }
         await wolffluenceInteraction.isModalSubmit(interaction, gameRoom, sender);
+      }
+      if (interaction.customId.startsWith('submit_choose_loudmouth_player_')) {
+        if (!sender) {
+          return;
+        }
+        await loudmouthInteraction.isModalSubmit(interaction, gameRoom, sender);
       }
     } catch (error) {
       console.error('Lỗi xử lý modal interaction:', error);

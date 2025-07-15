@@ -8,12 +8,14 @@ import {
 import { MessageFlags } from 'discord.js';
 
 import type { GameRoom } from '../../../../core/room.js';
+import rolesData from '../../../../data/data.json' with { type: 'json' };
 import { Faction } from '../../../../types/faction.js';
 import type Player from '../../../../types/player.js';
 import Dead from '../../../../types/roles/Dead.js';
 import Gunner from '../../../../types/roles/Gunner.js';
 import Villager from '../../../../types/roles/Villager.js';
 import { WEREROLE } from '../../../../utils/role.js';
+import { PlayerIsDead } from '../../../game/helper.js';
 
 class GunnerInteraction {
   isButtonGunner = async (interaction: Interaction) => {
@@ -121,12 +123,13 @@ class GunnerInteraction {
       }
 
       sender.role.bullets -= 1;
-      targetPlayer.alive = false;
-      targetPlayer.role = new Dead(
-        targetPlayer.role.faction,
-        targetPlayer.role.id,
-        gameRoom.gameState.nightCount,
-      );
+      // targetPlayer.alive = false;
+      // targetPlayer.role = new Dead(
+      //   targetPlayer.role.faction,
+      //   targetPlayer.role.id,
+      //   gameRoom.gameState.nightCount,
+      // );
+      PlayerIsDead(targetPlayer, gameRoom.gameState.nightCount);
 
       const notifyMessages = gameRoom.players.map((player: Player) => {
         let content = '';
@@ -165,6 +168,24 @@ class GunnerInteraction {
         }));
 
         await gameRoom.batchSendMessages(maidMessages);
+      }
+
+      const cauBeMiengBu = gameRoom.players.find(
+        (p) => p.role.deathNight === gameRoom.gameState.nightCount &&
+          p.role instanceof Dead &&
+          p.role.originalRoleId === WEREROLE.LOUDMOUTH,
+      );
+
+      if (cauBeMiengBu && cauBeMiengBu.role instanceof Dead) {
+        const revealPlayerId = cauBeMiengBu.role.getStoreInformation().loudmouthPlayer;
+        const revealPlayer = gameRoom.players.find((p) => p.userId === revealPlayerId);
+
+        const loudmouthMessages = gameRoom.players.map((player: Player) => ({
+          userId: player.userId,
+          content: `### 👦 Cậu bé miệng bự đã chết, role của **${revealPlayer?.name}** là **${revealPlayer?.role instanceof Dead ? rolesData[revealPlayer?.role.originalRoleId.toString() as keyof typeof rolesData].title : revealPlayer?.role.name}**`,
+        }));
+
+        await gameRoom.batchSendMessages(loudmouthMessages);
       }
 
       const giaLang = gameRoom.players.find(

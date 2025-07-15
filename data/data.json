@@ -130,5 +130,11 @@
     "eName": "Wolffluencer",
     "faction": 0,
     "description": "Mỗi đêm, bạn có thể chọn một người chơi để thao túng họ. Ngày hôm sau, bạn sẽ điều khiển phiếu bầu của người chơi đó."
+  },
+  "22": {
+    "title": "Cậu Bé Miệng Bự",
+    "eName": "Loudmouth",
+    "faction": 1,
+    "description": "Bạn có thể chọn một người chơi để tiết lộ vai trò của họ khi bạn chết."
   }
 }

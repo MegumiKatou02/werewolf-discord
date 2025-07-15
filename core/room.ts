@@ -18,26 +18,30 @@ import { MessageFlags } from 'discord.js';
 
 import rolesData from '../data/data.json' with { type: 'json' };
 import ServerSettings from '../models/ServerSettings.js';
+import {
+  checkVictory,
+  isActivity,
+  PlayerIsDead,
+  processVote,
+  revealRoles,
+  totalVotedWolvesSolve,
+} from '../src/game/helper.js';
 import { Faction } from '../types/faction.js';
 import Player from '../types/player.js';
-import AlphaWerewolf from '../types/roles/AlphaWerewolf.js';
 import Bodyguard from '../types/roles/Bodyguard.js';
 import Dead from '../types/roles/Dead.js';
-import Detective from '../types/roles/Detective.js';
 import Elder from '../types/roles/Elder.js';
 import FoxSpirit from '../types/roles/FoxSpirit.js';
 import Gunner from '../types/roles/Gunner.js';
+import Loudmouth from '../types/roles/loudmouth.js';
 import Maid from '../types/roles/Maid.js';
 import Medium from '../types/roles/Medium.js';
 import Puppeteer from '../types/roles/Puppeteer.js';
-import Seer from '../types/roles/Seer.js';
 import Stalker from '../types/roles/Stalker.js';
 import Villager from '../types/roles/Villager.js';
 import VoodooWerewolf from '../types/roles/VoodooWerewolf.js';
 import Werewolf from '../types/roles/WereWolf.js';
 import Witch from '../types/roles/Witch.js';
-import Wolffluence from '../types/roles/Wolffluencer.js';
-import WolfSeer from '../types/roles/WolfSeer.js';
 import { RoleResponseDMs } from '../utils/response.js';
 import {
   roleTable,
@@ -591,44 +595,6 @@ class GameRoom extends EventEmitter {
     this.cleanup().catch(err => console.error('Cleanup error:', err));
   }
 
-  totalVotedWolvesSolve() {
-    const totalVotes = this.players.reduce(
-      (acc: Record<string, number>, player) => {
-        if (player.role.faction === Faction.WEREWOLF && 'voteBite' in player.role && typeof player.role.voteBite === 'string') {
-          acc[player.role.voteBite] = (acc[player.role.voteBite] || 0) + 1;
-        }
-        return acc;
-      },
-      {},
-    );
-
-    const voteEntries = Object.entries(totalVotes);
-
-    console.log(totalVotes);
-
-    if (voteEntries.length === 0) {
-      return null;
-    }
-
-    let maxVotes = 0;
-    let candidates: string[] = [];
-
-    for (const [userId, count] of voteEntries) {
-      if (count > maxVotes) {
-        maxVotes = count;
-        candidates = [userId];
-      } else if (count === maxVotes) {
-        candidates.push(userId);
-      }
-    }
-
-    if (candidates.length === 1) {
-      return candidates[0];
-    }
-
-    return null;
-  }
-
   async nightPhase() {
     this.gameState.phase = 'night';
     this.gameState.nightCount += 1;
@@ -1130,7 +1096,39 @@ class GameRoom extends EventEmitter {
 
         wolfMessages.push(message);
         this.nightMessages.set(player.userId, message);
-      } else {
+      } else if (
+        player.role.id === WEREROLE.LOUDMOUTH &&
+        player.role instanceof Loudmouth
+      ) {
+        let revealPlayer: undefined | Player = undefined;
+        if (player.role.revealPlayer) {
+          revealPlayer = this.players.find((p) => p.role instanceof Loudmouth && p.userId === p.role.revealPlayer);
+        }
+        await user.send(
+          `👦 Bạn là cậu bé miệng bự, ${revealPlayer ? `bạn đã chọn người chơi **${revealPlayer.name}** để tiết lộ vai trò khi bạn chết`: 'hãy chọn người chơi để tiết lộ vai trò khi bạn chết'}`,
+        );
+
+        const muteButton = new ButtonBuilder()
+          .setCustomId(`target_loudmouth_player_${player.userId}`)
+          .setLabel('👦 Tiết lộ')
+          .setStyle(ButtonStyle.Secondary);
+
+        if (!player.canUseSkill) {
+          muteButton.setDisabled(true);
+        }
+
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+          muteButton,
+        );
+
+        message = await user.send({
+          embeds: [embed],
+          files: [attachment],
+          components: [row],
+        });
+
+        this.nightMessages.set(player.userId, message);
+      }  else {
         await user.send(`🌙 Bạn là dân làng, một đêm yên tĩnh trôi qua. Bạn hãy chờ ${this.settings.nightTime} giây cho đến sáng.`);
 
         message = await user.send({ embeds: [embed], files: [attachment] });
@@ -1176,7 +1174,7 @@ class GameRoom extends EventEmitter {
           console.error('Không thể cập nhật nút vote của Sói:', err);
         }
       }
-      const mostVotedUserId = this.totalVotedWolvesSolve();
+      const mostVotedUserId = totalVotedWolvesSolve(this.players);
       if (mostVotedUserId) {
         for (const player of this.players) {
           // nếu phù thuỷ còn bình mới được gửi
@@ -1267,7 +1265,7 @@ class GameRoom extends EventEmitter {
   async solvePhase2() {
     this.gameState.addLog(`## Đêm thứ ${this.gameState.nightCount}`);
 
-    let mostVotedUserId = this.totalVotedWolvesSolve();
+    let mostVotedUserId = totalVotedWolvesSolve(this.players);
     const killedPlayers = new Set(); // vẫn có thể cứu được
     const sureDieInTheNight = new Set(); // 100% chết ngay trong đêm đó (không thể cứu hay bảo vệ)
     // let savedPlayers = new Set();
@@ -1359,7 +1357,7 @@ class GameRoom extends EventEmitter {
         stalker.role instanceof Stalker &&
         stalker.role.stalkedPerson &&
         stalker.role.stalkedPerson === player.userId &&
-        this.isActivity(player.role.id)
+        isActivity(this.players, player.role.id)
       ) {
         const user = await this.fetchUser(stalker.userId);
         if (user) {
@@ -1374,7 +1372,7 @@ class GameRoom extends EventEmitter {
         stalker.role instanceof Stalker &&
         stalker.role.stalkedPerson &&
         stalker.role.stalkedPerson === player.userId &&
-        !this.isActivity(player.role.id)
+        !isActivity(this.players, player.role.id)
       ) {
         const user = await this.fetchUser(stalker.userId);
         if (user) {
@@ -1389,7 +1387,7 @@ class GameRoom extends EventEmitter {
         stalker.role instanceof Stalker &&
         stalker.role.killedPerson &&
         stalker.role.killedPerson === player.userId &&
-        this.isActivity(player.role.id)
+        isActivity(this.players, player.role.id)
       ) {
         const user = await this.fetchUser(stalker.userId);
         if (user) {
@@ -1404,7 +1402,7 @@ class GameRoom extends EventEmitter {
         stalker.role instanceof Stalker &&
         stalker.role.killedPerson &&
         stalker.role.killedPerson === player.userId &&
-        !this.isActivity(player.role.id)
+        !isActivity(this.players, player.role.id)
       ) {
         const user = await this.fetchUser(stalker.userId);
         if (user) {
@@ -1510,15 +1508,18 @@ class GameRoom extends EventEmitter {
         killed.alive = true;
         killedPlayers.delete(killedId);
       } else if (killed) {
-        killed.role = new Dead(killed.role.faction, killed.role.id, this.gameState.nightCount);
-        killed.alive = false;
+        // killed.role = new Dead(killed.role.faction, killed.role.id, this.gameState.nightCount);
+        // killed.alive = false;
+        PlayerIsDead(killed, this.gameState.nightCount);
       }
     }
     for (const killedId of sureDieInTheNight) {
       const killed = this.players.find((p) => p.userId === killedId);
       if (killed) {
-        killed.role = new Dead(killed.role.faction, killed.role.id, this.gameState.nightCount);
-        killed.alive = false;
+        // killed.role = new Dead(killed.role.faction, killed.role.id, this.gameState.nightCount);
+        // killed.alive = false;
+        PlayerIsDead(killed, this.gameState.nightCount);
+
       }
     }
 
@@ -1553,6 +1554,8 @@ class GameRoom extends EventEmitter {
         });
       await this.safePromiseAllSettled(dmVillagerPromise);
     }
+
+    const cauBeMiengBu = this.players.find((p) => p.role instanceof Dead && p.role.originalRoleId === WEREROLE.LOUDMOUTH && p.role.deathNight === this.gameState.nightCount);
 
     if (allDeadTonight.size !== 0) {
       this.gameState.addLog(
@@ -1597,6 +1600,17 @@ class GameRoom extends EventEmitter {
         if (maidNewRole) {
           await user.send(
             `### 👒 Hầu gái đã lên thay vai trò **${maidNewRole}** của chủ vì chủ đã chết.\n`,
+          );
+        }
+
+        if (cauBeMiengBu && cauBeMiengBu.role instanceof Dead) {
+          const revealPlayerId = cauBeMiengBu.role.getStoreInformation().loudmouthPlayer;
+          const revealPlayer = this.players.find((p) => p.userId === revealPlayerId);
+
+          await user.send(
+            // xu li truong hop nguoi bi lo da bi chet (da xu ly)
+            // console.log(rolesData[revealPlayer?.role.originalRoleId.toString() as keyof typeof rolesData].title);
+            `### 👦 Cậu bé miệng bự đã chết, role của **${revealPlayer?.name}** là **${revealPlayer?.role instanceof Dead ? rolesData[revealPlayer?.role.originalRoleId.toString() as keyof typeof rolesData].title : revealPlayer?.role.name}**`,
           );
         }
 
@@ -1830,7 +1844,7 @@ class GameRoom extends EventEmitter {
     }
     this.voteMessages.clear();
 
-    const resultHangedPlayer = this.processVote();
+    const resultHangedPlayer = processVote(this.players);
 
     if (!resultHangedPlayer) {
       this.gameState.addLog('Không ai bị treo cổ do không đủ phiếu bầu\n');
@@ -1861,19 +1875,26 @@ class GameRoom extends EventEmitter {
           await user.send(
             `🎭 **${resultHangedPlayer.hangedPlayer.name}** là **Ngố** và đã bị treo cổ. \n🎉 **Ngố** thắng !!.`,
           );
-          const roleRevealEmbed = this.revealRoles();
+          const roleRevealEmbed = revealRoles(this.players);
           await user.send({ embeds: [roleRevealEmbed] });
         });
         await this.safePromiseAllSettled(foolMessages);
         return;
       }
 
-      resultHangedPlayer.hangedPlayer.alive = false;
-      resultHangedPlayer.hangedPlayer.role = new Dead(
-        resultHangedPlayer.hangedPlayer.role.faction,
-        resultHangedPlayer.hangedPlayer.role.id,
-        this.gameState.nightCount,
-      );
+      // *check
+      // const loudmouthPlayer = resultHangedPlayer.hangedPlayer.role instanceof Loudmouth
+      //   ? resultHangedPlayer.hangedPlayer : null;
+
+      // resultHangedPlayer.hangedPlayer.alive = false;
+      // resultHangedPlayer.hangedPlayer.role = new Dead(
+      //   resultHangedPlayer.hangedPlayer.role.faction,
+      //   resultHangedPlayer.hangedPlayer.role.id,
+      //   this.gameState.nightCount,
+      //   { loudmouthPlayer: loudmouthPlayer },
+      // );
+
+      PlayerIsDead(resultHangedPlayer.hangedPlayer, this.gameState.nightCount);
 
       const maidNewRole = await this.checkIfMasterIsDead(resultHangedPlayer.hangedPlayer);
 
@@ -1953,6 +1974,24 @@ class GameRoom extends EventEmitter {
       await this.safePromiseAllSettled(dmVillagerPromise);
     }
 
+    // Kiem tra Loudmouth chet hom nay
+    const loudmouthDead = this.players.find((p) => p.role instanceof Dead && p.role.originalRoleId === WEREROLE.LOUDMOUTH && p.role.deathNight === this.gameState.nightCount);
+    if (loudmouthDead && loudmouthDead.role instanceof Dead) {
+      const revealPlayerId = loudmouthDead.role.getStoreInformation().loudmouthPlayer;
+      const revealPlayer = this.players.find((p) => p.userId === revealPlayerId);
+
+      const dmLoudmouthPromise = this.players.map(async (player) => {
+        const user = await this.fetchUser(player.userId);
+        if (!user) {
+          return;
+        }
+        await user.send(
+          // xu li truong hop nguoi bi lo da bi chet (da xu ly)
+          `### 👦 Cậu bé miệng bự đã chết, role của **${revealPlayer?.name}** là **${revealPlayer?.role instanceof Dead ? rolesData[revealPlayer?.role.originalRoleId.toString() as keyof typeof rolesData].title : revealPlayer?.role.name}**`,
+        );
+      });
+      await this.safePromiseAllSettled(dmLoudmouthPromise);
+    }
     // Reset vote and restrict
     for (const player of this.players) {
       player.role.voteHanged = null;
@@ -1963,169 +2002,8 @@ class GameRoom extends EventEmitter {
     await this.checkEndGame();
   }
 
-  revealRoles() {
-    const roleRevealEmbed = new EmbedBuilder()
-      .setColor(0x2ecc71)
-      .setTitle('Tiết Lộ Vai Trò')
-      .setDescription('```Danh sách vai trò của tất cả người chơi:```')
-      .addFields(
-        this.players.map((player) => {
-          let nameRole = player.role.name;
-          if (player.role.id === WEREROLE.DEAD && player.role instanceof Dead) {
-            const keyRole =
-              player.role.originalRoleId.toString() as keyof typeof rolesData;
-            nameRole = rolesData[keyRole].title;
-            if (player.role.originalRoleId === WEREROLE.CURSED) {
-              nameRole = `${nameRole} (Bán Sói)`;
-            }
-          }
-          let roleEmoji = '👤';
-          // Nếu là người chết thì lấy originalRoleId, còn người chưa chết thì lấy id
-          switch (
-            (player.role instanceof Dead && player.role.originalRoleId) ||
-            player.role.id
-          ) {
-          case 0:
-            roleEmoji = '🐺';
-            break;
-          case 1:
-            roleEmoji = '👥';
-            break;
-          case 2:
-            roleEmoji = '🛡️';
-            break;
-          case 3:
-            roleEmoji = '🌙';
-            break;
-          case 4:
-            roleEmoji = '👁️';
-            break;
-          case 5:
-            roleEmoji = '🔍';
-            break;
-          case 6:
-            roleEmoji = '🧪';
-            break;
-          case 7:
-            roleEmoji = '🃏';
-            break;
-          case 8:
-            roleEmoji = '🔮';
-            break;
-          case 10:
-            roleEmoji = '👒';
-            break;
-          case 11:
-            roleEmoji = '🤷';
-            break;
-          case 12:
-            roleEmoji = '🐺';
-            break;
-          case 13:
-            roleEmoji = '🐺';
-            break;
-          case 14:
-            roleEmoji = '🦊';
-            break;
-          case 15:
-            roleEmoji = '👴';
-            break;
-          case 16:
-            roleEmoji = '👀';
-            break;
-          case 17:
-            roleEmoji = '🔫';
-            break;
-          case 18:
-            roleEmoji = '🐺';
-            break;
-          case 19:
-            roleEmoji = '🐕‍🦺';
-            break;
-          case 20:
-            roleEmoji = '🐺';
-            break;
-          case 21:
-            roleEmoji = '🐺';
-            break;
-          }
-          return {
-            name: `${roleEmoji} ${nameRole}`,
-            value: `**${player.name}**${!player.alive ? ' (💀 Đã chết)' : ''}`,
-            inline: true,
-          };
-        }),
-      )
-      .setTimestamp()
-      .setFooter({ text: 'Hẹ hẹ hẹ' });
-    return roleRevealEmbed;
-  }
-
-  processVote() {
-    let fluencePlayerId: null | string = null;;
-    this.players.forEach((player) => {
-      if (player.role instanceof Wolffluence && player.alive && player.role.influencePlayer) {
-        fluencePlayerId = player.role.influencePlayer;
-      }
-    });
-    // const fluencePlayer = this.players.find((p) => p.userId === fluencePlayerId);
-
-    const totalVotes = this.players.reduce(
-      (acc: Record<string, number>, player) => {
-        if (
-          player.alive &&
-          player.role.voteHanged &&
-          player.role.voteHanged !== 'skip'
-        ) {
-          if (player.role instanceof Wolffluence && fluencePlayerId) {
-            acc[player.role.voteHanged] = (acc[player.role.voteHanged] || 0) + 2;
-          } else {
-            if (player.userId === fluencePlayerId) {
-              acc[player.role.voteHanged] = 0;
-            } else {
-              acc[player.role.voteHanged] = (acc[player.role.voteHanged] || 0) + 1;
-            }
-          }
-        }
-        return acc;
-      },
-      {},
-    );
-
-    const voteEntries = Object.entries(totalVotes);
-
-    if (voteEntries.length === 0) {
-      return null;
-    }
-
-    let maxVotes = 0;
-    let candidates: string[] = [];
-
-    for (const [userId, count] of voteEntries) {
-      if (count > maxVotes) {
-        maxVotes = count;
-        candidates = [userId];
-      } else if (count === maxVotes) {
-        candidates.push(userId);
-      }
-    }
-
-    if (candidates.length === 1 && maxVotes >= 2) {
-      const hangedPlayer = this.players.find((p) => p.userId === candidates[0]);
-      if (hangedPlayer && hangedPlayer.alive) {
-        hangedPlayer.alive = false;
-        return {
-          hangedPlayer,
-          maxVotes,
-        };
-      }
-    }
-
-    return null;
-  }
-
   async checkEndGame() {
-    const victoryResult = this.checkVictory();
+    const victoryResult = checkVictory(this.players);
     if (victoryResult) {
       this.status = 'ended';
       let winMessage = '';
@@ -2142,7 +2020,7 @@ class GameRoom extends EventEmitter {
         break;
       }
 
-      const roleRevealEmbed = this.revealRoles();
+      const roleRevealEmbed = revealRoles(this.players);
       const endGameMessages = this.players.map(player => ({
         userId: player.userId,
         content: {
@@ -2205,131 +2083,6 @@ class GameRoom extends EventEmitter {
         await this.cleanup();
       }
     }
-  }
-
-  /**
-   * @property {string} winner -  ('werewolf', 'village', 'solo').
-   * @property {number} faction -  (0: sói, 1: dân, 2: solo)
-   */
-  checkVictory() {
-    const alivePlayers = this.players.filter((p) => p.alive);
-    const aliveWolves = alivePlayers.filter((p) => p.role.faction === 0);
-    // const aliveVillagers = alivePlayers.filter((p) => p.role.faction === 1);
-    const aliveSolos = alivePlayers.filter((p) => p.role.faction === 2);
-
-    if (alivePlayers.length === aliveSolos.length && aliveSolos.length > 0) {
-      return { winner: 'solo', faction: 2 };
-    }
-
-    if (aliveWolves.length === 0) {
-      return { winner: 'village', faction: 1 };
-    }
-
-    const nonWolves = alivePlayers.length - aliveWolves.length;
-    if (aliveWolves.length >= nonWolves) {
-      return { winner: 'werewolf', faction: 0 };
-    }
-
-    return null;
-  }
-  /**
-   *
-   * @description Dùng hàm này trước resetday
-   */
-  isActivity(role: number) {
-    const player = this.players.find((p) => p.role.id === role);
-    if (!player) {
-      return false;
-    }
-    // **check: tinh ca soi thuong va soi co chuc nang vote
-    if (
-      player.role.faction === Faction.WEREWOLF &&
-      'voteBite' in player.role &&
-      typeof player.role.voteBite === 'string' &&
-      player.role.voteBite
-    ) {
-      return true;
-    }
-    // **check
-    if (
-      player.role.id === WEREROLE.BODYGUARD &&
-      player.role instanceof Bodyguard &&
-      player.role.protectedPerson
-    ) {
-      return true;
-    }
-    if (
-      player.role.id === WEREROLE.SEER &&
-      player.role instanceof Seer &&
-      player.role.viewCount <= 0
-    ) {
-      return true;
-    }
-    if (
-      player.role.id === WEREROLE.DETECTIVE &&
-      player.role instanceof Detective &&
-      player.role.investigatedPairs.length > 0
-    ) {
-      return true;
-    }
-    if (
-      player.role.id === WEREROLE.WITCH &&
-      player.role instanceof Witch &&
-      player.role.poisonedPerson
-    ) {
-      return true;
-    }
-    if (
-      player.role.id === WEREROLE.WITCH &&
-      player.role instanceof Witch &&
-      player.role.healedPerson
-    ) {
-      return true;
-    }
-    if (
-      player.role.id === WEREROLE.MEDIUM &&
-      player.role instanceof Medium &&
-      player.role.revivedPerson
-    ) {
-      return true;
-    }
-    if (
-      player.role.id === WEREROLE.WOLFSEER &&
-      player.role instanceof WolfSeer &&
-      player.role.seerCount <= 0
-    ) {
-      return true;
-    }
-    if (
-      player.role.id === WEREROLE.ALPHAWEREWOLF &&
-      player.role instanceof AlphaWerewolf &&
-      player.role.maskWolf
-    ) {
-      return true;
-    }
-    if (
-      player.role.id === WEREROLE.FOXSPIRIT &&
-      player.role instanceof FoxSpirit &&
-      player.role.threeViewed.length > 0
-    ) {
-      return true;
-    }
-    if (
-      player.role.id === WEREROLE.PUPPETEER &&
-      player.role instanceof Puppeteer &&
-      player.role.targetWolf
-    ) {
-      return true;
-    }
-    if (
-      player.role.id === WEREROLE.VOODOO &&
-      player.role instanceof VoodooWerewolf &&
-      player.role.silentPlayer
-    ) {
-      return true;
-    }
-
-    return false;
   }
 
   /**
