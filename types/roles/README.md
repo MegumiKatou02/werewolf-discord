@@ -20,5 +20,6 @@
 19. The Puppeteer (Người Múa Rối)
 20. Voodoo Werewolf (Sói Tà Thuật)
 21. Wolffluencer (Sói Thao Túng)
+22. Loudmouth (Cậu Bé Miệng Bự)
 
 - 0: sói, 1: dân, 2: solo, 3: dân làng hoặc ma sói

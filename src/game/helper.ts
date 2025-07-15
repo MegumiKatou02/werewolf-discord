@@ -8,6 +8,7 @@ import Bodyguard from '../../types/roles/Bodyguard.js';
 import Dead from '../../types/roles/Dead.js';
 import Detective from '../../types/roles/Detective.js';
 import FoxSpirit from '../../types/roles/FoxSpirit.js';
+import Loudmouth from '../../types/roles/loudmouth.js';
 import Medium from '../../types/roles/Medium.js';
 import Puppeteer from '../../types/roles/Puppeteer.js';
 import Seer from '../../types/roles/Seer.js';
@@ -350,4 +351,20 @@ export const processVote = (players: Player[]) => {
   }
 
   return null;
+};
+
+/**
+ * @param player người chơi bị chết
+ * @param nightCount đêm bị chết
+ */
+export const PlayerIsDead = (player: Player, nightCount: number) => {
+  const loudmouthPlayer = player.role instanceof Loudmouth ? player.role.revealPlayer : null;
+
+  player.alive = false;
+  player.role = new Dead(
+    player.role.faction,
+    player.role.id,
+    nightCount,
+    { loudmouthPlayer },
+  );
 };

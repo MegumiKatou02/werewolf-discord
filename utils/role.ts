@@ -8,6 +8,7 @@ import Fool from '../types/roles/Fool.js';
 import FoxSpirit from '../types/roles/FoxSpirit.js';
 import Gunner from '../types/roles/Gunner.js';
 import KittenWolf from '../types/roles/KittenWolf.js';
+import Loudmouth from '../types/roles/loudmouth.js';
 import Lycan from '../types/roles/Lycan.js';
 import Maid from '../types/roles/Maid.js';
 import Medium from '../types/roles/Medium.js';
@@ -77,6 +78,8 @@ const assignRolesGame = (roleId: number) => {
     return new VoodooWerewolf();
   case 21:
     return new Wolffluence();
+  case 22:
+    return new Loudmouth();
   default:
     throw new Error(`Role id không hợp lệ: ${roleId}`);
   }
@@ -120,6 +123,7 @@ const WEREROLE = Object.freeze({
   PUPPETEER: 19,
   VOODOO: 20,
   WOLFFLUENCE: 21,
+  LOUDMOUTH: 22,
 });
 
 const getRoleName = (roleId: number): string => {

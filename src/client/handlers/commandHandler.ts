@@ -145,6 +145,13 @@ const commandHandler = async (message: Message) => {
     21,
     FactionRole.Werewolf,
   );
+  await RoleResponse(
+    message,
+    ['!loudmouth', '!caubemiengbu'],
+    'loudmouth.png',
+    22,
+    FactionRole.Village,
+  );
 };
 
 export default commandHandler;
