@@ -12,6 +12,7 @@ import { MessageFlags } from 'discord.js';
 import rolesData from '../data/data.json' with { type: 'json' };
 import EmbedBuilderWerewolf from '../utils/embed.js';
 import { convertFactionRoles } from '../utils/role.js';
+import { UI_COLORS } from '../utils/ui.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -66,7 +67,7 @@ export default {
     );
 
     const initialEmbed = new EmbedBuilder()
-      .setColor(0x3498db)
+      .setColor(UI_COLORS.accent)
       .setTitle('🎭 THÔNG TIN VAI TRÒ')
       .setDescription(
         'Chọn một vai trò từ menu bên dưới để xem thông tin chi tiết!\n\n' +
