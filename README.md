@@ -86,15 +86,16 @@ npm run dev:watch
 
 ### ⚙️ **Bot Permissions**
 Bot cần các permissions sau trên Discord:
-- ✅ **View Channels**
-- ✅ **Send Messages**
-- ✅ **Send Messages in Threads**
-- ✅ **Embed Links**
-- ✅ **Attach Files**
-- ✅ **Read Message History**
-- ✅ **Use Slash Commands**
-- ✅ **Add Reactions**
-- ✅ **Use External Emojis**
+- [x] View Channels
+- [x] Send Messages
+- [x] Send Messages in Threads
+- [x] Embed Links
+- [x] Attach Files
+- [x] Read Message History
+- [x] Use Slash Commands
+- [x] Add Reactions
+- [x] Use External Emojis
+- [ ] Everything
 
 ---
 
