@@ -71,6 +71,7 @@ export async function votePhase(room: GameRoom): Promise<void> {
     room.once('voteComplete', resolve);
   });
 
+  // eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
   const notificationPromise = new Promise<void>((resolve) => {
     room.addTimeout(
       async () => {
@@ -86,9 +87,10 @@ export async function votePhase(room: GameRoom): Promise<void> {
     );
   });
 
-  room.trackPromise(timeoutPromise as Promise<unknown>);
-  room.trackPromise(voteCompletePromise as Promise<unknown>);
-  room.trackPromise(notificationPromise as Promise<unknown>);
+  // **check
+  // room.trackPromise(timeoutPromise as Promise<unknown>);
+  // room.trackPromise(voteCompletePromise as Promise<unknown>);
+  // room.trackPromise(notificationPromise as Promise<unknown>);
 
   try {
     await Promise.race([timeoutPromise, voteCompletePromise]);
