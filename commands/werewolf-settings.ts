@@ -12,6 +12,7 @@ import { MessageFlags } from 'discord.js';
 
 import { gameRooms } from '../core/room.js';
 import ServerSettings from '../models/ServerSettings.js';
+import { UI_COLORS } from '../utils/ui.js';
 
 const defaultSettings = {
   wolfVoteTime: 40,
@@ -47,7 +48,7 @@ export default {
 
     if (!isAdmin && !isDev) {
       return interaction.reply({
-        content: '❌ Bạn không có quyền sử dụng lệnh này!',
+        content: 'Bạn không có quyền sử dụng lệnh này.',
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -57,7 +58,7 @@ export default {
     const gameRoom = gameRooms.get(guildId);
     if (gameRoom && gameRoom.status === 'starting') {
       return interaction.reply({
-        content: '❌ Không thể thay đổi cài đặt khi đang có phòng chơi!',
+        content: 'Không thể thay đổi cài đặt khi đang có phòng chơi.',
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -72,37 +73,37 @@ export default {
     }
 
     const settingsEmbed = new EmbedBuilder()
-      .setColor(0x9c27b0)
-      .setTitle('⚙️ CÀI ĐẶT GAME MA SÓI')
-      .setDescription('```📋 Các thông số hiện tại của game```')
+      .setColor(UI_COLORS.accent)
+      .setTitle('Cài đặt Ma Sói')
+      .setDescription('Các thông số hiện tại')
       .addFields(
         {
-          name: '🐺 Thời Gian Sói Vote',
+          name: 'Thời gian Sói vote',
           value: `\`${settings.wolfVoteTime}\` giây`,
           inline: true,
         },
         {
-          name: '🌙 Thời Gian Ban Đêm',
+          name: 'Thời gian Ban đêm',
           value: `\`${settings.nightTime}\` giây`,
           inline: true,
         },
         {
-          name: '💭 Thời Gian Thảo Luận',
+          name: 'Thời gian Thảo luận',
           value: `\`${settings.discussTime}\` giây`,
           inline: true,
         },
         {
-          name: '🗳️ Thời Gian Vote Treo Cổ',
+          name: 'Thời gian Vote treo cổ',
           value: `\`${settings.voteTime}\` giây`,
           inline: true,
         },
       )
-      .setFooter({ text: '💡 Chỉ Admin mới có thể thay đổi cài đặt' });
+      .setFooter({ text: 'Chỉ Admin có thể thay đổi cài đặt' });
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId('edit_settings')
-        .setLabel('🔧 Điều Chỉnh Cài Đặt')
+        .setLabel('Điều chỉnh cài đặt')
         .setStyle(ButtonStyle.Primary),
     );
 
