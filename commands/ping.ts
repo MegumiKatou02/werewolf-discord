@@ -15,7 +15,7 @@ export default {
 
     if (useV2) {
       const pingStart = Date.now();
-      
+
       await interaction.reply(
         buildMinimalReplyPayload({
           title: 'Pong',
