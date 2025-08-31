@@ -74,7 +74,7 @@ const commandHandler = async (message: Message) => {
     10,
     FactionRole.Village,
   );
-  await RoleResponse(message, ['!lycan'], 'lycan.png', 11, FactionRole.Village);
+  await RoleResponse(message, ['!lycan', '!soicodoc'], 'lycan.png', 11, FactionRole.Village);
   await RoleResponse(
     message,
     ['!stalker', '!hori', '!stalkẻ'],

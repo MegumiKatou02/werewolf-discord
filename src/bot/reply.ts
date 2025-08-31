@@ -1,4 +1,4 @@
-import type { ButtonInteraction, ChatInputCommandInteraction, Interaction, InteractionEditReplyOptions, InteractionReplyOptions, MessageContextMenuCommandInteraction, ModalSubmitInteraction, UserContextMenuCommandInteraction } from 'discord.js';
+import type { ButtonInteraction, CacheType, ChatInputCommandInteraction, Interaction, InteractionEditReplyOptions, InteractionReplyOptions, MessageContextMenuCommandInteraction, ModalSubmitInteraction, PrimaryEntryPointCommandInteraction, UserContextMenuCommandInteraction } from 'discord.js';
 
 export function isInteractionValid(interaction: Interaction): boolean {
   const INTERACTION_TIMEOUT = 15 * 60 * 1000;
@@ -8,7 +8,7 @@ export function isInteractionValid(interaction: Interaction): boolean {
 }
 
 export async function safeReply(
-  interaction: ChatInputCommandInteraction | ButtonInteraction | ModalSubmitInteraction | MessageContextMenuCommandInteraction | UserContextMenuCommandInteraction,
+  interaction: ChatInputCommandInteraction | ButtonInteraction | ModalSubmitInteraction | MessageContextMenuCommandInteraction | UserContextMenuCommandInteraction | PrimaryEntryPointCommandInteraction<CacheType>,
   options: InteractionReplyOptions,
 ): Promise<boolean> {
   try {
