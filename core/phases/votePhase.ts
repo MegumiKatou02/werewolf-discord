@@ -121,16 +121,11 @@ export async function votePhase(room: GameRoom): Promise<void> {
 
   if (!resultHangedPlayer) {
     room.gameState.addLog('Không ai bị treo cổ do không đủ phiếu bầu\n');
-    const noHangPromises = room.players.map(async (player) => {
-      const user = await room.fetchUser(player.userId);
-      if (!user) {
-        return;
-      }
-      await user.send(
-        '🎭 Không đủ số phiếu hoặc có nhiều người cùng số phiếu cao nhất, không ai bị treo cổ trong ngày hôm nay.',
-      );
-    });
-    await room.safePromiseAllSettled(noHangPromises);
+    const noHangMessages = room.players.map((player) => ({
+      userId: player.userId,
+      content: '🎭 Không đủ số phiếu hoặc có nhiều người cùng số phiếu cao nhất, không ai bị treo cổ trong ngày hôm nay.',
+    }));
+    await room.batchSendMessages(noHangMessages);
   } else {
     room.gameState.addLog(
       `**${resultHangedPlayer.hangedPlayer.name}** đã bị dân làng treo cổ`,
@@ -237,7 +232,7 @@ export async function votePhase(room: GameRoom): Promise<void> {
   const loudmouthDead = room.players.find((p) => p.role instanceof Dead && p.role.originalRoleId === WEREROLE.LOUDMOUTH && p.role.deathNight === room.gameState.nightCount);
   if (loudmouthDead && loudmouthDead.role instanceof Dead) {
     const storeInfo = loudmouthDead.role.getStoreInformation();
-    
+
     if (!storeInfo.loudmouthRevealed) {
       const revealPlayerId = storeInfo.loudmouthPlayer;
       const revealPlayer = room.players.find((p) => p.userId === revealPlayerId);
