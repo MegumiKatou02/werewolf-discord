@@ -102,7 +102,7 @@ export async function handleSpamAction(userId: string, action: { isSpam: boolean
 
 async function cleanupSpamTracker(): Promise<void> {
   const now = Date.now();
-  const threshold = 24 * 60 * 60 * 1000;
+  const threshold = 2 * 60 * 60 * 1000;
 
   if (userMessageTracker.size === 0) {
     return;
@@ -150,7 +150,7 @@ export function startSpamCleanup(): void {
     cleanupSpamTracker().catch(error => {
       console.error('❌ Spam cleanup async error:', error);
     });
-  }, 60 * 60 * 1000);
+  }, 15 * 60 * 1000);
 }
 
 export function stopSpamCleanup(): void {
