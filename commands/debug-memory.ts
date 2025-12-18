@@ -10,7 +10,7 @@ export default {
   async execute(interaction: any) {
     const memUsage = process.memoryUsage();
     const activeRooms = gameRooms.size;
-    
+
     const roomDetails = Array.from(gameRooms.entries()).map(([guildId, room]) => {
       return `- Guild: ${guildId} | Status: ${room.status} | Players: ${room.players.length} | Phase: ${room.gameState.phase}`;
     }).join('\n');

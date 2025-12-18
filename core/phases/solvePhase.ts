@@ -290,7 +290,7 @@ export async function solvePhase(room: GameRoom): Promise<void> {
   let loudmouthRevealedThisPhase = false;
   if (cauBeMiengBu && cauBeMiengBu.role instanceof Dead) {
     const storeInfo = cauBeMiengBu.role.getStoreInformation();
-    
+
     if (!storeInfo.loudmouthRevealed) {
       const revealPlayerId = storeInfo.loudmouthPlayer;
       const revealPlayer = room.players.find((p) => p.userId === revealPlayerId);
