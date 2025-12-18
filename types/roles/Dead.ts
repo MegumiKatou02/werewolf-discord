@@ -2,6 +2,7 @@ import Role from './role.js';
 
 type Store = {
   loudmouthPlayer?: string | null,
+  loudmouthRevealed?: boolean,
 }
 
 class Dead extends Role {
@@ -22,6 +23,10 @@ class Dead extends Role {
 
   getStoreInformation = (): Store => {
     return this.storeInformation;
+  };
+
+  markLoudmouthRevealed = () => {
+    this.storeInformation.loudmouthRevealed = true;
   };
 
   resetDay() {}
