@@ -1,7 +1,7 @@
 import { AttachmentBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, type APIActionRowComponent, type APIButtonComponent } from 'discord.js';
 
 import rolesData from '../../data/data.json' with { type: 'json' };
-import { processVote, revealRoles } from '../../src/game/helper.js';
+import { processVote, revealRoles, PlayerIsDead } from '../../src/game/helper.js';
 import Dead from '../../types/roles/Dead.js';
 import Villager from '../../types/roles/Villager.js';
 import Werewolf from '../../types/roles/WereWolf.js';
@@ -157,6 +157,8 @@ export async function votePhase(room: GameRoom): Promise<void> {
 
     const maidNewRole = await room.checkIfMasterIsDead(resultHangedPlayer.hangedPlayer);
 
+    PlayerIsDead(resultHangedPlayer.hangedPlayer, room.gameState.nightCount);
+
     const hangMessages = room.players.map(async (player) => {
       const user = await room.fetchUser(player.userId);
       if (!user) {
@@ -234,19 +236,31 @@ export async function votePhase(room: GameRoom): Promise<void> {
 
   const loudmouthDead = room.players.find((p) => p.role instanceof Dead && p.role.originalRoleId === WEREROLE.LOUDMOUTH && p.role.deathNight === room.gameState.nightCount);
   if (loudmouthDead && loudmouthDead.role instanceof Dead) {
-    const revealPlayerId = loudmouthDead.role.getStoreInformation().loudmouthPlayer;
-    const revealPlayer = room.players.find((p) => p.userId === revealPlayerId);
+    const storeInfo = loudmouthDead.role.getStoreInformation();
+    
+    if (!storeInfo.loudmouthRevealed) {
+      const revealPlayerId = storeInfo.loudmouthPlayer;
+      const revealPlayer = room.players.find((p) => p.userId === revealPlayerId);
 
-    const dmLoudmouthPromise = room.players.map(async (player) => {
-      const user = await room.fetchUser(player.userId);
-      if (!user) {
-        return;
+      if (revealPlayer) {
+        room.gameState.addLog(
+          `👦 Cậu bé miệng bự đã chết, tiết lộ role của **${revealPlayer.name}** là **${revealPlayer.role instanceof Dead ? rolesData[revealPlayer.role.originalRoleId.toString() as keyof typeof rolesData].title : revealPlayer.role.name}**`,
+        );
       }
-      await user.send(
-        `### 👦 Cậu bé miệng bự đã chết, role của **${revealPlayer?.name}** là **${revealPlayer?.role instanceof Dead ? rolesData[revealPlayer?.role.originalRoleId.toString() as keyof typeof rolesData].title : revealPlayer?.role.name}**`,
-      );
-    });
-    await room.safePromiseAllSettled(dmLoudmouthPromise);
+
+      const dmLoudmouthPromise = room.players.map(async (player) => {
+        const user = await room.fetchUser(player.userId);
+        if (!user) {
+          return;
+        }
+        await user.send(
+          `### 👦 Cậu bé miệng bự đã chết, role của **${revealPlayer?.name}** là **${revealPlayer?.role instanceof Dead ? rolesData[revealPlayer?.role.originalRoleId.toString() as keyof typeof rolesData].title : revealPlayer?.role.name}**`,
+        );
+      });
+      await room.safePromiseAllSettled(dmLoudmouthPromise);
+
+      loudmouthDead.role.markLoudmouthRevealed();
+    }
   }
   for (const player of room.players) {
     player.role.voteHanged = null;

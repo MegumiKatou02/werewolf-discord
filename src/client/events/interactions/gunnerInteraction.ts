@@ -177,15 +177,27 @@ class GunnerInteraction {
       );
 
       if (cauBeMiengBu && cauBeMiengBu.role instanceof Dead) {
-        const revealPlayerId = cauBeMiengBu.role.getStoreInformation().loudmouthPlayer;
-        const revealPlayer = gameRoom.players.find((p) => p.userId === revealPlayerId);
+        const storeInfo = cauBeMiengBu.role.getStoreInformation();
+        
+        if (!storeInfo.loudmouthRevealed) {
+          const revealPlayerId = storeInfo.loudmouthPlayer;
+          const revealPlayer = gameRoom.players.find((p) => p.userId === revealPlayerId);
 
-        const loudmouthMessages = gameRoom.players.map((player: Player) => ({
-          userId: player.userId,
-          content: `### 👦 Cậu bé miệng bự đã chết, role của **${revealPlayer?.name}** là **${revealPlayer?.role instanceof Dead ? rolesData[revealPlayer?.role.originalRoleId.toString() as keyof typeof rolesData].title : revealPlayer?.role.name}**`,
-        }));
+          if (revealPlayer) {
+            gameRoom.gameState.addLog(
+              `👦 Cậu bé miệng bự đã chết, tiết lộ role của **${revealPlayer.name}** là **${revealPlayer.role instanceof Dead ? rolesData[revealPlayer.role.originalRoleId.toString() as keyof typeof rolesData].title : revealPlayer.role.name}**`,
+            );
+          }
 
-        await gameRoom.batchSendMessages(loudmouthMessages);
+          const loudmouthMessages = gameRoom.players.map((player: Player) => ({
+            userId: player.userId,
+            content: `### 👦 Cậu bé miệng bự đã chết, role của **${revealPlayer?.name}** là **${revealPlayer?.role instanceof Dead ? rolesData[revealPlayer?.role.originalRoleId.toString() as keyof typeof rolesData].title : revealPlayer?.role.name}**`,
+          }));
+
+          await gameRoom.batchSendMessages(loudmouthMessages);
+
+          cauBeMiengBu.role.markLoudmouthRevealed();
+        }
       }
 
       const giaLang = gameRoom.players.find(

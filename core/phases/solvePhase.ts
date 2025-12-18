@@ -287,6 +287,24 @@ export async function solvePhase(room: GameRoom): Promise<void> {
 
   const cauBeMiengBu = room.players.find((p) => p.role instanceof Dead && p.role.originalRoleId === WEREROLE.LOUDMOUTH && p.role.deathNight === room.gameState.nightCount);
 
+  let loudmouthRevealedThisPhase = false;
+  if (cauBeMiengBu && cauBeMiengBu.role instanceof Dead) {
+    const storeInfo = cauBeMiengBu.role.getStoreInformation();
+    
+    if (!storeInfo.loudmouthRevealed) {
+      const revealPlayerId = storeInfo.loudmouthPlayer;
+      const revealPlayer = room.players.find((p) => p.userId === revealPlayerId);
+
+      if (revealPlayer) {
+        room.gameState.addLog(
+          `👦 Cậu bé miệng bự đã chết, tiết lộ role của **${revealPlayer.name}** là **${revealPlayer.role instanceof Dead ? rolesData[revealPlayer.role.originalRoleId.toString() as keyof typeof rolesData].title : revealPlayer.role.name}**`,
+        );
+        loudmouthRevealedThisPhase = true;
+        cauBeMiengBu.role.markLoudmouthRevealed();
+      }
+    }
+  }
+
   if (allDeadTonight.size !== 0) {
     room.gameState.addLog(
       `${Array.from(allDeadTonight)
@@ -333,7 +351,7 @@ export async function solvePhase(room: GameRoom): Promise<void> {
         );
       }
 
-      if (cauBeMiengBu && cauBeMiengBu.role instanceof Dead) {
+      if (loudmouthRevealedThisPhase && cauBeMiengBu && cauBeMiengBu.role instanceof Dead) {
         const revealPlayerId = cauBeMiengBu.role.getStoreInformation().loudmouthPlayer;
         const revealPlayer = room.players.find((p) => p.userId === revealPlayerId);
 
