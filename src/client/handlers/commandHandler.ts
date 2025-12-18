@@ -74,7 +74,7 @@ const commandHandler = async (message: Message) => {
     10,
     FactionRole.Village,
   );
-  await RoleResponse(message, ['!lycan', '!soicodoc'], 'lycan.png', 11, FactionRole.Village);
+  await RoleResponse(message, ['!lycan', '!soicodoc', '!shiba'], 'lycan.png', 11, FactionRole.Village);
   await RoleResponse(
     message,
     ['!stalker', '!hori', '!stalkẻ'],
@@ -119,7 +119,7 @@ const commandHandler = async (message: Message) => {
   );
   await RoleResponse(
     message,
-    ['!soimeocon', '!kittenwolf'],
+    ['!soimeocon', '!kittenwolf', '!kitten'],
     'kitten_wolf.png',
     18,
     FactionRole.Werewolf,
@@ -140,7 +140,7 @@ const commandHandler = async (message: Message) => {
   );
   await RoleResponse(
     message,
-    ['!wolffluencer', '!soithaotung'],
+    ['!wolffluencer', '!soithaotung', '!awai'],
     'wolffluencer.png',
     21,
     FactionRole.Werewolf,
