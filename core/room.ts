@@ -325,6 +325,7 @@ class GameRoom extends EventEmitter {
       store.delete(player.userId);
     }
 
+    this.players = [];
     // this.players = [];
     if (global.gc && (process.memoryUsage().heapUsed > 100 * 1024 * 1024)) { // 100MB threshold
       global.gc();
@@ -612,9 +613,15 @@ class GameRoom extends EventEmitter {
     } catch (error) {
       console.error(`GameRoom ${this.guildId} error in gameLoop:`, error);
       await this.cleanup();
+      gameRooms.delete(this.guildId);
+      console.log(`✅ Room ${this.guildId} removed in gameLoop error handler`);
     } finally {
       if (!this.isCleaningUp) {
         await this.cleanup();
+      }
+      if (gameRooms.has(this.guildId)) {
+        gameRooms.delete(this.guildId);
+        console.log(`✅ Room ${this.guildId} removed in gameLoop finally. Remaining rooms: ${gameRooms.size}`);
       }
     }
   }

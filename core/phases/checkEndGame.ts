@@ -1,5 +1,6 @@
 import { checkVictory, revealRoles } from '../../src/game/helper.js';
 import type { GameRoom } from '../room.js';
+import { gameRooms } from '../room.js';
 import { store } from '../store.js';
 
 export async function checkEndGame(room: GameRoom): Promise<boolean> {
@@ -55,6 +56,9 @@ export async function checkEndGame(room: GameRoom): Promise<boolean> {
     } catch (error) {
       console.error(`GameRoom ${room.guildId}: Cleanup timeout in checkEndGame:`, error);
     }
+
+    gameRooms.delete(room.guildId);
+    console.log(`✅ Room ${room.guildId} removed from gameRooms. Remaining rooms: ${gameRooms.size}`);
 
     return true;
   }
